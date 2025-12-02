@@ -266,8 +266,7 @@ const Auth = () => {
               </div>
               <CardTitle>Organisation not ready</CardTitle>
               <CardDescription>
-                Oops! It looks like your organisation has not been fully registered yet. 
-                Please contact your manager to complete the onboarding process.
+                It looks like your organisation is not set up yet. Speak to your manager.
               </CardDescription>
             </CardHeader>
             <CardContent>
