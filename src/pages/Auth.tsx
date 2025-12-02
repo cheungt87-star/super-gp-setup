@@ -19,6 +19,7 @@ interface InvitationValidationResult {
   organisationName: string | null;
   onboardingComplete: boolean;
   isEmailLinked: boolean;
+  profileExists: boolean;
 }
 
 const Auth = () => {
@@ -208,12 +209,18 @@ const Auth = () => {
       setExistingOrgName(result.organisationName);
       setMode("org-confirm");
     } else if (result.isEmailLinked) {
-      // Email-linked user can continue onboarding even if incomplete
-      // They are the designated admin who should complete the onboarding
-      setIsFirstUser(true);
-      setExistingOrgName(result.organisationName);
-      setOrganisationName(result.organisationName || "");
-      setMode("register");
+      // Email-linked user - check if they already have a profile
+      if (result.profileExists) {
+        // Returning user - direct to login, then they'll be redirected to onboarding
+        toast.info("Account found. Please sign in to continue onboarding.");
+        setMode("login");
+      } else {
+        // New user - proceed with account creation
+        setIsFirstUser(true);
+        setExistingOrgName(result.organisationName);
+        setOrganisationName(result.organisationName || "");
+        setMode("register");
+      }
     } else {
       // Org exists but onboarding not complete and user is not the designated admin
       setMode("error");
