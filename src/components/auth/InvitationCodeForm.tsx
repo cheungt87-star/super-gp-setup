@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Loader2, KeyRound } from "lucide-react";
 
 interface InvitationCodeFormProps {
-  onValidCode: (organisationId: string, code: string) => void;
+  onValidCode: (code: string) => void;
   onBackToLogin: () => void;
 }
 
@@ -65,7 +65,7 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
 
     // Code is valid
     toast.success("Invitation code accepted");
-    onValidCode(invitation.organisation_id, code.trim());
+    onValidCode(code.trim());
     setLoading(false);
   };
 

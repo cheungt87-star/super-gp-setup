@@ -6,11 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Building2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { InvitationCodeForm } from "@/components/auth/InvitationCodeForm";
 
-type AuthMode = "login" | "invite" | "register" | "verify";
+type AuthMode = "login" | "invite" | "org-setup" | "register" | "verify";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -30,9 +30,9 @@ const Auth = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   
-  // Invitation-related state
-  const [organisationId, setOrganisationId] = useState<string | null>(null);
+  // Invitation and organisation state
   const [invitationCode, setInvitationCode] = useState<string | null>(null);
+  const [organisationName, setOrganisationName] = useState("");
 
   useEffect(() => {
     // Check if user is already logged in
@@ -61,12 +61,30 @@ const Auth = () => {
     setLoading(false);
   };
 
+  const handleOrgSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!organisationName.trim()) {
+      toast.error("Please enter your organisation name");
+      return;
+    }
+
+    // Move to registration step
+    setMode("register");
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!organisationId || !invitationCode) {
+    if (!invitationCode) {
       toast.error("Please enter a valid invitation code first");
       setMode("invite");
+      return;
+    }
+
+    if (!organisationName.trim()) {
+      toast.error("Please enter your organisation name");
+      setMode("org-setup");
       return;
     }
 
@@ -80,7 +98,7 @@ const Auth = () => {
         data: {
           first_name: firstName,
           last_name: lastName,
-          organisation_id: organisationId,
+          organisation_name: organisationName.trim(),
           invitation_code: invitationCode,
         },
       },
@@ -95,10 +113,9 @@ const Auth = () => {
     setLoading(false);
   };
 
-  const handleValidCode = (orgId: string, code: string) => {
-    setOrganisationId(orgId);
+  const handleValidCode = (code: string) => {
     setInvitationCode(code);
-    setMode("register");
+    setMode("org-setup");
   };
 
   return (
@@ -140,6 +157,49 @@ const Auth = () => {
             onValidCode={handleValidCode}
             onBackToLogin={() => setMode("login")}
           />
+        ) : mode === "org-setup" ? (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+              <CardTitle>Name your organisation</CardTitle>
+              <CardDescription>
+                This will be the name of your practice or clinic.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleOrgSetup} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="orgName">Organisation Name</Label>
+                  <Input
+                    id="orgName"
+                    placeholder="e.g. Riverside Medical Centre"
+                    value={organisationName}
+                    onChange={(e) => setOrganisationName(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full">
+                  Continue
+                </Button>
+              </form>
+              <div className="mt-6 text-center text-sm">
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setInvitationCode(null);
+                    setMode("invite");
+                  }}
+                >
+                  ← Use a different code
+                </button>
+              </div>
+            </CardContent>
+          </Card>
         ) : mode === "login" ? (
           <Card>
             <CardHeader>
@@ -191,7 +251,9 @@ const Auth = () => {
           <Card>
             <CardHeader>
               <CardTitle>Create your account</CardTitle>
-              <CardDescription>Complete your registration to get started</CardDescription>
+              <CardDescription>
+                Setting up <strong>{organisationName}</strong>
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleRegister} className="space-y-4">
