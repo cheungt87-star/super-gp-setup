@@ -13,6 +13,7 @@ interface InvitationValidationResult {
   organisationName: string | null;
   onboardingComplete: boolean;
   isEmailLinked: boolean;
+  profileExists: boolean;
 }
 
 interface InvitationCodeFormProps {
@@ -104,6 +105,10 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
     const isEmailLinked = invitation.email !== null && 
       invitation.email.toLowerCase() === email.trim().toLowerCase();
 
+    // Check if a profile already exists for this email
+    const { data: profileExists } = await supabase
+      .rpc('check_profile_exists_by_email', { check_email: email.trim() });
+
     // Code is valid
     toast.success("Invitation code accepted");
     onValidCode({
@@ -112,6 +117,7 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
       organisationName: org?.name || null,
       onboardingComplete: org?.onboarding_complete || false,
       isEmailLinked,
+      profileExists: profileExists || false,
     });
     setLoading(false);
   };
