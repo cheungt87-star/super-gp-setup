@@ -18,6 +18,7 @@ interface InvitationValidationResult {
   organisationId: string | null;
   organisationName: string | null;
   onboardingComplete: boolean;
+  isEmailLinked: boolean;
 }
 
 const Auth = () => {
@@ -206,8 +207,15 @@ const Auth = () => {
       setIsFirstUser(false);
       setExistingOrgName(result.organisationName);
       setMode("org-confirm");
+    } else if (result.isEmailLinked) {
+      // Email-linked user can continue onboarding even if incomplete
+      // They are the designated admin who should complete the onboarding
+      setIsFirstUser(true);
+      setExistingOrgName(result.organisationName);
+      setOrganisationName(result.organisationName || "");
+      setMode("register");
     } else {
-      // Org exists but onboarding not complete - show error
+      // Org exists but onboarding not complete and user is not the designated admin
       setMode("error");
     }
   };
