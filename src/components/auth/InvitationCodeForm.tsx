@@ -1,0 +1,117 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Loader2, KeyRound } from "lucide-react";
+
+interface InvitationCodeFormProps {
+  onValidCode: (organisationId: string, code: string) => void;
+  onBackToLogin: () => void;
+}
+
+export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCodeFormProps) => {
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!code.trim()) {
+      toast.error("Please enter an invitation code");
+      return;
+    }
+
+    setLoading(true);
+
+    // Validate the invitation code
+    const { data: invitation, error } = await supabase
+      .from("invitation_codes")
+      .select("id, organisation_id, max_uses, used_count, expires_at, is_active")
+      .eq("code", code.trim())
+      .maybeSingle();
+
+    if (error) {
+      toast.error("Failed to validate invitation code");
+      setLoading(false);
+      return;
+    }
+
+    if (!invitation) {
+      toast.error("Invitation code not recognised");
+      setLoading(false);
+      return;
+    }
+
+    if (!invitation.is_active) {
+      toast.error("This invitation code is no longer active");
+      setLoading(false);
+      return;
+    }
+
+    if (invitation.used_count >= invitation.max_uses) {
+      toast.error("This invitation code has already been used");
+      setLoading(false);
+      return;
+    }
+
+    if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
+      toast.error("This invitation code has expired");
+      setLoading(false);
+      return;
+    }
+
+    // Code is valid
+    toast.success("Invitation code accepted");
+    onValidCode(invitation.organisation_id, code.trim());
+    setLoading(false);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <KeyRound className="h-5 w-5 text-primary" />
+          </div>
+        </div>
+        <CardTitle>Enter your invitation code</CardTitle>
+        <CardDescription>
+          You'll need an invitation code from your organisation to get started.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="code">Invitation Code</Label>
+            <Input
+              id="code"
+              placeholder="Enter your code"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              className="font-mono text-center text-lg tracking-widest"
+              autoComplete="off"
+              required
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Continue
+          </Button>
+        </form>
+        <div className="mt-6 text-center text-sm">
+          <span className="text-muted-foreground">Already have an account? </span>
+          <button
+            type="button"
+            className="text-primary font-medium hover:underline"
+            onClick={onBackToLogin}
+          >
+            Sign in
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
