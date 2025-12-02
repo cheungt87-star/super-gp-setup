@@ -47,27 +47,74 @@ const Auth = () => {
   const [isFirstUser, setIsFirstUser] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check if user is already logged in and redirect appropriately
+    const checkSessionAndRedirect = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/dashboard");
+        // Check onboarding status
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("organisation_id")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (profile?.organisation_id) {
+          const { data: org } = await supabase
+            .from("organisations")
+            .select("onboarding_complete")
+            .eq("id", profile.organisation_id)
+            .maybeSingle();
+
+          if (org?.onboarding_complete) {
+            navigate("/dashboard");
+          } else {
+            navigate("/onboarding");
+          }
+        } else {
+          navigate("/dashboard");
+        }
       }
-    });
+    };
+    checkSessionAndRedirect();
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
       toast.error(error.message);
+      setLoading(false);
+      return;
+    }
+
+    toast.success("Welcome back!");
+
+    // Check onboarding status and redirect appropriately
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("organisation_id")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    if (profile?.organisation_id) {
+      const { data: org } = await supabase
+        .from("organisations")
+        .select("onboarding_complete")
+        .eq("id", profile.organisation_id)
+        .maybeSingle();
+
+      if (org?.onboarding_complete) {
+        navigate("/dashboard");
+      } else {
+        navigate("/onboarding");
+      }
     } else {
-      toast.success("Welcome back!");
       navigate("/dashboard");
     }
     setLoading(false);

@@ -19,6 +19,26 @@ const Dashboard = () => {
         return;
       }
 
+      // Check onboarding status
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("organisation_id")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (profile?.organisation_id) {
+        const { data: org } = await supabase
+          .from("organisations")
+          .select("onboarding_complete")
+          .eq("id", profile.organisation_id)
+          .maybeSingle();
+
+        if (!org?.onboarding_complete) {
+          navigate("/onboarding");
+          return;
+        }
+      }
+
       setUserName(session.user.user_metadata?.first_name || "there");
 
       const [sitesRes, jobTitlesRes, usersRes] = await Promise.all([
