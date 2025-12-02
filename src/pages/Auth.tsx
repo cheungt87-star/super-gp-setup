@@ -50,7 +50,7 @@ const Auth = () => {
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/onboarding");
+        navigate("/dashboard");
       }
     });
   }, [navigate]);
@@ -68,7 +68,7 @@ const Auth = () => {
       toast.error(error.message);
     } else {
       toast.success("Welcome back!");
-      navigate("/onboarding");
+      navigate("/dashboard");
     }
     setLoading(false);
   };
