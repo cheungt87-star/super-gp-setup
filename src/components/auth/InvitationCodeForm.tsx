@@ -12,6 +12,7 @@ interface InvitationValidationResult {
   organisationId: string | null;
   organisationName: string | null;
   onboardingComplete: boolean;
+  isEmailLinked: boolean;
 }
 
 interface InvitationCodeFormProps {
@@ -99,6 +100,10 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
     // Type assertion for the joined organisation data
     const org = invitation.organisations as { id: string; name: string; onboarding_complete: boolean } | null;
 
+    // Check if this user's email is specifically linked to the invitation code
+    const isEmailLinked = invitation.email !== null && 
+      invitation.email.toLowerCase() === email.trim().toLowerCase();
+
     // Code is valid
     toast.success("Invitation code accepted");
     onValidCode({
@@ -106,6 +111,7 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
       organisationId: invitation.organisation_id,
       organisationName: org?.name || null,
       onboardingComplete: org?.onboarding_complete || false,
+      isEmailLinked,
     });
     setLoading(false);
   };
