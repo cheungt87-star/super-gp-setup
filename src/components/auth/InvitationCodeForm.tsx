@@ -50,7 +50,7 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
         expires_at, 
         is_active,
         email,
-        organisations (
+        organisations!invitation_codes_organisation_id_fkey (
           id,
           name,
           onboarding_complete
