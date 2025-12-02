@@ -4,13 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Building2 } from "lucide-react";
+import { ArrowLeft, Loader2, Building2, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { InvitationCodeForm } from "@/components/auth/InvitationCodeForm";
 
-type AuthMode = "login" | "invite" | "org-setup" | "register" | "verify";
+type AuthMode = "login" | "invite" | "org-setup" | "org-confirm" | "register" | "verify" | "error";
+
+interface InvitationValidationResult {
+  code: string;
+  organisationId: string | null;
+  organisationName: string | null;
+  onboardingComplete: boolean;
+}
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -29,10 +37,14 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
   
   // Invitation and organisation state
   const [invitationCode, setInvitationCode] = useState<string | null>(null);
   const [organisationName, setOrganisationName] = useState("");
+  const [existingOrgName, setExistingOrgName] = useState<string | null>(null);
+  const [orgConfirmed, setOrgConfirmed] = useState(false);
+  const [isFirstUser, setIsFirstUser] = useState(true);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -73,6 +85,18 @@ const Auth = () => {
     setMode("register");
   };
 
+  const handleOrgConfirm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!orgConfirmed) {
+      toast.error("Please confirm you are joining the correct organisation");
+      return;
+    }
+
+    // Move to registration step
+    setMode("register");
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -82,9 +106,17 @@ const Auth = () => {
       return;
     }
 
-    if (!organisationName.trim()) {
+    // For first user, require org name
+    if (isFirstUser && !organisationName.trim()) {
       toast.error("Please enter your organisation name");
       setMode("org-setup");
+      return;
+    }
+
+    // For subsequent users, require confirmation
+    if (!isFirstUser && !orgConfirmed) {
+      toast.error("Please confirm your organisation");
+      setMode("org-confirm");
       return;
     }
 
@@ -98,7 +130,8 @@ const Auth = () => {
         data: {
           first_name: firstName,
           last_name: lastName,
-          organisation_name: organisationName.trim(),
+          phone: phone || null,
+          organisation_name: isFirstUser ? organisationName.trim() : null,
           invitation_code: invitationCode,
         },
       },
@@ -113,9 +146,37 @@ const Auth = () => {
     setLoading(false);
   };
 
-  const handleValidCode = (code: string) => {
-    setInvitationCode(code);
-    setMode("org-setup");
+  const handleValidCode = (result: InvitationValidationResult) => {
+    setInvitationCode(result.code);
+    setEmail(""); // Reset email so user enters it again in registration
+    
+    if (result.organisationId === null) {
+      // First user - needs to create organisation
+      setIsFirstUser(true);
+      setMode("org-setup");
+    } else if (result.onboardingComplete) {
+      // Subsequent user - org exists and onboarding complete
+      setIsFirstUser(false);
+      setExistingOrgName(result.organisationName);
+      setMode("org-confirm");
+    } else {
+      // Org exists but onboarding not complete - show error
+      setMode("error");
+    }
+  };
+
+  const resetFlow = () => {
+    setInvitationCode(null);
+    setOrganisationName("");
+    setExistingOrgName(null);
+    setOrgConfirmed(false);
+    setIsFirstUser(true);
+    setEmail("");
+    setPassword("");
+    setFirstName("");
+    setLastName("");
+    setPhone("");
+    setMode("invite");
   };
 
   return (
@@ -133,7 +194,31 @@ const Auth = () => {
           <span className="font-semibold text-xl">Super GP</span>
         </div>
 
-        {mode === "verify" ? (
+        {mode === "error" ? (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                </div>
+              </div>
+              <CardTitle>Organisation not ready</CardTitle>
+              <CardDescription>
+                Oops! It looks like your organisation has not been fully registered yet. 
+                Please contact your manager to complete the onboarding process.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={resetFlow}
+              >
+                Try a different code
+              </Button>
+            </CardContent>
+          </Card>
+        ) : mode === "verify" ? (
           <Card>
             <CardHeader>
               <CardTitle>Check your email</CardTitle>
@@ -190,10 +275,50 @@ const Auth = () => {
                 <button
                   type="button"
                   className="text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    setInvitationCode(null);
-                    setMode("invite");
-                  }}
+                  onClick={resetFlow}
+                >
+                  ← Use a different code
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : mode === "org-confirm" ? (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+              <CardTitle>Confirm your organisation</CardTitle>
+              <CardDescription>
+                Please confirm you are joining the correct organisation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleOrgConfirm} className="space-y-4">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-lg font-medium">{existingOrgName}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="confirmOrg" 
+                    checked={orgConfirmed}
+                    onCheckedChange={(checked) => setOrgConfirmed(checked === true)}
+                  />
+                  <Label htmlFor="confirmOrg" className="text-sm">
+                    I confirm this is my organisation
+                  </Label>
+                </div>
+                <Button type="submit" className="w-full" disabled={!orgConfirmed}>
+                  Continue
+                </Button>
+              </form>
+              <div className="mt-6 text-center text-sm">
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={resetFlow}
                 >
                   ← Use a different code
                 </button>
@@ -252,7 +377,11 @@ const Auth = () => {
             <CardHeader>
               <CardTitle>Create your account</CardTitle>
               <CardDescription>
-                Setting up <strong>{organisationName}</strong>
+                {isFirstUser ? (
+                  <>Setting up <strong>{organisationName}</strong></>
+                ) : (
+                  <>Joining <strong>{existingOrgName}</strong></>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -288,6 +417,16 @@ const Auth = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="07700 900000"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">

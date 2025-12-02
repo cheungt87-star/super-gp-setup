@@ -19,6 +19,7 @@ export type Database = {
           code: string
           created_at: string
           created_by: string | null
+          email: string | null
           expires_at: string | null
           id: string
           is_active: boolean
@@ -31,6 +32,7 @@ export type Database = {
           code: string
           created_at?: string
           created_by?: string | null
+          email?: string | null
           expires_at?: string | null
           id?: string
           is_active?: boolean
@@ -43,6 +45,7 @@ export type Database = {
           code?: string
           created_at?: string
           created_by?: string | null
+          email?: string | null
           expires_at?: string | null
           id?: string
           is_active?: boolean
@@ -109,6 +112,7 @@ export type Database = {
           created_from_invite_code_id: string | null
           id: string
           name: string
+          onboarding_complete: boolean
           updated_at: string
         }
         Insert: {
@@ -116,6 +120,7 @@ export type Database = {
           created_from_invite_code_id?: string | null
           id?: string
           name: string
+          onboarding_complete?: boolean
           updated_at?: string
         }
         Update: {
@@ -123,6 +128,7 @@ export type Database = {
           created_from_invite_code_id?: string | null
           id?: string
           name?: string
+          onboarding_complete?: boolean
           updated_at?: string
         }
         Relationships: [
