@@ -7,6 +7,7 @@ import { JobTitlesStep } from "@/components/onboarding/JobTitlesStep";
 import { UsersStep } from "@/components/onboarding/UsersStep";
 import { CompletionStep } from "@/components/onboarding/CompletionStep";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const STEPS = ["Sites", "Job Titles", "Users", "Complete"];
 
@@ -16,6 +17,7 @@ const Onboarding = () => {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [organisationId, setOrganisationId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -27,15 +29,64 @@ const Onboarding = () => {
       
       setUserId(session.user.id);
       
-      // Fetch user's organisation from their profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organisation_id")
-        .eq("id", session.user.id)
+      // Fetch user's profile and role
+      const [profileResult, roleResult] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("organisation_id")
+          .eq("id", session.user.id)
+          .maybeSingle(),
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .maybeSingle()
+      ]);
+      
+      if (!profileResult.data?.organisation_id) {
+        toast.error("Organisation setup incomplete. Please contact support.");
+        navigate("/auth");
+        return;
+      }
+      
+      setOrganisationId(profileResult.data.organisation_id);
+      
+      // Check if user is admin
+      const userIsAdmin = roleResult.data?.role === "admin";
+      setIsAdmin(userIsAdmin);
+      
+      // If not admin, check if org onboarding is complete and redirect to dashboard
+      if (!userIsAdmin) {
+        const { data: org } = await supabase
+          .from("organisations")
+          .select("onboarding_complete")
+          .eq("id", profileResult.data.organisation_id)
+          .maybeSingle();
+        
+        if (org?.onboarding_complete) {
+          // Non-admin user, org already set up - go to dashboard
+          navigate("/dashboard");
+          return;
+        } else {
+          // Non-admin but onboarding not complete - shouldn't happen, but handle it
+          toast.error("Organisation onboarding is not complete. Please contact your manager.");
+          await supabase.auth.signOut();
+          navigate("/auth");
+          return;
+        }
+      }
+      
+      // Admin user - check if onboarding already complete
+      const { data: org } = await supabase
+        .from("organisations")
+        .select("onboarding_complete")
+        .eq("id", profileResult.data.organisation_id)
         .maybeSingle();
       
-      if (profile?.organisation_id) {
-        setOrganisationId(profile.organisation_id);
+      if (org?.onboarding_complete) {
+        // Onboarding already done, go to dashboard
+        navigate("/dashboard");
+        return;
       }
       
       setLoading(false);
@@ -104,7 +155,7 @@ const Onboarding = () => {
               />
             )}
             {currentStep === 3 && (
-              <CompletionStep />
+              <CompletionStep organisationId={organisationId} />
             )}
           </div>
         </div>

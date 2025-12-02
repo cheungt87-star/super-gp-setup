@@ -1,10 +1,42 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-export const CompletionStep = () => {
+interface CompletionStepProps {
+  organisationId: string | null;
+}
+
+export const CompletionStep = ({ organisationId }: CompletionStepProps) => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const handleComplete = async () => {
+    if (!organisationId) {
+      toast.error("Organisation not found");
+      return;
+    }
+
+    setLoading(true);
+
+    // Mark onboarding as complete
+    const { error } = await supabase
+      .from("organisations")
+      .update({ onboarding_complete: true })
+      .eq("id", organisationId);
+
+    if (error) {
+      toast.error("Failed to complete onboarding");
+      setLoading(false);
+      return;
+    }
+
+    toast.success("Onboarding complete!");
+    navigate("/dashboard");
+  };
 
   return (
     <Card className="text-center">
@@ -33,7 +65,13 @@ export const CompletionStep = () => {
           </div>
         </div>
 
-        <Button size="lg" className="gap-2" onClick={() => navigate("/dashboard")}>
+        <Button 
+          size="lg" 
+          className="gap-2" 
+          onClick={handleComplete}
+          disabled={loading}
+        >
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
           Go to Dashboard
           <ArrowRight className="h-4 w-4" />
         </Button>

@@ -7,13 +7,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, KeyRound } from "lucide-react";
 
+interface InvitationValidationResult {
+  code: string;
+  organisationId: string | null;
+  organisationName: string | null;
+  onboardingComplete: boolean;
+}
+
 interface InvitationCodeFormProps {
-  onValidCode: (code: string) => void;
+  onValidCode: (result: InvitationValidationResult) => void;
   onBackToLogin: () => void;
 }
 
 export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCodeFormProps) => {
   const [code, setCode] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,12 +32,30 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
       return;
     }
 
+    if (!email.trim()) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
     setLoading(true);
 
-    // Validate the invitation code
+    // Validate the invitation code and check email
     const { data: invitation, error } = await supabase
       .from("invitation_codes")
-      .select("id, organisation_id, max_uses, used_count, expires_at, is_active")
+      .select(`
+        id, 
+        organisation_id, 
+        max_uses, 
+        used_count, 
+        expires_at, 
+        is_active,
+        email,
+        organisations (
+          id,
+          name,
+          onboarding_complete
+        )
+      `)
       .eq("code", code.trim())
       .maybeSingle();
 
@@ -63,9 +89,24 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
       return;
     }
 
+    // Check if email matches the invitation code's email (if set)
+    if (invitation.email && invitation.email.toLowerCase() !== email.trim().toLowerCase()) {
+      toast.error("This invitation code is not valid for this email address");
+      setLoading(false);
+      return;
+    }
+
+    // Type assertion for the joined organisation data
+    const org = invitation.organisations as { id: string; name: string; onboarding_complete: boolean } | null;
+
     // Code is valid
     toast.success("Invitation code accepted");
-    onValidCode(code.trim());
+    onValidCode({
+      code: code.trim(),
+      organisationId: invitation.organisation_id,
+      organisationName: org?.name || null,
+      onboardingComplete: org?.onboarding_complete || false,
+    });
     setLoading(false);
   };
 
@@ -84,6 +125,17 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@clinic.nhs.uk"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="code">Invitation Code</Label>
             <Input
