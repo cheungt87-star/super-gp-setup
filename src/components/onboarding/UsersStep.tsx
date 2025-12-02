@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 interface UsersStepProps {
   onNext: () => void;
   onBack: () => void;
+  organisationId: string | null;
 }
 
 interface CSVUser {
@@ -27,7 +28,7 @@ interface ValidationError {
   message: string;
 }
 
-export const UsersStep = ({ onNext, onBack }: UsersStepProps) => {
+export const UsersStep = ({ onNext, onBack, organisationId }: UsersStepProps) => {
   const [users, setUsers] = useState<CSVUser[]>([]);
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [saving, setSaving] = useState(false);
@@ -143,9 +144,14 @@ export const UsersStep = ({ onNext, onBack }: UsersStepProps) => {
       return;
     }
 
+    if (!organisationId) {
+      toast.error("Organisation not found. Please try logging in again.");
+      return;
+    }
+
     setSaving(true);
 
-    // Create profiles for each user
+    // Create profiles for each user (pre-created staff records)
     const defaultSiteId = sites[0]?.id;
     const defaultJobTitleId = jobTitles[0]?.id;
 
@@ -159,6 +165,7 @@ export const UsersStep = ({ onNext, onBack }: UsersStepProps) => {
         contracted_hours: user.contracted_hours ? parseFloat(user.contracted_hours) : null,
         primary_site_id: defaultSiteId || null,
         job_title_id: defaultJobTitleId || null,
+        organisation_id: organisationId,
       }))
     );
 

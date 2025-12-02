@@ -8,18 +8,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { InvitationCodeForm } from "@/components/auth/InvitationCodeForm";
+
+type AuthMode = "login" | "invite" | "register" | "verify";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "register" | "verify">(
-    searchParams.get("mode") === "register" ? "register" : "login"
-  );
+  
+  // Determine initial mode
+  const getInitialMode = (): AuthMode => {
+    const modeParam = searchParams.get("mode");
+    if (modeParam === "register" || modeParam === "invite") return "invite";
+    return "login";
+  };
+
+  const [mode, setMode] = useState<AuthMode>(getInitialMode);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  
+  // Invitation-related state
+  const [organisationId, setOrganisationId] = useState<string | null>(null);
+  const [invitationCode, setInvitationCode] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -50,15 +63,25 @@ const Auth = () => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!organisationId || !invitationCode) {
+      toast.error("Please enter a valid invitation code first");
+      setMode("invite");
+      return;
+    }
+
     setLoading(true);
 
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: `${window.location.origin}/onboarding`,
         data: {
           first_name: firstName,
           last_name: lastName,
+          organisation_id: organisationId,
+          invitation_code: invitationCode,
         },
       },
     });
@@ -70,6 +93,12 @@ const Auth = () => {
       toast.success("Check your email for the verification link!");
     }
     setLoading(false);
+  };
+
+  const handleValidCode = (orgId: string, code: string) => {
+    setOrganisationId(orgId);
+    setInvitationCode(code);
+    setMode("register");
   };
 
   return (
@@ -106,6 +135,11 @@ const Auth = () => {
               </Button>
             </CardContent>
           </Card>
+        ) : mode === "invite" ? (
+          <InvitationCodeForm 
+            onValidCode={handleValidCode}
+            onBackToLogin={() => setMode("login")}
+          />
         ) : mode === "login" ? (
           <Card>
             <CardHeader>
@@ -142,11 +176,11 @@ const Auth = () => {
                 </Button>
               </form>
               <div className="mt-6 text-center text-sm">
-                <span className="text-muted-foreground">Don't have an account? </span>
+                <span className="text-muted-foreground">Have an invitation code? </span>
                 <button
                   type="button"
                   className="text-primary font-medium hover:underline"
-                  onClick={() => setMode("register")}
+                  onClick={() => setMode("invite")}
                 >
                   Get started
                 </button>
@@ -157,7 +191,7 @@ const Auth = () => {
           <Card>
             <CardHeader>
               <CardTitle>Create your account</CardTitle>
-              <CardDescription>Get started with Super GP for your clinic</CardDescription>
+              <CardDescription>Complete your registration to get started</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleRegister} className="space-y-4">

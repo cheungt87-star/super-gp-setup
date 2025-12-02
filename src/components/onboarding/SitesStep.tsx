@@ -17,9 +17,10 @@ interface Site {
 interface SitesStepProps {
   onNext: () => void;
   userId: string | null;
+  organisationId: string | null;
 }
 
-export const SitesStep = ({ onNext, userId }: SitesStepProps) => {
+export const SitesStep = ({ onNext, userId, organisationId }: SitesStepProps) => {
   const [sites, setSites] = useState<Site[]>([
     { name: "", address: "", email: "", phone: "" },
   ]);
@@ -49,6 +50,11 @@ export const SitesStep = ({ onNext, userId }: SitesStepProps) => {
       return;
     }
 
+    if (!organisationId) {
+      toast.error("Organisation not found. Please try logging in again.");
+      return;
+    }
+
     setSaving(true);
 
     const { error } = await supabase.from("sites").insert(
@@ -57,6 +63,7 @@ export const SitesStep = ({ onNext, userId }: SitesStepProps) => {
         address: site.address || null,
         email: site.email || null,
         phone: site.phone || null,
+        organisation_id: organisationId,
       }))
     );
 

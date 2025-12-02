@@ -15,6 +15,7 @@ interface JobTitle {
 interface JobTitlesStepProps {
   onNext: () => void;
   onBack: () => void;
+  organisationId: string | null;
 }
 
 const DEFAULT_JOB_TITLES: JobTitle[] = [
@@ -26,7 +27,7 @@ const DEFAULT_JOB_TITLES: JobTitle[] = [
   { name: "Receptionist", description: "Front desk and admin" },
 ];
 
-export const JobTitlesStep = ({ onNext, onBack }: JobTitlesStepProps) => {
+export const JobTitlesStep = ({ onNext, onBack, organisationId }: JobTitlesStepProps) => {
   const [jobTitles, setJobTitles] = useState<JobTitle[]>(DEFAULT_JOB_TITLES);
   const [saving, setSaving] = useState(false);
 
@@ -54,12 +55,18 @@ export const JobTitlesStep = ({ onNext, onBack }: JobTitlesStepProps) => {
       return;
     }
 
+    if (!organisationId) {
+      toast.error("Organisation not found. Please try logging in again.");
+      return;
+    }
+
     setSaving(true);
 
     const { error } = await supabase.from("job_titles").insert(
       validTitles.map((jt) => ({
         name: jt.name,
         description: jt.description || null,
+        organisation_id: organisationId,
       }))
     );
 

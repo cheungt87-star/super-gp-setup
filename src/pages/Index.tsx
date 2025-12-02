@@ -40,12 +40,16 @@ const Index = () => {
             into one elegant platform. Get started in minutes.
           </p>
 
-          <Link to="/auth?mode=register">
+          <Link to="/auth?mode=invite">
             <Button size="lg" className="h-12 px-8 text-base font-semibold gap-2 group">
-              Get Started
+              Enter Invitation Code
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </Link>
+          
+          <p className="text-sm text-muted-foreground mt-4">
+            Need an invitation? Contact your organisation administrator.
+          </p>
         </div>
 
         {/* Feature Cards */}

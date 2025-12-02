@@ -15,6 +15,7 @@ const Onboarding = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [organisationId, setOrganisationId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -23,7 +24,20 @@ const Onboarding = () => {
         navigate("/auth");
         return;
       }
+      
       setUserId(session.user.id);
+      
+      // Fetch user's organisation from their profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("organisation_id")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      
+      if (profile?.organisation_id) {
+        setOrganisationId(profile.organisation_id);
+      }
+      
       setLoading(false);
     };
     checkAuth();
@@ -69,13 +83,25 @@ const Onboarding = () => {
 
           <div className="mt-10 animate-fade-in">
             {currentStep === 0 && (
-              <SitesStep onNext={handleNext} userId={userId} />
+              <SitesStep 
+                onNext={handleNext} 
+                userId={userId} 
+                organisationId={organisationId}
+              />
             )}
             {currentStep === 1 && (
-              <JobTitlesStep onNext={handleNext} onBack={handleBack} />
+              <JobTitlesStep 
+                onNext={handleNext} 
+                onBack={handleBack}
+                organisationId={organisationId}
+              />
             )}
             {currentStep === 2 && (
-              <UsersStep onNext={handleNext} onBack={handleBack} />
+              <UsersStep 
+                onNext={handleNext} 
+                onBack={handleBack}
+                organisationId={organisationId}
+              />
             )}
             {currentStep === 3 && (
               <CompletionStep />
