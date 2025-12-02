@@ -23,7 +23,7 @@ export type Database = {
           id: string
           is_active: boolean
           max_uses: number
-          organisation_id: string
+          organisation_id: string | null
           updated_at: string
           used_count: number
         }
@@ -35,7 +35,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_uses?: number
-          organisation_id: string
+          organisation_id?: string | null
           updated_at?: string
           used_count?: number
         }
@@ -47,7 +47,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_uses?: number
-          organisation_id?: string
+          organisation_id?: string | null
           updated_at?: string
           used_count?: number
         }
@@ -106,23 +106,34 @@ export type Database = {
       organisations: {
         Row: {
           created_at: string
+          created_from_invite_code_id: string | null
           id: string
           name: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          created_from_invite_code_id?: string | null
           id?: string
           name: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          created_from_invite_code_id?: string | null
           id?: string
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "organisations_created_from_invite_code_id_fkey"
+            columns: ["created_from_invite_code_id"]
+            isOneToOne: false
+            referencedRelation: "invitation_codes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
