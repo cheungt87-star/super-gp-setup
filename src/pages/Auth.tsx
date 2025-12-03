@@ -22,6 +22,14 @@ interface InvitationValidationResult {
   isEmailLinked: boolean;
   profileExists: boolean;
   email: string;
+  hasAuthAccount: boolean;
+  csvProfile?: {
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    primarySiteId: string | null;
+    jobTitleId: string | null;
+  };
 }
 
 const Auth = () => {
@@ -50,6 +58,7 @@ const Auth = () => {
   const [orgConfirmed, setOrgConfirmed] = useState(false);
   const [isFirstUser, setIsFirstUser] = useState(true);
   const [organisationIdFromCode, setOrganisationIdFromCode] = useState<string | null>(null);
+  const [isCsvUser, setIsCsvUser] = useState(false);
   
   // Site and job title state for subsequent users
   const [sites, setSites] = useState<{ id: string; name: string }[]>([]);
@@ -243,26 +252,53 @@ const Auth = () => {
     setOrganisationIdFromCode(result.organisationId);
     console.log("Set organisationIdFromCode to:", result.organisationId);
     
+    // Check if this is a CSV-enrolled user (profile exists but no auth account)
+    if (result.profileExists && !result.hasAuthAccount && result.csvProfile) {
+      console.log("CSV-enrolled user detected - claim profile flow");
+      setIsCsvUser(true);
+      setIsFirstUser(false);
+      setExistingOrgName(result.organisationName);
+      // Pre-fill form with CSV data
+      setFirstName(result.csvProfile.firstName || "");
+      setLastName(result.csvProfile.lastName || "");
+      setPhone(result.csvProfile.phone || "");
+      setSelectedSiteId(result.csvProfile.primarySiteId || "");
+      setSelectedJobTitleId(result.csvProfile.jobTitleId || "");
+      setOrgConfirmed(true); // Auto-confirm org for CSV users
+      toast.success("Welcome! We found your profile. Please set a password to activate your account.");
+      setMode("register");
+      return;
+    }
+    
     if (result.organisationId === null) {
       // First user - needs to create organisation
       console.log("First user flow - org-setup");
       setIsFirstUser(true);
+      setIsCsvUser(false);
       setMode("org-setup");
     } else if (result.onboardingComplete) {
       // Subsequent user - org exists and onboarding complete
       console.log("Subsequent user flow - org-confirm, isFirstUser=false");
       setIsFirstUser(false);
+      setIsCsvUser(false);
       setExistingOrgName(result.organisationName);
-      setMode("org-confirm");
+      // Check if they have an existing auth account
+      if (result.profileExists && result.hasAuthAccount) {
+        toast.info("Account found. Please sign in to continue.");
+        setMode("login");
+      } else {
+        setMode("org-confirm");
+      }
     } else if (result.isEmailLinked) {
       // Email-linked user - check if they already have a profile
-      if (result.profileExists) {
+      if (result.profileExists && result.hasAuthAccount) {
         // Returning user - direct to login, then they'll be redirected to onboarding
         toast.info("Account found. Please sign in to continue onboarding.");
         setMode("login");
       } else {
         // New user - proceed with account creation
         setIsFirstUser(true);
+        setIsCsvUser(false);
         setExistingOrgName(result.organisationName);
         setOrganisationName(result.organisationName || "");
         setMode("register");
@@ -279,6 +315,7 @@ const Auth = () => {
     setExistingOrgName(null);
     setOrgConfirmed(false);
     setIsFirstUser(true);
+    setIsCsvUser(false);
     setOrganisationIdFromCode(null);
     setSites([]);
     setJobTitles([]);
@@ -487,9 +524,11 @@ const Auth = () => {
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>Create your account</CardTitle>
+              <CardTitle>{isCsvUser ? "Activate your account" : "Create your account"}</CardTitle>
               <CardDescription>
-                {isFirstUser ? (
+                {isCsvUser ? (
+                  <>Welcome to <strong>{existingOrgName}</strong>! Your profile has been set up. Just set a password to get started.</>
+                ) : isFirstUser ? (
                   <>Setting up <strong>{organisationName}</strong></>
                 ) : (
                   <>Joining <strong>{existingOrgName}</strong></>
@@ -507,6 +546,8 @@ const Auth = () => {
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       required
+                      readOnly={isCsvUser && !!firstName}
+                      className={isCsvUser && !!firstName ? "bg-muted" : ""}
                     />
                   </div>
                   <div className="space-y-2">
@@ -517,6 +558,8 @@ const Auth = () => {
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       required
+                      readOnly={isCsvUser && !!lastName}
+                      className={isCsvUser && !!lastName ? "bg-muted" : ""}
                     />
                   </div>
                 </div>
@@ -527,7 +570,8 @@ const Auth = () => {
                     type="email"
                     placeholder="you@clinic.nhs.uk"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    readOnly
+                    className="bg-muted"
                     required
                   />
                 </div>
@@ -539,36 +583,43 @@ const Auth = () => {
                     placeholder="07700 900000"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    readOnly={isCsvUser && !!phone}
+                    className={isCsvUser && !!phone ? "bg-muted" : ""}
                   />
                 </div>
-                {!isFirstUser && (
+                {(!isFirstUser || isCsvUser) && (
                   <>
-                    <div className="space-y-2">
-                      <Label htmlFor="site">Primary Site</Label>
-                      <Select value={selectedSiteId} onValueChange={setSelectedSiteId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your site" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sites.map((site) => (
-                            <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="jobTitle">Job Title</Label>
-                      <Select value={selectedJobTitleId} onValueChange={setSelectedJobTitleId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your job title" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {jobTitles.map((jt) => (
-                            <SelectItem key={jt.id} value={jt.id}>{jt.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {/* Only show site/job title dropdowns if they're not pre-filled for CSV users, or if they need to be selected */}
+                    {(!isCsvUser || !selectedSiteId) && sites.length > 0 && (
+                      <div className="space-y-2">
+                        <Label htmlFor="site">Primary Site</Label>
+                        <Select value={selectedSiteId} onValueChange={setSelectedSiteId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your site" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sites.map((site) => (
+                              <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {(!isCsvUser || !selectedJobTitleId) && jobTitles.length > 0 && (
+                      <div className="space-y-2">
+                        <Label htmlFor="jobTitle">Job Title</Label>
+                        <Select value={selectedJobTitleId} onValueChange={setSelectedJobTitleId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your job title" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {jobTitles.map((jt) => (
+                              <SelectItem key={jt.id} value={jt.id}>{jt.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </>
                 )}
                 <div className="space-y-2">
@@ -585,7 +636,7 @@ const Auth = () => {
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Account
+                  {isCsvUser ? "Activate Account" : "Create Account"}
                 </Button>
               </form>
               <div className="mt-6 text-center text-sm">
