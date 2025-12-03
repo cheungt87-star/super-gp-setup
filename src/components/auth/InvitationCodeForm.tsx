@@ -14,6 +14,7 @@ interface InvitationValidationResult {
   onboardingComplete: boolean;
   isEmailLinked: boolean;
   profileExists: boolean;
+  email: string;
 }
 
 interface InvitationCodeFormProps {
@@ -81,6 +82,7 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
       onboardingComplete: result.onboarding_complete ?? false,
       isEmailLinked: result.is_email_linked ?? false,
       profileExists: result.profile_exists ?? false,
+      email: email.trim(),
     });
     setLoading(false);
   };
