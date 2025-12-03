@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Building2, AlertTriangle } from "lucide-react";
@@ -47,6 +48,13 @@ const Auth = () => {
   const [existingOrgName, setExistingOrgName] = useState<string | null>(null);
   const [orgConfirmed, setOrgConfirmed] = useState(false);
   const [isFirstUser, setIsFirstUser] = useState(true);
+  const [organisationIdFromCode, setOrganisationIdFromCode] = useState<string | null>(null);
+  
+  // Site and job title state for subsequent users
+  const [sites, setSites] = useState<{ id: string; name: string }[]>([]);
+  const [jobTitles, setJobTitles] = useState<{ id: string; name: string }[]>([]);
+  const [selectedSiteId, setSelectedSiteId] = useState<string>("");
+  const [selectedJobTitleId, setSelectedJobTitleId] = useState<string>("");
 
   useEffect(() => {
     // Check if user is already logged in and redirect appropriately
@@ -79,6 +87,21 @@ const Auth = () => {
     };
     checkSessionAndRedirect();
   }, [navigate]);
+
+  // Fetch sites and job titles when transitioning to register mode for non-first users
+  useEffect(() => {
+    const fetchOptions = async () => {
+      if (mode === "register" && !isFirstUser && organisationIdFromCode) {
+        const [sitesRes, jobTitlesRes] = await Promise.all([
+          supabase.from("sites").select("id, name").eq("organisation_id", organisationIdFromCode).eq("is_active", true),
+          supabase.from("job_titles").select("id, name").eq("organisation_id", organisationIdFromCode)
+        ]);
+        if (sitesRes.data) setSites(sitesRes.data);
+        if (jobTitlesRes.data) setJobTitles(jobTitlesRes.data);
+      }
+    };
+    fetchOptions();
+  }, [mode, isFirstUser, organisationIdFromCode]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,6 +205,8 @@ const Auth = () => {
           phone: phone || null,
           organisation_name: isFirstUser ? organisationName.trim() : null,
           invitation_code: invitationCode,
+          primary_site_id: !isFirstUser && selectedSiteId ? selectedSiteId : null,
+          job_title_id: !isFirstUser && selectedJobTitleId ? selectedJobTitleId : null,
         },
       },
     });
@@ -198,6 +223,7 @@ const Auth = () => {
   const handleValidCode = (result: InvitationValidationResult) => {
     setInvitationCode(result.code);
     setEmail(""); // Reset email so user enters it again in registration
+    setOrganisationIdFromCode(result.organisationId);
     
     if (result.organisationId === null) {
       // First user - needs to create organisation
@@ -233,6 +259,11 @@ const Auth = () => {
     setExistingOrgName(null);
     setOrgConfirmed(false);
     setIsFirstUser(true);
+    setOrganisationIdFromCode(null);
+    setSites([]);
+    setJobTitles([]);
+    setSelectedSiteId("");
+    setSelectedJobTitleId("");
     setEmail("");
     setPassword("");
     setFirstName("");
@@ -490,6 +521,36 @@ const Auth = () => {
                     onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
+                {!isFirstUser && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="site">Primary Site</Label>
+                      <Select value={selectedSiteId} onValueChange={setSelectedSiteId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your site" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sites.map((site) => (
+                            <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="jobTitle">Job Title</Label>
+                      <Select value={selectedJobTitleId} onValueChange={setSelectedJobTitleId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your job title" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {jobTitles.map((jt) => (
+                            <SelectItem key={jt.id} value={jt.id}>{jt.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="regPassword">Password</Label>
                   <Input
