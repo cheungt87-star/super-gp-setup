@@ -98,8 +98,11 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
       return;
     }
 
-    // Type assertion for the joined organisation data
-    const org = invitation.organisations as { id: string; name: string; onboarding_complete: boolean } | null;
+    // Type assertion for the joined organisation data - Supabase returns array for joins
+    const orgsData = invitation.organisations;
+    const org = Array.isArray(orgsData) && orgsData.length > 0 
+      ? orgsData[0] as { id: string; name: string; onboarding_complete: boolean }
+      : (orgsData as { id: string; name: string; onboarding_complete: boolean } | null);
 
     // Check if this user's email is specifically linked to the invitation code
     const isEmailLinked = invitation.email !== null && 
