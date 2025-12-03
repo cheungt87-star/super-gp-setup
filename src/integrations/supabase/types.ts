@@ -341,6 +341,10 @@ export type Database = {
         Args: { check_email: string }
         Returns: boolean
       }
+      get_organisation_options: {
+        Args: { p_organisation_id: string }
+        Returns: Json
+      }
       get_user_organisation_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }

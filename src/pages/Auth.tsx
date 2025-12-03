@@ -92,12 +92,15 @@ const Auth = () => {
   useEffect(() => {
     const fetchOptions = async () => {
       if (mode === "register" && !isFirstUser && organisationIdFromCode) {
-        const [sitesRes, jobTitlesRes] = await Promise.all([
-          supabase.from("sites").select("id, name").eq("organisation_id", organisationIdFromCode).eq("is_active", true),
-          supabase.from("job_titles").select("id, name").eq("organisation_id", organisationIdFromCode)
-        ]);
-        if (sitesRes.data) setSites(sitesRes.data);
-        if (jobTitlesRes.data) setJobTitles(jobTitlesRes.data);
+        const { data, error } = await supabase.rpc('get_organisation_options', {
+          p_organisation_id: organisationIdFromCode
+        });
+        
+        if (data && !error) {
+          const options = data as { sites: { id: string; name: string }[]; job_titles: { id: string; name: string }[] };
+          setSites(options.sites || []);
+          setJobTitles(options.job_titles || []);
+        }
       }
     };
     fetchOptions();
