@@ -15,6 +15,14 @@ interface InvitationValidationResult {
   isEmailLinked: boolean;
   profileExists: boolean;
   email: string;
+  hasAuthAccount: boolean;
+  csvProfile?: {
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    primarySiteId: string | null;
+    jobTitleId: string | null;
+  };
 }
 
 interface InvitationCodeFormProps {
@@ -65,6 +73,14 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
       onboarding_complete?: boolean;
       is_email_linked?: boolean;
       profile_exists?: boolean;
+      has_auth_account?: boolean;
+      csv_profile?: {
+        first_name: string | null;
+        last_name: string | null;
+        phone: string | null;
+        primary_site_id: string | null;
+        job_title_id: string | null;
+      };
     } | null;
 
     if (!result?.valid) {
@@ -83,6 +99,14 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
       isEmailLinked: result.is_email_linked ?? false,
       profileExists: result.profile_exists ?? false,
       email: email.trim(),
+      hasAuthAccount: result.has_auth_account ?? false,
+      csvProfile: result.csv_profile ? {
+        firstName: result.csv_profile.first_name ?? null,
+        lastName: result.csv_profile.last_name ?? null,
+        phone: result.csv_profile.phone ?? null,
+        primarySiteId: result.csv_profile.primary_site_id ?? null,
+        jobTitleId: result.csv_profile.job_title_id ?? null,
+      } : undefined,
     });
     setLoading(false);
   };
