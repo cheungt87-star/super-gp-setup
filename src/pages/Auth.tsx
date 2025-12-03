@@ -21,6 +21,7 @@ interface InvitationValidationResult {
   onboardingComplete: boolean;
   isEmailLinked: boolean;
   profileExists: boolean;
+  email: string;
 }
 
 const Auth = () => {
@@ -238,7 +239,7 @@ const Auth = () => {
   const handleValidCode = (result: InvitationValidationResult) => {
     console.log("handleValidCode called with:", result);
     setInvitationCode(result.code);
-    setEmail(""); // Reset email so user enters it again in registration
+    setEmail(result.email); // Inherit email from invitation step
     setOrganisationIdFromCode(result.organisationId);
     console.log("Set organisationIdFromCode to:", result.organisationId);
     
