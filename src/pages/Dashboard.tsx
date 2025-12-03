@@ -3,13 +3,23 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Briefcase, LogOut, Loader2 } from "lucide-react";
+import { Building2, Users, Briefcase, LogOut, Loader2, Copy, Check, UserPlus } from "lucide-react";
+import { toast } from "sonner";
+
+interface InviteCodeInfo {
+  code: string;
+  usedCount: number;
+  maxUses: number;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ sites: 0, jobTitles: 0, users: 0 });
   const [userName, setUserName] = useState("");
+  const [inviteCode, setInviteCode] = useState<InviteCodeInfo | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -19,7 +29,7 @@ const Dashboard = () => {
         return;
       }
 
-      // Check onboarding status
+      // Check onboarding status and get org id
       const { data: profile } = await supabase
         .from("profiles")
         .select("organisation_id")
@@ -36,6 +46,35 @@ const Dashboard = () => {
         if (!org?.onboarding_complete) {
           navigate("/onboarding");
           return;
+        }
+
+        // Check if user is admin
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        const userIsAdmin = roleData?.role === "admin";
+        setIsAdmin(userIsAdmin);
+
+        // Fetch invitation code for admins
+        if (userIsAdmin) {
+          const { data: codeData } = await supabase
+            .from("invitation_codes")
+            .select("code, used_count, max_uses")
+            .eq("organisation_id", profile.organisation_id)
+            .is("email", null)
+            .eq("is_active", true)
+            .maybeSingle();
+
+          if (codeData) {
+            setInviteCode({
+              code: codeData.code,
+              usedCount: codeData.used_count,
+              maxUses: codeData.max_uses,
+            });
+          }
         }
       }
 
@@ -60,6 +99,14 @@ const Dashboard = () => {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/");
+  };
+
+  const handleCopy = async () => {
+    if (!inviteCode) return;
+    await navigator.clipboard.writeText(inviteCode.code);
+    setCopied(true);
+    toast.success("Code copied to clipboard");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   if (loading) {
@@ -92,6 +139,42 @@ const Dashboard = () => {
           <h1 className="text-3xl font-bold mb-2">Welcome, {userName}!</h1>
           <p className="text-muted-foreground">Here's an overview of your clinic setup.</p>
         </div>
+
+        {/* Invitation Code Card for Admins */}
+        {isAdmin && inviteCode && (
+          <Card className="mb-6 animate-fade-in border-primary/20 bg-primary/5">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-medium">Team Invitation Code</CardTitle>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopy}
+                className="gap-2"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-success" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <code className="text-xl font-mono font-bold tracking-wider">{inviteCode.code}</code>
+                <span className="text-sm text-muted-foreground">
+                  {inviteCode.usedCount} / {inviteCode.maxUses} uses
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Share this code with team members so they can join your organisation.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-6 md:grid-cols-3 animate-fade-in">
           <StatCard
