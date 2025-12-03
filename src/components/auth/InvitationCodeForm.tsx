@@ -41,86 +41,46 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
 
     setLoading(true);
 
-    // Validate the invitation code and check email
-    const { data: invitation, error } = await supabase
-      .from("invitation_codes")
-      .select(`
-        id, 
-        organisation_id, 
-        max_uses, 
-        used_count, 
-        expires_at, 
-        is_active,
-        email,
-        organisations (
-          id,
-          name,
-          onboarding_complete
-        )
-      `)
-      .eq("code", code.trim())
-      .maybeSingle();
+    // Call the SECURITY DEFINER function to validate the invitation code
+    const { data, error } = await supabase.rpc('validate_invitation_code', {
+      p_code: code.trim(),
+      p_email: email.trim()
+    });
 
     if (error) {
+      console.error("Invitation code validation error:", error);
       toast.error("Failed to validate invitation code");
       setLoading(false);
       return;
     }
 
-    if (!invitation) {
-      toast.error("Invitation code not recognised");
+    // Type the response
+    const result = data as {
+      valid: boolean;
+      error?: string;
+      code?: string;
+      organisation_id?: string | null;
+      organisation_name?: string | null;
+      onboarding_complete?: boolean;
+      is_email_linked?: boolean;
+      profile_exists?: boolean;
+    } | null;
+
+    if (!result?.valid) {
+      toast.error(result?.error || "Invalid invitation code");
       setLoading(false);
       return;
     }
-
-    if (!invitation.is_active) {
-      toast.error("This invitation code is no longer active");
-      setLoading(false);
-      return;
-    }
-
-    if (invitation.used_count >= invitation.max_uses) {
-      toast.error("This invitation code has already been used");
-      setLoading(false);
-      return;
-    }
-
-    if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
-      toast.error("This invitation code has expired");
-      setLoading(false);
-      return;
-    }
-
-    // Check if email matches the invitation code's email (if set)
-    if (invitation.email && invitation.email.toLowerCase() !== email.trim().toLowerCase()) {
-      toast.error("This invitation code is not valid for this email address");
-      setLoading(false);
-      return;
-    }
-
-    // Type assertion for the joined organisation data - Supabase returns array for joins
-    const orgsData = invitation.organisations;
-    const org = Array.isArray(orgsData) && orgsData.length > 0 
-      ? orgsData[0] as { id: string; name: string; onboarding_complete: boolean }
-      : (orgsData as { id: string; name: string; onboarding_complete: boolean } | null);
-
-    // Check if this user's email is specifically linked to the invitation code
-    const isEmailLinked = invitation.email !== null && 
-      invitation.email.toLowerCase() === email.trim().toLowerCase();
-
-    // Check if a profile already exists for this email
-    const { data: profileExists } = await supabase
-      .rpc('check_profile_exists_by_email', { check_email: email.trim() });
 
     // Code is valid
     toast.success("Invitation code accepted");
     onValidCode({
-      code: code.trim(),
-      organisationId: invitation.organisation_id,
-      organisationName: org?.name || null,
-      onboardingComplete: org?.onboarding_complete || false,
-      isEmailLinked,
-      profileExists: profileExists || false,
+      code: result.code!,
+      organisationId: result.organisation_id ?? null,
+      organisationName: result.organisation_name ?? null,
+      onboardingComplete: result.onboarding_complete ?? false,
+      isEmailLinked: result.is_email_linked ?? false,
+      profileExists: result.profile_exists ?? false,
     });
     setLoading(false);
   };

@@ -353,6 +353,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_invitation_code: {
+        Args: { p_code: string; p_email: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "staff"
