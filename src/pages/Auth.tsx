@@ -91,13 +91,25 @@ const Auth = () => {
   // Fetch sites and job titles when transitioning to register mode for non-first users
   useEffect(() => {
     const fetchOptions = async () => {
+      console.log("Fetch options useEffect triggered:", { mode, isFirstUser, organisationIdFromCode });
+      
       if (mode === "register" && !isFirstUser && organisationIdFromCode) {
+        console.log("Calling get_organisation_options RPC with:", organisationIdFromCode);
+        
         const { data, error } = await supabase.rpc('get_organisation_options', {
           p_organisation_id: organisationIdFromCode
         });
         
-        if (data && !error) {
+        console.log("RPC response:", { data, error });
+        
+        if (error) {
+          console.error("Error fetching organisation options:", error);
+          return;
+        }
+        
+        if (data) {
           const options = data as { sites: { id: string; name: string }[]; job_titles: { id: string; name: string }[] };
+          console.log("Parsed options:", options);
           setSites(options.sites || []);
           setJobTitles(options.job_titles || []);
         }
@@ -224,16 +236,20 @@ const Auth = () => {
   };
 
   const handleValidCode = (result: InvitationValidationResult) => {
+    console.log("handleValidCode called with:", result);
     setInvitationCode(result.code);
     setEmail(""); // Reset email so user enters it again in registration
     setOrganisationIdFromCode(result.organisationId);
+    console.log("Set organisationIdFromCode to:", result.organisationId);
     
     if (result.organisationId === null) {
       // First user - needs to create organisation
+      console.log("First user flow - org-setup");
       setIsFirstUser(true);
       setMode("org-setup");
     } else if (result.onboardingComplete) {
       // Subsequent user - org exists and onboarding complete
+      console.log("Subsequent user flow - org-confirm, isFirstUser=false");
       setIsFirstUser(false);
       setExistingOrgName(result.organisationName);
       setMode("org-confirm");
