@@ -155,6 +155,7 @@ export type Database = {
           phone: string | null
           primary_site_id: string | null
           updated_at: string
+          working_days: Json | null
         }
         Insert: {
           contracted_hours?: number | null
@@ -169,6 +170,7 @@ export type Database = {
           phone?: string | null
           primary_site_id?: string | null
           updated_at?: string
+          working_days?: Json | null
         }
         Update: {
           contracted_hours?: number | null
@@ -183,6 +185,7 @@ export type Database = {
           phone?: string | null
           primary_site_id?: string | null
           updated_at?: string
+          working_days?: Json | null
         }
         Relationships: [
           {
