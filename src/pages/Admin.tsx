@@ -10,7 +10,7 @@ import { useOrganisation } from "@/contexts/OrganisationContext";
 import { canManageRoles } from "@/lib/roles";
 import { UserFilters } from "@/components/admin/UserFilters";
 import { RoleSelect } from "@/components/admin/RoleSelect";
-
+import { SiteManagementCard } from "@/components/admin/SiteManagementCard";
 interface OrgUser {
   id: string;
   email: string;
@@ -339,6 +339,8 @@ const Admin = () => {
           </div>
         </CardContent>
       </Card>
+
+      <SiteManagementCard />
     </div>
   );
 };
