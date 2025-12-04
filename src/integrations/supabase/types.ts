@@ -410,6 +410,7 @@ export type Database = {
       get_organisation_users: {
         Args: { p_organisation_id: string }
         Returns: {
+          contracted_hours: number
           email: string
           first_name: string
           id: string
@@ -422,6 +423,7 @@ export type Database = {
           registration_completed: boolean
           role: string
           site_name: string
+          working_days: Json
         }[]
       }
       get_user_organisation_id: { Args: { _user_id: string }; Returns: string }
