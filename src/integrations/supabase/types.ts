@@ -346,6 +346,23 @@ export type Database = {
         Args: { p_organisation_id: string }
         Returns: Json
       }
+      get_organisation_users: {
+        Args: { p_organisation_id: string }
+        Returns: {
+          email: string
+          first_name: string
+          id: string
+          is_active: boolean
+          job_title_id: string
+          job_title_name: string
+          last_name: string
+          phone: string
+          primary_site_id: string
+          registration_completed: boolean
+          role: string
+          site_name: string
+        }[]
+      }
       get_user_organisation_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
