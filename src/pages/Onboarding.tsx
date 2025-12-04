@@ -52,7 +52,7 @@ const Onboarding = () => {
       setOrganisationId(profileResult.data.organisation_id);
       
       // Check if user is admin
-      const userIsAdmin = roleResult.data?.role === "admin";
+      const userIsAdmin = roleResult.data?.role === "admin" || roleResult.data?.role === "master";
       setIsAdmin(userIsAdmin);
       
       // If not admin, check if org onboarding is complete and redirect to dashboard

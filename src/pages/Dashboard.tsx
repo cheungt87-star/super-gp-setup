@@ -55,7 +55,7 @@ const Dashboard = () => {
           .eq("user_id", session.user.id)
           .maybeSingle();
 
-        const userIsAdmin = roleData?.role === "admin";
+        const userIsAdmin = roleData?.role === "admin" || roleData?.role === "master";
         setIsAdmin(userIsAdmin);
 
         // Fetch invitation code for admins

@@ -337,6 +337,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_roles: { Args: { _user_id: string }; Returns: boolean }
       check_profile_exists_by_email: {
         Args: { check_email: string }
         Returns: boolean
@@ -357,6 +358,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_master: { Args: { _user_id: string }; Returns: boolean }
       validate_invitation_code: {
         Args: { p_code: string; p_email: string }
         Returns: Json
