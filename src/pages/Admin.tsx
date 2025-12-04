@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Settings, ArrowUpDown, Check, X, Loader2, ShieldAlert } from "lucide-react";
+import { Settings, ArrowUpDown, Check, X, Loader2, ShieldAlert, Pencil } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,8 @@ import { canManageRoles } from "@/lib/roles";
 import { UserFilters } from "@/components/admin/UserFilters";
 import { RoleSelect } from "@/components/admin/RoleSelect";
 import { SiteManagementCard } from "@/components/admin/SiteManagementCard";
+import { UserEditForm, WorkingDays } from "@/components/admin/UserEditForm";
+
 interface OrgUser {
   id: string;
   email: string;
@@ -24,6 +26,8 @@ interface OrgUser {
   role: string | null;
   is_active: boolean;
   registration_completed: boolean;
+  contracted_hours: number | null;
+  working_days: WorkingDays | null;
 }
 
 interface FilterOption {
@@ -31,7 +35,7 @@ interface FilterOption {
   name: string;
 }
 
-type SortField = 'name' | 'email' | 'job_title' | 'site' | 'role' | 'registered';
+type SortField = 'name' | 'email' | 'job_title' | 'site' | 'role' | 'registered' | 'hours';
 type SortDirection = 'asc' | 'desc';
 
 const Admin = () => {
@@ -45,6 +49,10 @@ const Admin = () => {
   const [sites, setSites] = useState<FilterOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+  
+  // Edit dialog
+  const [editingUser, setEditingUser] = useState<OrgUser | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // Filters
   const [jobTitleFilter, setJobTitleFilter] = useState("");
@@ -85,7 +93,13 @@ const Admin = () => {
         supabase.from('sites').select('id, name').eq('organisation_id', organisationId).eq('is_active', true),
       ]);
       
-      if (usersResult.data) setUsers(usersResult.data as OrgUser[]);
+      if (usersResult.data) {
+        const mappedUsers: OrgUser[] = usersResult.data.map((u: any) => ({
+          ...u,
+          working_days: u.working_days as WorkingDays | null,
+        }));
+        setUsers(mappedUsers);
+      }
       if (jobTitlesResult.data) setJobTitles(jobTitlesResult.data);
       if (sitesResult.data) setSites(sitesResult.data);
       
@@ -94,6 +108,23 @@ const Admin = () => {
     
     fetchData();
   }, [organisationId]);
+
+  const refetchUsers = async () => {
+    if (!organisationId) return;
+    const { data } = await supabase.rpc('get_organisation_users', { p_organisation_id: organisationId });
+    if (data) {
+      const mappedUsers: OrgUser[] = data.map((u: any) => ({
+        ...u,
+        working_days: u.working_days as WorkingDays | null,
+      }));
+      setUsers(mappedUsers);
+    }
+  };
+
+  const handleEditUser = (user: OrgUser) => {
+    setEditingUser(user);
+    setEditDialogOpen(true);
+  };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     setUpdatingRole(userId);
@@ -189,6 +220,10 @@ const Admin = () => {
           aVal = a.role || 'zzz'; // Put nulls at end
           bVal = b.role || 'zzz';
           break;
+        case 'hours':
+          return sortDirection === 'asc'
+            ? (a.contracted_hours || 0) - (b.contracted_hours || 0)
+            : (b.contracted_hours || 0) - (a.contracted_hours || 0);
       }
       
       return sortDirection === 'asc' 
@@ -282,14 +317,17 @@ const Admin = () => {
                   <TableHead>Phone</TableHead>
                   <TableHead><SortableHeader field="job_title">Job Title</SortableHeader></TableHead>
                   <TableHead><SortableHeader field="site">Site</SortableHeader></TableHead>
+                  <TableHead><SortableHeader field="hours">Hours</SortableHeader></TableHead>
+                  <TableHead>Working Days</TableHead>
                   <TableHead><SortableHeader field="role">Role</SortableHeader></TableHead>
                   <TableHead className="text-center"><SortableHeader field="registered">Registered</SortableHeader></TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAndSortedUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -305,6 +343,27 @@ const Admin = () => {
                       <TableCell>{user.phone || '—'}</TableCell>
                       <TableCell>{user.job_title_name || '—'}</TableCell>
                       <TableCell>{user.site_name || '—'}</TableCell>
+                      <TableCell>{user.contracted_hours ?? '—'}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {user.working_days ? (
+                            ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((day) => (
+                              <span
+                                key={day}
+                                className={`text-xs font-medium w-5 h-5 flex items-center justify-center rounded ${
+                                  (user.working_days as WorkingDays)?.[day as keyof WorkingDays]
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'bg-muted text-muted-foreground'
+                                }`}
+                              >
+                                {day.charAt(0).toUpperCase()}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         {updatingRole === user.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -331,6 +390,16 @@ const Admin = () => {
                           </Badge>
                         )}
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEditUser(user)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -341,6 +410,13 @@ const Admin = () => {
       </Card>
 
       <SiteManagementCard />
+
+      <UserEditForm
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        user={editingUser}
+        onSuccess={refetchUsers}
+      />
     </div>
   );
 };
