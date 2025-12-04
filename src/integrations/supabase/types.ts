@@ -256,6 +256,57 @@ export type Database = {
           },
         ]
       }
+      site_opening_hours: {
+        Row: {
+          close_time: string | null
+          created_at: string
+          day_of_week: number
+          id: string
+          is_closed: boolean | null
+          open_time: string | null
+          organisation_id: string | null
+          site_id: string
+          updated_at: string
+        }
+        Insert: {
+          close_time?: string | null
+          created_at?: string
+          day_of_week: number
+          id?: string
+          is_closed?: boolean | null
+          open_time?: string | null
+          organisation_id?: string | null
+          site_id: string
+          updated_at?: string
+        }
+        Update: {
+          close_time?: string | null
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          is_closed?: boolean | null
+          open_time?: string | null
+          organisation_id?: string | null
+          site_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_opening_hours_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_opening_hours_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sites: {
         Row: {
           address: string | null
@@ -266,6 +317,7 @@ export type Database = {
           name: string
           organisation_id: string | null
           phone: string | null
+          site_manager_id: string | null
           updated_at: string
         }
         Insert: {
@@ -277,6 +329,7 @@ export type Database = {
           name: string
           organisation_id?: string | null
           phone?: string | null
+          site_manager_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -288,6 +341,7 @@ export type Database = {
           name?: string
           organisation_id?: string | null
           phone?: string | null
+          site_manager_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -296,6 +350,13 @@ export type Database = {
             columns: ["organisation_id"]
             isOneToOne: false
             referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sites_site_manager_id_fkey"
+            columns: ["site_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
