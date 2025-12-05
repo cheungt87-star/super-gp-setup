@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { Building2, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Building2, Plus, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
 import { SiteForm } from "./SiteForm";
+import { SiteCard } from "./SiteCard";
+import { FacilityForm, Facility, FacilityFormData } from "./FacilityForm";
 import { OpeningHour } from "./OpeningHoursForm";
 import {
   AlertDialog,
@@ -46,20 +47,35 @@ export const SiteManagementCard = () => {
   
   const [sites, setSites] = useState<Site[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
+  const [facilities, setFacilities] = useState<Record<string, Facility[]>>({});
   const [loading, setLoading] = useState(true);
-  const [formOpen, setFormOpen] = useState(false);
+  
+  // Site form state
+  const [siteFormOpen, setSiteFormOpen] = useState(false);
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
   const [selectedSiteHours, setSelectedSiteHours] = useState<OpeningHour[]>([]);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  
+  // Site delete state
+  const [siteDeleteOpen, setSiteDeleteOpen] = useState(false);
   const [siteToDelete, setSiteToDelete] = useState<Site | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [deletingSite, setDeletingSite] = useState(false);
+  
+  // Facility form state
+  const [facilityFormOpen, setFacilityFormOpen] = useState(false);
+  const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
+  const [selectedSiteIdForFacility, setSelectedSiteIdForFacility] = useState<string | null>(null);
+  
+  // Facility delete state
+  const [facilityDeleteOpen, setFacilityDeleteOpen] = useState(false);
+  const [facilityToDelete, setFacilityToDelete] = useState<Facility | null>(null);
+  const [deletingFacility, setDeletingFacility] = useState(false);
 
   const fetchData = async () => {
     if (!organisationId) return;
     
     setLoading(true);
     
-    const [sitesResult, usersResult] = await Promise.all([
+    const [sitesResult, usersResult, facilitiesResult] = await Promise.all([
       supabase
         .from('sites')
         .select(`
@@ -74,6 +90,12 @@ export const SiteManagementCard = () => {
         .select('id, first_name, last_name')
         .eq('organisation_id', organisationId)
         .eq('is_active', true),
+      supabase
+        .from('facilities')
+        .select('id, site_id, name, capacity, is_active')
+        .eq('organisation_id', organisationId)
+        .eq('is_active', true)
+        .order('name'),
     ]);
     
     if (sitesResult.data) {
@@ -81,6 +103,15 @@ export const SiteManagementCard = () => {
     }
     if (usersResult.data) {
       setUsers(usersResult.data);
+    }
+    if (facilitiesResult.data) {
+      // Group facilities by site_id
+      const grouped: Record<string, Facility[]> = {};
+      facilitiesResult.data.forEach((f) => {
+        if (!grouped[f.site_id]) grouped[f.site_id] = [];
+        grouped[f.site_id].push(f as Facility);
+      });
+      setFacilities(grouped);
     }
     
     setLoading(false);
@@ -90,8 +121,8 @@ export const SiteManagementCard = () => {
     fetchData();
   }, [organisationId]);
 
-  const handleEdit = async (site: Site) => {
-    // Fetch opening hours for this site
+  // Site handlers
+  const handleEditSite = async (site: Site) => {
     const { data: hoursData } = await supabase
       .from('site_opening_hours')
       .select('day_of_week, open_time, close_time, is_closed')
@@ -106,23 +137,22 @@ export const SiteManagementCard = () => {
         is_closed: h.is_closed || false,
       }))
     );
-    setFormOpen(true);
+    setSiteFormOpen(true);
   };
 
-  const handleAdd = () => {
+  const handleAddSite = () => {
     setSelectedSite(null);
     setSelectedSiteHours([]);
-    setFormOpen(true);
+    setSiteFormOpen(true);
   };
 
-  const handleSave = async (data: any, hours: OpeningHour[]) => {
+  const handleSaveSite = async (data: any, hours: OpeningHour[]) => {
     if (!organisationId) return;
 
     try {
       let siteId: string;
 
       if (selectedSite) {
-        // Update existing site
         const { error } = await supabase
           .from('sites')
           .update({
@@ -137,7 +167,6 @@ export const SiteManagementCard = () => {
         if (error) throw error;
         siteId = selectedSite.id;
       } else {
-        // Create new site
         const { data: newSite, error } = await supabase
           .from('sites')
           .insert({
@@ -155,7 +184,6 @@ export const SiteManagementCard = () => {
         siteId = newSite.id;
       }
 
-      // Delete existing opening hours and insert new ones
       await supabase
         .from('site_opening_hours')
         .delete()
@@ -193,17 +221,16 @@ export const SiteManagementCard = () => {
     }
   };
 
-  const handleDeleteClick = (site: Site) => {
+  const handleDeleteSiteClick = (site: Site) => {
     setSiteToDelete(site);
-    setDeleteDialogOpen(true);
+    setSiteDeleteOpen(true);
   };
 
-  const handleDelete = async () => {
+  const handleDeleteSite = async () => {
     if (!siteToDelete) return;
     
-    setDeleting(true);
+    setDeletingSite(true);
     
-    // Soft delete by setting is_active to false
     const { error } = await supabase
       .from('sites')
       .update({ is_active: false })
@@ -223,18 +250,104 @@ export const SiteManagementCard = () => {
       fetchData();
     }
     
-    setDeleting(false);
-    setDeleteDialogOpen(false);
+    setDeletingSite(false);
+    setSiteDeleteOpen(false);
     setSiteToDelete(null);
   };
 
-  const getManagerName = (site: Site) => {
-    if (!site.manager) return "—";
-    const { first_name, last_name } = site.manager;
-    if (first_name || last_name) {
-      return `${first_name || ''} ${last_name || ''}`.trim();
+  // Facility handlers
+  const handleAddFacility = (siteId: string) => {
+    setSelectedSiteIdForFacility(siteId);
+    setSelectedFacility(null);
+    setFacilityFormOpen(true);
+  };
+
+  const handleEditFacility = (facility: Facility) => {
+    setSelectedSiteIdForFacility(facility.site_id);
+    setSelectedFacility(facility);
+    setFacilityFormOpen(true);
+  };
+
+  const handleSaveFacility = async (data: FacilityFormData) => {
+    if (!organisationId || !selectedSiteIdForFacility) return;
+
+    try {
+      if (selectedFacility) {
+        const { error } = await supabase
+          .from('facilities')
+          .update({
+            name: data.name,
+            capacity: data.capacity,
+          })
+          .eq('id', selectedFacility.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('facilities')
+          .insert({
+            name: data.name,
+            capacity: data.capacity,
+            site_id: selectedSiteIdForFacility,
+            organisation_id: organisationId,
+          });
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: selectedFacility ? "Facility updated" : "Facility added",
+        description: `${data.name} has been ${selectedFacility ? "updated" : "added"} successfully.`,
+      });
+
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Error saving facility",
+        description: error.message,
+        variant: "destructive",
+      });
     }
-    return "—";
+  };
+
+  const handleDeleteFacilityClick = (facility: Facility) => {
+    setFacilityToDelete(facility);
+    setFacilityDeleteOpen(true);
+  };
+
+  const handleDeleteFacility = async () => {
+    if (!facilityToDelete) return;
+    
+    setDeletingFacility(true);
+    
+    const { error } = await supabase
+      .from('facilities')
+      .update({ is_active: false })
+      .eq('id', facilityToDelete.id);
+
+    if (error) {
+      toast({
+        title: "Error deleting facility",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Facility deleted",
+        description: `${facilityToDelete.name} has been removed.`,
+      });
+      fetchData();
+    }
+    
+    setDeletingFacility(false);
+    setFacilityDeleteOpen(false);
+    setFacilityToDelete(null);
+  };
+
+  const getSiteName = (siteId: string | null) => {
+    if (!siteId) return "Unknown Site";
+    const site = sites.find(s => s.id === siteId);
+    return site?.name || "Unknown Site";
   };
 
   if (loading) {
@@ -262,89 +375,68 @@ export const SiteManagementCard = () => {
 
   return (
     <>
-      <Card className="animate-fade-in">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle>Site Management</CardTitle>
-                <CardDescription>{sites.length} sites in your organisation</CardDescription>
-              </div>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Building2 className="h-5 w-5 text-primary" />
             </div>
-            <Button onClick={handleAdd}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Site
-            </Button>
+            <div>
+              <h2 className="text-xl font-semibold">Site Management</h2>
+              <p className="text-sm text-muted-foreground">{sites.length} sites in your organisation</p>
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Site Manager</TableHead>
-                  <TableHead className="w-24">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sites.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No sites found. Add your first site to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  sites.map((site) => (
-                    <TableRow key={site.id}>
-                      <TableCell className="font-medium">{site.name}</TableCell>
-                      <TableCell>{site.address || "—"}</TableCell>
-                      <TableCell>{site.email || "—"}</TableCell>
-                      <TableCell>{site.phone || "—"}</TableCell>
-                      <TableCell>{getManagerName(site)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(site)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteClick(site)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+          <Button onClick={handleAddSite}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Site
+          </Button>
+        </div>
+
+        {sites.length === 0 ? (
+          <Card>
+            <CardContent className="py-12">
+              <p className="text-center text-muted-foreground">
+                No sites found. Add your first site to get started.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {sites.map((site) => (
+              <SiteCard
+                key={site.id}
+                site={site}
+                facilities={facilities[site.id] || []}
+                onEditSite={handleEditSite}
+                onDeleteSite={handleDeleteSiteClick}
+                onAddFacility={handleAddFacility}
+                onEditFacility={handleEditFacility}
+                onDeleteFacility={handleDeleteFacilityClick}
+              />
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       <SiteForm
-        open={formOpen}
-        onOpenChange={setFormOpen}
+        open={siteFormOpen}
+        onOpenChange={setSiteFormOpen}
         site={selectedSite}
         users={users}
         openingHours={selectedSiteHours}
-        onSave={handleSave}
+        onSave={handleSaveSite}
       />
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <FacilityForm
+        open={facilityFormOpen}
+        onOpenChange={setFacilityFormOpen}
+        facility={selectedFacility}
+        siteName={getSiteName(selectedSiteIdForFacility)}
+        onSave={handleSaveFacility}
+      />
+
+      {/* Site Delete Dialog */}
+      <AlertDialog open={siteDeleteOpen} onOpenChange={setSiteDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Site</AlertDialogTitle>
@@ -354,8 +446,27 @@ export const SiteManagementCard = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleting}>
-              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <AlertDialogAction onClick={handleDeleteSite} disabled={deletingSite}>
+              {deletingSite && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Facility Delete Dialog */}
+      <AlertDialog open={facilityDeleteOpen} onOpenChange={setFacilityDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Facility</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{facilityToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteFacility} disabled={deletingFacility}>
+              {deletingFacility && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
