@@ -47,20 +47,17 @@ export const DraggableStaffCard = ({ staff, scheduledHours }: DraggableStaffCard
       {...listeners}
       {...attributes}
       className={cn(
-        "flex flex-col p-3 rounded-lg border bg-card cursor-grab transition-all shrink-0 w-36",
+        "flex flex-col p-2.5 rounded-lg border bg-card cursor-grab transition-all",
         "hover:border-primary/50 hover:shadow-sm",
         isDragging && "opacity-50 shadow-lg scale-105"
       )}
     >
       <div className="flex items-center gap-2 mb-1">
-        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-          <User className="h-3.5 w-3.5 text-primary" />
+        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <User className="h-3 w-3 text-primary" />
         </div>
         <p className="font-medium text-sm truncate flex-1">{fullName}</p>
       </div>
-      <p className="text-xs text-muted-foreground truncate mb-1">
-        {staff.job_title_name || "No title"}
-      </p>
       <div className="flex items-center justify-between text-xs">
         <span className={cn(
           "font-medium",
