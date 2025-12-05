@@ -207,21 +207,12 @@ export const RotaScheduleTab = () => {
     return byDay;
   }, [openingHours]);
 
-  const handleAddShift = async (userId: string, dateKey: string, isOnCall: boolean) => {
-    // Check for duplicate assignment
-    const existingShift = shiftsByDate[dateKey]?.find((s) => s.user_id === userId);
-    if (existingShift) {
-      toast({
-        title: "Already assigned",
-        description: "This staff member is already scheduled for this day",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleAddShift = async (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean) => {
+    const dayShifts = shiftsByDate[dateKey] || [];
+    
     // If adding on-call, check if there's already one
     if (isOnCall) {
-      const existingOnCall = shiftsByDate[dateKey]?.find((s) => s.is_oncall);
+      const existingOnCall = dayShifts.find((s) => s.is_oncall);
       if (existingOnCall) {
         toast({
           title: "On-call already assigned",
@@ -232,14 +223,50 @@ export const RotaScheduleTab = () => {
       }
     }
 
-    const result = await addShift(userId, dateKey, "full_day", undefined, undefined, isOnCall);
+    // Check for conflicting assignments based on shift type
+    const userShifts = dayShifts.filter((s) => s.user_id === userId && !s.is_oncall);
+    
+    if (shiftType === "full_day") {
+      // Full day conflicts with any existing shift for this user
+      if (userShifts.length > 0) {
+        toast({
+          title: "Conflict detected",
+          description: "This staff member already has a shift assigned today",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else if (shiftType === "am") {
+      // AM conflicts with existing AM or Full Day
+      const hasConflict = userShifts.some((s) => s.shift_type === "am" || s.shift_type === "full_day");
+      if (hasConflict) {
+        toast({
+          title: "Conflict detected",
+          description: "This staff member already has an AM or Full Day shift",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else if (shiftType === "pm") {
+      // PM conflicts with existing PM or Full Day
+      const hasConflict = userShifts.some((s) => s.shift_type === "pm" || s.shift_type === "full_day");
+      if (hasConflict) {
+        toast({
+          title: "Conflict detected",
+          description: "This staff member already has a PM or Full Day shift",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const result = await addShift(userId, dateKey, shiftType, undefined, undefined, isOnCall);
 
     if (result) {
+      const shiftLabel = isOnCall ? "On-call" : shiftType === "full_day" ? "Full Day" : shiftType.toUpperCase();
       toast({
         title: isOnCall ? "On-call assigned" : "Shift added",
-        description: isOnCall
-          ? "Staff member has been assigned as on-call"
-          : "Staff member has been assigned to a full day shift",
+        description: `Staff member has been assigned to ${shiftLabel} shift`,
       });
     }
   };
@@ -454,6 +481,10 @@ export const RotaScheduleTab = () => {
                         requireOnCall={rotaRule?.require_oncall ?? true}
                         loading={loadingSiteData}
                         previousDateKey={previousDateKey}
+                        amShiftStart={rotaRule?.am_shift_start || "09:00"}
+                        amShiftEnd={rotaRule?.am_shift_end || "13:00"}
+                        pmShiftStart={rotaRule?.pm_shift_start || "13:00"}
+                        pmShiftEnd={rotaRule?.pm_shift_end || "18:00"}
                         onAddShift={handleAddShift}
                         onDeleteShift={handleDeleteShift}
                         onEditShift={setEditingShift}
