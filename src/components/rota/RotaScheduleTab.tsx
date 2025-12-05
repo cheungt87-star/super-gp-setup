@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
+import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertCircle, Send } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
 import { useRotaSchedule, RotaShift } from "@/hooks/useRotaSchedule";
@@ -399,7 +402,33 @@ export const RotaScheduleTab = () => {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="grid grid-cols-7 border-t">
+              <Tabs defaultValue="0" className="w-full">
+                <TabsList className="w-full justify-start h-auto p-1 bg-muted/50 rounded-none border-t">
+                  {weekDays.map((day, index) => {
+                    const dayOfWeek = day.getDay();
+                    const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                    const dayHours = openingHoursByDay[adjustedDay];
+                    const isClosed = dayHours?.is_closed ?? true;
+
+                    return (
+                      <TabsTrigger
+                        key={index}
+                        value={String(index)}
+                        className={cn(
+                          "flex-1 py-2 px-3 data-[state=active]:bg-background",
+                          isClosed && "text-muted-foreground"
+                        )}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs">{format(day, "EEE")}</span>
+                          <span className="font-semibold">{format(day, "d")}</span>
+                          {isClosed && <span className="text-[10px] italic">Closed</span>}
+                        </div>
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+
                 {weekDays.map((day, index) => {
                   const dateKey = formatDateKey(day);
                   const dayOfWeek = day.getDay();
@@ -412,27 +441,28 @@ export const RotaScheduleTab = () => {
                   const previousDateKey = index > 0 ? formatDateKey(weekDays[index - 1]) : null;
 
                   return (
-                    <RoleDayCell
-                      key={dateKey}
-                      date={day}
-                      dateKey={dateKey}
-                      shifts={shiftsByDate[dateKey] || []}
-                      openingHours={dayHours}
-                      staffingRules={staffingRules}
-                      jobTitles={jobTitles}
-                      availableStaff={staff}
-                      scheduledHours={staffScheduledHours}
-                      requireOnCall={rotaRule?.require_oncall ?? true}
-                      loading={loadingSiteData}
-                      previousDateKey={previousDateKey}
-                      onAddShift={handleAddShift}
-                      onDeleteShift={handleDeleteShift}
-                      onEditShift={setEditingShift}
-                      onRepeatPreviousDay={handleRepeatPreviousDay}
-                    />
+                    <TabsContent key={dateKey} value={String(index)} className="mt-0">
+                      <RoleDayCell
+                        date={day}
+                        dateKey={dateKey}
+                        shifts={shiftsByDate[dateKey] || []}
+                        openingHours={dayHours}
+                        staffingRules={staffingRules}
+                        jobTitles={jobTitles}
+                        availableStaff={staff}
+                        scheduledHours={staffScheduledHours}
+                        requireOnCall={rotaRule?.require_oncall ?? true}
+                        loading={loadingSiteData}
+                        previousDateKey={previousDateKey}
+                        onAddShift={handleAddShift}
+                        onDeleteShift={handleDeleteShift}
+                        onEditShift={setEditingShift}
+                        onRepeatPreviousDay={handleRepeatPreviousDay}
+                      />
+                    </TabsContent>
                   );
                 })}
-              </div>
+              </Tabs>
             )}
           </CardContent>
         </Card>
