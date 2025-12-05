@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { User } from "lucide-react";
+import { User, KeyRound } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
 import ProfileForm, { ProfileFormValues } from "@/components/profile/ProfileForm";
+import ChangePasswordForm from "@/components/profile/ChangePasswordForm";
 
 interface Profile {
   id: string;
@@ -194,6 +195,21 @@ const Profile = () => {
             onSubmit={handleSubmit}
             saving={saving}
           />
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-2xl animate-fade-in">
+        <CardHeader className="text-center pb-2">
+          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <KeyRound className="h-8 w-8 text-primary" />
+          </div>
+          <CardTitle>Change Password</CardTitle>
+          <CardDescription>
+            Update your password to keep your account secure
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <ChangePasswordForm />
         </CardContent>
       </Card>
     </div>
