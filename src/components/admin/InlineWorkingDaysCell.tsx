@@ -90,7 +90,7 @@ export const InlineWorkingDaysCell = ({
                   "text-xs font-medium w-5 h-5 flex items-center justify-center rounded",
                   value[key]
                     ? "bg-primary/10 text-primary"
-                    : "bg-muted text-muted-foreground"
+                    : "bg-red-100 text-red-600"
                 )}
               >
                 {short}
