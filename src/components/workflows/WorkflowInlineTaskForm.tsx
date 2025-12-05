@@ -236,7 +236,7 @@ const WorkflowInlineTaskForm = ({
               control={form.control}
               name="facility_id"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Facility</FormLabel>
                   <Select 
                     value={field.value} 
@@ -302,7 +302,7 @@ const WorkflowInlineTaskForm = ({
               control={form.control}
               name="recurrence_pattern"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Recurrence *</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
@@ -326,7 +326,7 @@ const WorkflowInlineTaskForm = ({
               control={form.control}
               name="assignee_id"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Assignee</FormLabel>
                   <Select 
                     value={field.value} 
