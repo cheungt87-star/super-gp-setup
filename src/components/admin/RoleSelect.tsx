@@ -6,6 +6,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getRoleDisplayName, isMaster, canModifyRole } from "@/lib/roles";
+import { Badge } from "@/components/ui/badge";
 
 interface RoleSelectProps {
   currentRole: string | null;
@@ -24,27 +25,36 @@ export function RoleSelect({
   onRoleChange,
   disabled = false,
 }: RoleSelectProps) {
+  // Can't change role if user hasn't completed registration (no role)
+  if (!currentRole) {
+    return (
+      <Badge variant="outline" className="bg-muted/50 text-muted-foreground">
+        Pending
+      </Badge>
+    );
+  }
+
   // Can't change role if:
-  // 1. User hasn't completed registration (no role)
-  // 2. Target is master (can't demote master)
-  // 3. Current user can't modify the target's role
-  // 4. Trying to edit own role
+  // 1. Target is master (can't demote master)
+  // 2. Current user can't modify the target's role
+  // 3. Trying to edit own role
   const isTargetMaster = isMaster(currentRole);
   const canModify = canModifyRole(currentUserRole, currentRole);
   const isSelf = targetUserId === currentUserId;
   
-  const isDisabled = disabled || !currentRole || isTargetMaster || !canModify || isSelf;
+  const isDisabled = disabled || isTargetMaster || !canModify || isSelf;
 
-  if (!currentRole) {
+  // If master, show a non-editable badge
+  if (isTargetMaster) {
     return (
-      <span className="text-muted-foreground text-sm">Pending</span>
+      <Badge variant="default" className="bg-primary/10 text-primary border-primary/20">
+        Master
+      </Badge>
     );
   }
 
-  // Available roles based on current user's role
-  const availableRoles = currentUserRole === 'master' 
-    ? ['admin', 'manager', 'staff'] 
-    : ['admin', 'manager', 'staff'];
+  // Available roles - admin and master can assign admin, manager, staff
+  const availableRoles = ['admin', 'manager', 'staff'];
 
   return (
     <Select
@@ -52,19 +62,15 @@ export function RoleSelect({
       onValueChange={(value) => onRoleChange(targetUserId, value)}
       disabled={isDisabled}
     >
-      <SelectTrigger className="w-[120px]">
+      <SelectTrigger className="w-[120px] h-8">
         <SelectValue>{getRoleDisplayName(currentRole)}</SelectValue>
       </SelectTrigger>
       <SelectContent>
-        {isTargetMaster ? (
-          <SelectItem value="master">Master</SelectItem>
-        ) : (
-          availableRoles.map((role) => (
-            <SelectItem key={role} value={role}>
-              {getRoleDisplayName(role)}
-            </SelectItem>
-          ))
-        )}
+        {availableRoles.map((role) => (
+          <SelectItem key={role} value={role}>
+            {getRoleDisplayName(role)}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
