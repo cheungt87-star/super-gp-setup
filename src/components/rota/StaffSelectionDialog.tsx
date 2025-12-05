@@ -1,8 +1,11 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { User, Clock } from "lucide-react";
+import { User, Clock, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { Database } from "@/integrations/supabase/types";
+
+type ShiftType = Database["public"]["Enums"]["shift_type"];
 
 interface StaffMember {
   id: string;
@@ -19,6 +22,7 @@ interface StaffSelectionDialogProps {
   onOpenChange: (open: boolean) => void;
   jobTitleId: string;
   jobTitleName: string;
+  shiftType: ShiftType | "oncall";
   dateLabel: string;
   availableStaff: StaffMember[];
   excludeUserIds: string[];
@@ -26,10 +30,26 @@ interface StaffSelectionDialogProps {
   onSelectStaff: (userId: string) => void;
 }
 
+const getShiftTypeDisplay = (shiftType: ShiftType | "oncall") => {
+  switch (shiftType) {
+    case "am":
+      return { label: "AM Shift", icon: Sun, color: "text-amber-500" };
+    case "pm":
+      return { label: "PM Shift", icon: Moon, color: "text-indigo-500" };
+    case "full_day":
+      return { label: "Full Day", icon: Clock, color: "text-muted-foreground" };
+    case "oncall":
+      return { label: "On-Call", icon: Clock, color: "text-muted-foreground" };
+    default:
+      return { label: "", icon: Clock, color: "text-muted-foreground" };
+  }
+};
+
 export const StaffSelectionDialog = ({
   open,
   onOpenChange,
   jobTitleName,
+  shiftType,
   dateLabel,
   availableStaff,
   excludeUserIds,
@@ -45,11 +65,17 @@ export const StaffSelectionDialog = ({
     onOpenChange(false);
   };
 
+  const shiftDisplay = getShiftTypeDisplay(shiftType);
+  const ShiftIcon = shiftDisplay.icon;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add {jobTitleName}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <ShiftIcon className={cn("h-4 w-4", shiftDisplay.color)} />
+            Add {jobTitleName} - {shiftDisplay.label}
+          </DialogTitle>
           <p className="text-sm text-muted-foreground">{dateLabel}</p>
         </DialogHeader>
 
@@ -57,12 +83,12 @@ export const StaffSelectionDialog = ({
           <div className="py-8 text-center">
             <User className="mx-auto h-12 w-12 text-muted-foreground/50 mb-2" />
             <p className="text-sm text-muted-foreground">
-              No available {jobTitleName.toLowerCase()} staff at this site
+              No available {jobTitleName.toLowerCase()} staff
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {availableStaff.length === 0
                 ? "No staff with this role are assigned to this site"
-                : "All staff with this role are already assigned today"}
+                : "All eligible staff are already assigned for this shift"}
             </p>
           </div>
         ) : (
