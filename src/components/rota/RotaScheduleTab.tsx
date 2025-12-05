@@ -380,7 +380,7 @@ export const RotaScheduleTab = () => {
 
         {selectedSiteId && (
           <div className="space-y-4">
-            {/* Staff Panel - Horizontal */}
+            {/* Staff Panel - Grouped by Job Title */}
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -392,21 +392,37 @@ export const RotaScheduleTab = () => {
                 </div>
               </CardHeader>
               <CardContent className="pb-4">
-                <div className="flex gap-3 overflow-x-auto pb-2">
-                  {staff.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-2">
-                      No staff assigned to this site
-                    </p>
-                  ) : (
-                    staff.map((member) => (
-                      <DraggableStaffCard
-                        key={member.id}
-                        staff={member}
-                        scheduledHours={staffScheduledHours[member.id] || 0}
-                      />
-                    ))
-                  )}
-                </div>
+                {staff.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2">
+                    No staff assigned to this site
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {Object.entries(
+                      staff.reduce((acc, member) => {
+                        const title = member.job_title_name || "No Title";
+                        if (!acc[title]) acc[title] = [];
+                        acc[title].push(member);
+                        return acc;
+                      }, {} as Record<string, typeof staff>)
+                    ).map(([jobTitle, members]) => (
+                      <div key={jobTitle}>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                          {jobTitle} ({members.length})
+                        </h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                          {members.map((member) => (
+                            <DraggableStaffCard
+                              key={member.id}
+                              staff={member}
+                              scheduledHours={staffScheduledHours[member.id] || 0}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
