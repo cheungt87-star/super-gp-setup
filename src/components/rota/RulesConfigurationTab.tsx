@@ -35,7 +35,7 @@ export const RulesConfigurationTab = () => {
   const [amEnd, setAmEnd] = useState("13:00");
   const [pmStart, setPmStart] = useState("13:00");
   const [pmEnd, setPmEnd] = useState("18:00");
-  const [requireOncall, setRequireOncall] = useState(false);
+  const [requireOncall, setRequireOncall] = useState(true);
 
   // Adding new staffing rule
   const [isAddingRule, setIsAddingRule] = useState(false);
@@ -92,7 +92,7 @@ export const RulesConfigurationTab = () => {
       setAmEnd("13:00");
       setPmStart("13:00");
       setPmEnd("18:00");
-      setRequireOncall(false);
+      setRequireOncall(true);
     }
   }, [rotaRule]);
 
