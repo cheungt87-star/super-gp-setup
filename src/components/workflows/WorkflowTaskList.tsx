@@ -1,8 +1,13 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, ArrowUpDown } from "lucide-react";
+import { Pencil, Trash2, ArrowUpDown, Plus } from "lucide-react";
 import { format } from "date-fns";
 import RecurrenceDisplay from "./RecurrenceDisplay";
+import WorkflowInlineTaskForm, { WorkflowFormValues } from "./WorkflowInlineTaskForm";
+
+interface Site {
+  id: string;
+  name: string;
+}
 
 interface WorkflowTask {
   id: string;
@@ -24,84 +29,162 @@ type SortDirection = "asc" | "desc";
 
 interface WorkflowTaskListProps {
   tasks: WorkflowTask[];
+  sites: Site[];
   sortField: SortField;
   sortDirection: SortDirection;
   onSort: (field: SortField) => void;
   onEdit: (task: WorkflowTask) => void;
   onDelete: (task: WorkflowTask) => void;
+  onSave: (data: WorkflowFormValues, task?: WorkflowTask | null) => Promise<void>;
+  editingId: string | null;
+  isAdding: boolean;
+  onStartEdit: (task: WorkflowTask) => void;
+  onCancelEdit: () => void;
+  onStartAdd: () => void;
+  onCancelAdd: () => void;
+  saving: boolean;
 }
 
 const WorkflowTaskList = ({
   tasks,
+  sites,
   sortField,
   sortDirection,
   onSort,
-  onEdit,
   onDelete,
+  onSave,
+  editingId,
+  isAdding,
+  onStartEdit,
+  onCancelEdit,
+  onStartAdd,
+  onCancelAdd,
+  saving,
 }: WorkflowTaskListProps) => {
-  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
-    <TableHead>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="-ml-3 h-8 data-[state=open]:bg-accent"
-        onClick={() => onSort(field)}
-      >
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    </TableHead>
+  const SortButton = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-6 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+      onClick={() => onSort(field)}
+    >
+      {children}
+      <ArrowUpDown className="ml-1 h-3 w-3" />
+    </Button>
   );
 
-  if (tasks.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        No workflow tasks found. Create your first task to get started.
-      </div>
-    );
-  }
+  const handleSaveNew = async (data: WorkflowFormValues) => {
+    await onSave(data, null);
+  };
+
+  const handleSaveEdit = async (data: WorkflowFormValues, task: WorkflowTask) => {
+    await onSave(data, task);
+  };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <SortableHeader field="name">Task Name</SortableHeader>
-          <SortableHeader field="site_name">Site</SortableHeader>
-          <TableHead>Facility</TableHead>
-          <SortableHeader field="initial_due_date">Due Date</SortableHeader>
-          <SortableHeader field="recurrence_pattern">Recurrence</SortableHeader>
-          <SortableHeader field="assignee_name">Assignee</SortableHeader>
-          <TableHead className="w-[100px]">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {tasks.map((task) => (
-          <TableRow key={task.id}>
-            <TableCell className="font-medium">{task.name}</TableCell>
-            <TableCell>{task.site_name || "-"}</TableCell>
-            <TableCell>{task.facility_name || "Whole site"}</TableCell>
-            <TableCell>{format(new Date(task.initial_due_date), "dd MMM yyyy")}</TableCell>
-            <TableCell>
-              <RecurrenceDisplay 
-                pattern={task.recurrence_pattern} 
-                intervalDays={task.recurrence_interval_days} 
-              />
-            </TableCell>
-            <TableCell>{task.assignee_name || "-"}</TableCell>
-            <TableCell>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="icon" onClick={() => onEdit(task)}>
+    <div className="space-y-2">
+      {/* Header row */}
+      <div className="hidden md:grid md:grid-cols-[1fr_120px_120px_100px_100px_120px_80px] gap-2 px-3 py-2 text-xs text-muted-foreground border-b">
+        <SortButton field="name">Task Name</SortButton>
+        <SortButton field="site_name">Site</SortButton>
+        <span className="px-2">Facility</span>
+        <SortButton field="initial_due_date">Due Date</SortButton>
+        <SortButton field="recurrence_pattern">Recurrence</SortButton>
+        <SortButton field="assignee_name">Assignee</SortButton>
+        <span className="px-2">Actions</span>
+      </div>
+
+      {/* Task rows */}
+      {tasks.length === 0 && !isAdding && (
+        <div className="text-center py-8 text-muted-foreground">
+          No workflow tasks found. Create your first task to get started.
+        </div>
+      )}
+
+      {tasks.map((task) => (
+        <div key={task.id}>
+          {editingId === task.id ? (
+            <WorkflowInlineTaskForm
+              sites={sites}
+              task={task}
+              onSave={(data) => handleSaveEdit(data, task)}
+              onCancel={onCancelEdit}
+              saving={saving}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_120px_120px_100px_100px_120px_80px] gap-2 px-3 py-3 border rounded-lg items-center hover:bg-muted/50 transition-colors">
+              <div className="font-medium truncate">{task.name}</div>
+              <div className="text-sm text-muted-foreground truncate">
+                <span className="md:hidden text-xs font-medium mr-1">Site:</span>
+                {task.site_name || "-"}
+              </div>
+              <div className="text-sm text-muted-foreground truncate">
+                <span className="md:hidden text-xs font-medium mr-1">Facility:</span>
+                {task.facility_name || "Whole site"}
+              </div>
+              <div className="text-sm">
+                <span className="md:hidden text-xs font-medium text-muted-foreground mr-1">Due:</span>
+                {format(new Date(task.initial_due_date), "dd MMM yyyy")}
+              </div>
+              <div className="text-sm">
+                <span className="md:hidden text-xs font-medium text-muted-foreground mr-1">Recurrence:</span>
+                <RecurrenceDisplay 
+                  pattern={task.recurrence_pattern} 
+                  intervalDays={task.recurrence_interval_days} 
+                />
+              </div>
+              <div className="text-sm text-muted-foreground truncate">
+                <span className="md:hidden text-xs font-medium mr-1">Assignee:</span>
+                {task.assignee_name || "-"}
+              </div>
+              <div className="flex gap-1 justify-end md:justify-start">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => onStartEdit(task)}
+                  disabled={isAdding || editingId !== null}
+                >
                   <Pencil className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => onDelete(task)}>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => onDelete(task)}
+                  disabled={isAdding || editingId !== null}
+                >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Inline add form */}
+      {isAdding && (
+        <WorkflowInlineTaskForm
+          sites={sites}
+          task={null}
+          onSave={handleSaveNew}
+          onCancel={onCancelAdd}
+          saving={saving}
+        />
+      )}
+
+      {/* Add button */}
+      {!isAdding && editingId === null && (
+        <Button
+          variant="outline"
+          className="w-full justify-start text-muted-foreground"
+          onClick={onStartAdd}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add workflow task
+        </Button>
+      )}
+    </div>
   );
 };
 

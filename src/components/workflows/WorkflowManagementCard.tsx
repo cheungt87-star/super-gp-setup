@@ -1,14 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, GitBranch, Loader2 } from "lucide-react";
+import { GitBranch, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
 import { toast } from "@/hooks/use-toast";
 import WorkflowTaskFilters from "./WorkflowTaskFilters";
 import WorkflowTaskList from "./WorkflowTaskList";
-import WorkflowTaskForm, { WHOLE_SITE_VALUE, UNASSIGNED_VALUE } from "./WorkflowTaskForm";
+import { WHOLE_SITE_VALUE, UNASSIGNED_VALUE, WorkflowFormValues } from "./WorkflowInlineTaskForm";
 
 interface Site {
   id: string;
@@ -49,9 +48,9 @@ const WorkflowManagementCard = () => {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   
-  // Form state
-  const [formOpen, setFormOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<WorkflowTask | null>(null);
+  // Inline form state
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   
   // Delete state
@@ -173,21 +172,29 @@ const WorkflowManagementCard = () => {
     setSearchQuery("");
   };
 
-  const handleEdit = (task: WorkflowTask) => {
-    setSelectedTask(task);
-    setFormOpen(true);
+  const handleStartEdit = (task: WorkflowTask) => {
+    setEditingId(task.id);
+    setIsAdding(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const handleStartAdd = () => {
+    setIsAdding(true);
+    setEditingId(null);
+  };
+
+  const handleCancelAdd = () => {
+    setIsAdding(false);
   };
 
   const handleDelete = (task: WorkflowTask) => {
     setTaskToDelete(task);
   };
 
-  const handleAddNew = () => {
-    setSelectedTask(null);
-    setFormOpen(true);
-  };
-
-  const handleSave = async (data: any) => {
+  const handleSave = async (data: WorkflowFormValues, task?: WorkflowTask | null) => {
     if (!organisationId) return;
     
     setSaving(true);
@@ -205,11 +212,11 @@ const WorkflowManagementCard = () => {
         assignee_id: data.assignee_id === UNASSIGNED_VALUE ? null : (data.assignee_id || null),
       };
 
-      if (selectedTask) {
+      if (task) {
         const { error } = await supabase
           .from("workflow_tasks")
           .update(taskData)
-          .eq("id", selectedTask.id);
+          .eq("id", task.id);
 
         if (error) throw error;
 
@@ -217,6 +224,7 @@ const WorkflowManagementCard = () => {
           title: "Task updated",
           description: `${data.name} has been updated successfully.`,
         });
+        setEditingId(null);
       } else {
         const { error } = await supabase
           .from("workflow_tasks")
@@ -228,10 +236,9 @@ const WorkflowManagementCard = () => {
           title: "Task created",
           description: `${data.name} has been created successfully.`,
         });
+        setIsAdding(false);
       }
 
-      setFormOpen(false);
-      setSelectedTask(null);
       fetchData(true);
     } catch (error: any) {
       toast({
@@ -292,20 +299,14 @@ const WorkflowManagementCard = () => {
     <>
       <Card className="animate-fade-in">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <GitBranch className="h-5 w-5" />
-              <div>
-                <CardTitle>Workflow Tasks</CardTitle>
-                <CardDescription>
-                  {tasks.length} workflow task{tasks.length !== 1 ? "s" : ""} configured
-                </CardDescription>
-              </div>
+          <div className="flex items-center gap-2">
+            <GitBranch className="h-5 w-5" />
+            <div>
+              <CardTitle>Workflow Tasks</CardTitle>
+              <CardDescription>
+                {tasks.length} workflow task{tasks.length !== 1 ? "s" : ""} configured
+              </CardDescription>
             </div>
-            <Button onClick={handleAddNew}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Task
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -320,23 +321,23 @@ const WorkflowManagementCard = () => {
           
           <WorkflowTaskList
             tasks={filteredAndSortedTasks}
+            sites={sites}
             sortField={sortField}
             sortDirection={sortDirection}
             onSort={handleSort}
-            onEdit={handleEdit}
+            onEdit={handleStartEdit}
             onDelete={handleDelete}
+            onSave={handleSave}
+            editingId={editingId}
+            isAdding={isAdding}
+            onStartEdit={handleStartEdit}
+            onCancelEdit={handleCancelEdit}
+            onStartAdd={handleStartAdd}
+            onCancelAdd={handleCancelAdd}
+            saving={saving}
           />
         </CardContent>
       </Card>
-
-      <WorkflowTaskForm
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        sites={sites}
-        task={selectedTask}
-        onSave={handleSave}
-        saving={saving}
-      />
 
       <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
         <AlertDialogContent>
