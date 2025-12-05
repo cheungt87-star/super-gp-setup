@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const passwordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
   newPassword: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
 }).refine((data) => data.newPassword === data.confirmPassword, {
@@ -29,12 +30,14 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 const ChangePasswordForm = () => {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
+      currentPassword: "",
       newPassword: "",
       confirmPassword: "",
     },
@@ -43,6 +46,35 @@ const ChangePasswordForm = () => {
   const onSubmit = async (values: PasswordFormValues) => {
     setSaving(true);
 
+    // Get current user email
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) {
+      setSaving(false);
+      toast({
+        title: "Error",
+        description: "Unable to verify user session",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Re-authenticate with current password
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: values.currentPassword,
+    });
+
+    if (authError) {
+      setSaving(false);
+      toast({
+        title: "Incorrect password",
+        description: "The current password you entered is incorrect.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update to new password
     const { error } = await supabase.auth.updateUser({
       password: values.newPassword,
     });
@@ -67,6 +99,39 @@ const ChangePasswordForm = () => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="currentPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Current Password</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Input
+                    type={showCurrentPassword ? "text" : "password"}
+                    placeholder="Enter current password"
+                    {...field}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="newPassword"
