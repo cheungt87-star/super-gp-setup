@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, AlertCircle, Send, Users } from "lucide-react";
-import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
 import { useRotaSchedule, RotaShift } from "@/hooks/useRotaSchedule";
@@ -14,13 +13,17 @@ import { useRotaRules } from "@/hooks/useRotaRules";
 import { WeekSelector } from "./WeekSelector";
 import { DraggableStaffCard } from "./DraggableStaffCard";
 import { DroppableDayCell } from "./DroppableDayCell";
-import { ShiftTypeDialog } from "./ShiftTypeDialog";
 import { EditShiftDialog } from "./EditShiftDialog";
 import { getWeekDays, getWeekStartDate, formatDateKey, calculateShiftHours } from "@/lib/rotaUtils";
 import { toast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type ShiftType = Database["public"]["Enums"]["shift_type"];
+
+interface JobTitle {
+  id: string;
+  name: string;
+}
 
 interface Site {
   id: string;
@@ -31,6 +34,7 @@ interface StaffMember {
   id: string;
   first_name: string | null;
   last_name: string | null;
+  job_title_id: string | null;
   job_title_name: string | null;
   working_days: Record<string, boolean> | null;
   contracted_hours: number | null;
@@ -50,11 +54,11 @@ export const RotaScheduleTab = () => {
   const [weekStart, setWeekStart] = useState(getWeekStartDate(new Date()));
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
+  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
 
   // Drag state
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  const [pendingDrop, setPendingDrop] = useState<{ staffId: string; dateKey: string } | null>(null);
 
   // Edit state
   const [editingShift, setEditingShift] = useState<RotaShift | null>(null);
@@ -62,7 +66,7 @@ export const RotaScheduleTab = () => {
   const weekStartStr = formatDateKey(weekStart);
   const weekDays = getWeekDays(weekStart);
 
-  const { rotaRule, loading: loadingRules } = useRotaRules({
+  const { rotaRule, staffingRules, loading: loadingRules } = useRotaRules({
     siteId: selectedSiteId,
     organisationId,
   });
@@ -103,16 +107,16 @@ export const RotaScheduleTab = () => {
     fetchSites();
   }, [organisationId]);
 
-  // Fetch staff and opening hours when site changes
+  // Fetch staff, opening hours, and job titles when site changes
   useEffect(() => {
     const fetchSiteData = async () => {
       if (!selectedSiteId || !organisationId) return;
 
       try {
-        const [staffRes, hoursRes] = await Promise.all([
+        const [staffRes, hoursRes, jobTitlesRes] = await Promise.all([
           supabase
             .from("profiles")
-            .select("id, first_name, last_name, working_days, contracted_hours, job_titles(name)")
+            .select("id, first_name, last_name, working_days, contracted_hours, job_title_id, job_titles(name)")
             .eq("organisation_id", organisationId)
             .eq("primary_site_id", selectedSiteId)
             .eq("is_active", true),
@@ -120,10 +124,15 @@ export const RotaScheduleTab = () => {
             .from("site_opening_hours")
             .select("day_of_week, is_closed, open_time, close_time")
             .eq("site_id", selectedSiteId),
+          supabase
+            .from("job_titles")
+            .select("id, name")
+            .eq("organisation_id", organisationId),
         ]);
 
         if (staffRes.error) throw staffRes.error;
         if (hoursRes.error) throw hoursRes.error;
+        if (jobTitlesRes.error) throw jobTitlesRes.error;
 
         setStaff(
           (staffRes.data || []).map((s: any) => ({
@@ -132,6 +141,7 @@ export const RotaScheduleTab = () => {
           }))
         );
         setOpeningHours(hoursRes.data || []);
+        setJobTitles(jobTitlesRes.data || []);
       } catch (error) {
         console.error("Error fetching site data:", error);
       }
@@ -194,14 +204,19 @@ export const RotaScheduleTab = () => {
     setActiveDragId(event.active.id as string);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     setActiveDragId(null);
 
     const { active, over } = event;
     if (!over) return;
 
     const staffId = active.id as string;
-    const dateKey = over.id as string;
+    const dropId = over.id as string;
+    const dropData = over.data.current as { dateKey?: string; isOnCall?: boolean } | undefined;
+    
+    // Determine if dropping on on-call zone or regular shift zone
+    const isOnCallDrop = dropId.startsWith("oncall-");
+    const dateKey = isOnCallDrop ? dropId.replace("oncall-", "") : dropId;
 
     // Check if the day is closed
     const dropDate = weekDays.find((d) => formatDateKey(d) === dateKey);
@@ -220,35 +235,48 @@ export const RotaScheduleTab = () => {
       return;
     }
 
-    // Show shift type dialog
-    setPendingDrop({ staffId, dateKey });
-  };
+    // Check for duplicate assignment (same staff on same day)
+    const existingShift = shiftsByDate[dateKey]?.find((s) => s.user_id === staffId);
+    if (existingShift) {
+      toast({
+        title: "Already assigned",
+        description: "This staff member is already scheduled for this day",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const handleConfirmShift = async (
-    shiftType: ShiftType,
-    customStart?: string,
-    customEnd?: string,
-    isOncall?: boolean
-  ) => {
-    if (!pendingDrop) return;
+    // If dropping on on-call zone, check if there's already an on-call assigned
+    if (isOnCallDrop) {
+      const existingOnCall = shiftsByDate[dateKey]?.find((s) => s.is_oncall);
+      if (existingOnCall) {
+        toast({
+          title: "On-call already assigned",
+          description: "Remove the current on-call assignment first",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
+    // Add shift directly with full_day type (or as on-call)
     const result = await addShift(
-      pendingDrop.staffId,
-      pendingDrop.dateKey,
-      shiftType,
-      customStart,
-      customEnd,
-      isOncall
+      staffId,
+      dateKey,
+      "full_day",
+      undefined,
+      undefined,
+      isOnCallDrop
     );
 
     if (result) {
       toast({
-        title: "Shift added",
-        description: "Staff member has been assigned to the shift",
+        title: isOnCallDrop ? "On-call assigned" : "Shift added",
+        description: isOnCallDrop 
+          ? "Staff member has been assigned as on-call"
+          : "Staff member has been assigned to a full day shift",
       });
     }
-
-    setPendingDrop(null);
   };
 
   const handleEditShift = async (updates: {
@@ -281,7 +309,6 @@ export const RotaScheduleTab = () => {
   };
 
   const activeStaff = activeDragId ? staff.find((s) => s.id === activeDragId) : null;
-  const pendingStaff = pendingDrop ? staff.find((s) => s.id === pendingDrop.staffId) : null;
 
   if (loadingInitial) {
     return (
@@ -412,6 +439,8 @@ export const RotaScheduleTab = () => {
                           shifts={shiftsByDate[dateKey] || []}
                           openingHours={dayHours}
                           rotaRules={rotaRule}
+                          staffingRules={staffingRules}
+                          jobTitles={jobTitles}
                           onShiftClick={setEditingShift}
                           onDeleteShift={handleDeleteShift}
                         />
@@ -436,16 +465,6 @@ export const RotaScheduleTab = () => {
           </div>
         )}
       </DragOverlay>
-
-      {/* Shift Type Dialog */}
-      <ShiftTypeDialog
-        open={!!pendingDrop}
-        onOpenChange={(open) => !open && setPendingDrop(null)}
-        staffName={pendingStaff ? `${pendingStaff.first_name} ${pendingStaff.last_name}` : ""}
-        date={pendingDrop ? format(new Date(pendingDrop.dateKey), "EEEE, MMM d") : ""}
-        rotaRules={rotaRule}
-        onConfirm={handleConfirmShift}
-      />
 
       {/* Edit Shift Dialog */}
       <EditShiftDialog
