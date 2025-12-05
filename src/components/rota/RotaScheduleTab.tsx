@@ -270,6 +270,50 @@ export const RotaScheduleTab = () => {
     }
   };
 
+  const handleRepeatPreviousDay = async (dateKey: string, previousDateKey: string) => {
+    const previousShifts = shiftsByDate[previousDateKey] || [];
+    const currentShifts = shiftsByDate[dateKey] || [];
+    const currentUserIds = new Set(currentShifts.map((s) => s.user_id));
+
+    if (previousShifts.length === 0) {
+      toast({
+        title: "No shifts to copy",
+        description: "The previous day has no shifts assigned",
+      });
+      return;
+    }
+
+    let copiedCount = 0;
+    for (const shift of previousShifts) {
+      // Skip if user already assigned today
+      if (currentUserIds.has(shift.user_id)) continue;
+
+      // If on-call, check if there's already one assigned
+      if (shift.is_oncall) {
+        const existingOnCall = currentShifts.find((s) => s.is_oncall);
+        if (existingOnCall) continue;
+      }
+
+      const result = await addShift(
+        shift.user_id,
+        dateKey,
+        shift.shift_type,
+        shift.custom_start_time || undefined,
+        shift.custom_end_time || undefined,
+        shift.is_oncall
+      );
+      if (result) copiedCount++;
+    }
+
+    toast({
+      title: copiedCount > 0 ? `Copied ${copiedCount} shift${copiedCount > 1 ? "s" : ""}` : "No shifts copied",
+      description:
+        copiedCount === 0
+          ? "All staff from the previous day are already assigned"
+          : "Shifts copied from the previous day",
+    });
+  };
+
   if (loadingInitial) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -356,7 +400,7 @@ export const RotaScheduleTab = () => {
               </div>
             ) : (
               <div className="grid grid-cols-7 border-t">
-                {weekDays.map((day) => {
+                {weekDays.map((day, index) => {
                   const dateKey = formatDateKey(day);
                   const dayOfWeek = day.getDay();
                   const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -365,6 +409,7 @@ export const RotaScheduleTab = () => {
                     open_time: null,
                     close_time: null,
                   };
+                  const previousDateKey = index > 0 ? formatDateKey(weekDays[index - 1]) : null;
 
                   return (
                     <RoleDayCell
@@ -379,9 +424,11 @@ export const RotaScheduleTab = () => {
                       scheduledHours={staffScheduledHours}
                       requireOnCall={rotaRule?.require_oncall ?? false}
                       loading={loadingSiteData}
+                      previousDateKey={previousDateKey}
                       onAddShift={handleAddShift}
                       onDeleteShift={handleDeleteShift}
                       onEditShift={setEditingShift}
+                      onRepeatPreviousDay={handleRepeatPreviousDay}
                     />
                   );
                 })}
