@@ -89,7 +89,7 @@ export const InlineWorkingDaysCell = ({
                 className={cn(
                   "text-xs font-medium w-5 h-5 flex items-center justify-center rounded",
                   value[key]
-                    ? "bg-primary/10 text-primary"
+                    ? "bg-green-100 text-green-700"
                     : "bg-red-100 text-red-600"
                 )}
               >
