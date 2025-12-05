@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, Clock, Mail, MapPin, Pencil, Phone, Plus, Trash2, User } from "lucide-react";
+import { Building2, Clock, Mail, MapPin, Pencil, Phone, Trash2, User } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -143,36 +143,19 @@ export const SiteCard = ({
 
         {/* Facilities Section */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              Facilities ({facilities.length})
-            </h4>
-            {!isAddingFacility && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsAddingFacility(true)}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-            )}
-          </div>
+          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Facilities ({facilities.length})
+          </h4>
           
-          {facilities.length > 0 || isAddingFacility ? (
-            <FacilityList
-              facilities={facilities}
-              onEdit={() => {}}
-              onDelete={onDeleteFacility}
-              onSave={handleSaveFacility}
-              isAdding={isAddingFacility}
-              onCancelAdd={() => setIsAddingFacility(false)}
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground italic py-2">
-              No facilities added yet
-            </p>
-          )}
+          <FacilityList
+            facilities={facilities}
+            onEdit={() => {}}
+            onDelete={onDeleteFacility}
+            onSave={handleSaveFacility}
+            isAdding={isAddingFacility}
+            onStartAdd={() => setIsAddingFacility(true)}
+            onCancelAdd={() => setIsAddingFacility(false)}
+          />
         </div>
       </CardContent>
     </Card>
