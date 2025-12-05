@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
 import { SiteForm } from "./SiteForm";
 import { SiteCard } from "./SiteCard";
-import { FacilityForm, Facility, FacilityFormData } from "./FacilityForm";
+import { Facility } from "./FacilityForm";
 import { OpeningHour } from "./OpeningHoursForm";
 import {
   AlertDialog,
@@ -61,10 +61,6 @@ export const SiteManagementCard = () => {
   const [siteToDelete, setSiteToDelete] = useState<Site | null>(null);
   const [deletingSite, setDeletingSite] = useState(false);
   
-  // Facility form state
-  const [facilityFormOpen, setFacilityFormOpen] = useState(false);
-  const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
-  const [selectedSiteIdForFacility, setSelectedSiteIdForFacility] = useState<string | null>(null);
   
   // Facility delete state
   const [facilityDeleteOpen, setFacilityDeleteOpen] = useState(false);
@@ -272,50 +268,40 @@ export const SiteManagementCard = () => {
     setSiteToDelete(null);
   };
 
-  // Facility handlers
-  const handleAddFacility = (siteId: string) => {
-    setSelectedSiteIdForFacility(siteId);
-    setSelectedFacility(null);
-    setFacilityFormOpen(true);
-  };
-
-  const handleEditFacility = (facility: Facility) => {
-    setSelectedSiteIdForFacility(facility.site_id);
-    setSelectedFacility(facility);
-    setFacilityFormOpen(true);
-  };
-
-  const handleSaveFacility = async (data: FacilityFormData) => {
-    if (!organisationId || !selectedSiteIdForFacility) return;
+  // Facility handlers - inline save
+  const handleSaveFacility = async (siteId: string, name: string, capacity: number, facilityId?: string) => {
+    if (!organisationId) return;
 
     try {
-      if (selectedFacility) {
+      if (facilityId) {
         const { error } = await supabase
           .from('facilities')
-          .update({
-            name: data.name,
-            capacity: data.capacity,
-          })
-          .eq('id', selectedFacility.id);
+          .update({ name, capacity })
+          .eq('id', facilityId);
 
         if (error) throw error;
+        
+        toast({
+          title: "Facility updated",
+          description: `${name} has been updated successfully.`,
+        });
       } else {
         const { error } = await supabase
           .from('facilities')
           .insert({
-            name: data.name,
-            capacity: data.capacity,
-            site_id: selectedSiteIdForFacility,
+            name,
+            capacity,
+            site_id: siteId,
             organisation_id: organisationId,
           });
 
         if (error) throw error;
+        
+        toast({
+          title: "Facility added",
+          description: `${name} has been added successfully.`,
+        });
       }
-
-      toast({
-        title: selectedFacility ? "Facility updated" : "Facility added",
-        description: `${data.name} has been ${selectedFacility ? "updated" : "added"} successfully.`,
-      });
 
       fetchData();
     } catch (error: any) {
@@ -324,6 +310,7 @@ export const SiteManagementCard = () => {
         description: error.message,
         variant: "destructive",
       });
+      throw error;
     }
   };
 
@@ -361,11 +348,6 @@ export const SiteManagementCard = () => {
     setFacilityToDelete(null);
   };
 
-  const getSiteName = (siteId: string | null) => {
-    if (!siteId) return "Unknown Site";
-    const site = sites.find(s => s.id === siteId);
-    return site?.name || "Unknown Site";
-  };
 
   if (loading) {
     return (
@@ -427,8 +409,7 @@ export const SiteManagementCard = () => {
                 openingHours={openingHours[site.id] || []}
                 onEditSite={handleEditSite}
                 onDeleteSite={handleDeleteSiteClick}
-                onAddFacility={handleAddFacility}
-                onEditFacility={handleEditFacility}
+                onSaveFacility={handleSaveFacility}
                 onDeleteFacility={handleDeleteFacilityClick}
               />
             ))}
@@ -443,14 +424,6 @@ export const SiteManagementCard = () => {
         users={users}
         openingHours={selectedSiteHours}
         onSave={handleSaveSite}
-      />
-
-      <FacilityForm
-        open={facilityFormOpen}
-        onOpenChange={setFacilityFormOpen}
-        facility={selectedFacility}
-        siteName={getSiteName(selectedSiteIdForFacility)}
-        onSave={handleSaveFacility}
       />
 
       {/* Site Delete Dialog */}
