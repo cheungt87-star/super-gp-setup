@@ -75,7 +75,7 @@ const WorkflowManagementCard = () => {
           recurrence_pattern,
           recurrence_interval_days,
           assignee_id,
-          sites!inner(name),
+          sites(name),
           facilities(name),
           profiles(first_name, last_name)
         `)
