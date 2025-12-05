@@ -1,0 +1,47 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ClipboardList, User, Building2 } from "lucide-react";
+import { TaskWithDueDate } from "@/lib/taskUtils";
+import TaskRowItem from "./TaskRowItem";
+
+interface TaskWidgetProps {
+  title: string;
+  tasks: TaskWithDueDate[];
+  onTaskClick: (task: TaskWithDueDate) => void;
+  variant: "personal" | "site";
+}
+
+const TaskWidget = ({ title, tasks, onTaskClick, variant }: TaskWidgetProps) => {
+  const Icon = variant === "personal" ? User : Building2;
+  
+  return (
+    <Card className="h-full">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        </div>
+        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+          {tasks.length}
+        </span>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {tasks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <ClipboardList className="h-8 w-8 text-muted-foreground/50 mb-2" />
+            <p className="text-sm text-muted-foreground">No tasks</p>
+          </div>
+        ) : (
+          tasks.map((task) => (
+            <TaskRowItem
+              key={task.id}
+              task={task}
+              onClick={() => onTaskClick(task)}
+            />
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default TaskWidget;

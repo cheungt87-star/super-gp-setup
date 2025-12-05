@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, Users, Briefcase, Loader2, Copy, Check, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import TaskWidget from "@/components/dashboard/TaskWidget";
+import TaskDetailSheet from "@/components/dashboard/TaskDetailSheet";
+import { WorkflowTaskWithDetails, TaskWithDueDate, enrichTaskWithDueDate } from "@/lib/taskUtils";
+import { format, subDays, addDays } from "date-fns";
 
 interface InviteCodeInfo {
   code: string;
@@ -18,6 +22,139 @@ const Dashboard = () => {
   const [inviteCode, setInviteCode] = useState<InviteCodeInfo | null>(null);
   const [copied, setCopied] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  
+  // Task state
+  const [myTasks, setMyTasks] = useState<TaskWithDueDate[]>([]);
+  const [siteTasks, setSiteTasks] = useState<TaskWithDueDate[]>([]);
+  const [selectedTask, setSelectedTask] = useState<TaskWithDueDate | null>(null);
+  const [taskSheetOpen, setTaskSheetOpen] = useState(false);
+
+  const fetchTasks = useCallback(async (userId: string, primarySiteId: string | null) => {
+    try {
+      // Fetch tasks assigned to me
+      const { data: myTasksData, error: myError } = await supabase
+        .from("workflow_tasks")
+        .select(`
+          id,
+          name,
+          description,
+          site_id,
+          facility_id,
+          assignee_id,
+          initial_due_date,
+          recurrence_pattern,
+          recurrence_interval_days,
+          is_active,
+          organisation_id,
+          sites!inner(name),
+          facilities(name),
+          profiles!workflow_tasks_assignee_id_fkey(first_name, last_name)
+        `)
+        .eq("assignee_id", userId)
+        .eq("is_active", true);
+
+      if (myError) throw myError;
+
+      // Fetch tasks for my site (excluding ones already assigned to me)
+      let siteTasksData: any[] = [];
+      if (primarySiteId) {
+        const { data, error: siteError } = await supabase
+          .from("workflow_tasks")
+          .select(`
+            id,
+            name,
+            description,
+            site_id,
+            facility_id,
+            assignee_id,
+            initial_due_date,
+            recurrence_pattern,
+            recurrence_interval_days,
+            is_active,
+            organisation_id,
+            sites!inner(name),
+            facilities(name),
+            profiles!workflow_tasks_assignee_id_fkey(first_name, last_name)
+          `)
+          .eq("site_id", primarySiteId)
+          .eq("is_active", true)
+          .neq("assignee_id", userId);
+
+        if (siteError) throw siteError;
+        siteTasksData = data || [];
+      }
+
+      // Get today's date range for filtering completions
+      const today = new Date();
+      
+      // Get all task IDs to check for recent completions
+      const allTaskIds = [
+        ...(myTasksData || []).map(t => t.id),
+        ...siteTasksData.map(t => t.id)
+      ];
+
+      // Fetch recent completions to filter out completed tasks
+      const { data: completions } = await supabase
+        .from("task_completions")
+        .select("workflow_task_id, due_date")
+        .in("workflow_task_id", allTaskIds.length > 0 ? allTaskIds : ['00000000-0000-0000-0000-000000000000']);
+
+      const completedTaskDates = new Set(
+        (completions || []).map(c => `${c.workflow_task_id}-${c.due_date}`)
+      );
+
+      // Transform and enrich tasks
+      const transformTask = (task: any): WorkflowTaskWithDetails => ({
+        id: task.id,
+        name: task.name,
+        description: task.description,
+        site_id: task.site_id,
+        site_name: task.sites?.name,
+        facility_id: task.facility_id,
+        facility_name: task.facilities?.name,
+        assignee_id: task.assignee_id,
+        assignee_name: task.profiles 
+          ? `${task.profiles.first_name || ""} ${task.profiles.last_name || ""}`.trim()
+          : null,
+        initial_due_date: task.initial_due_date,
+        recurrence_pattern: task.recurrence_pattern,
+        recurrence_interval_days: task.recurrence_interval_days,
+        is_active: task.is_active,
+        organisation_id: task.organisation_id
+      });
+
+      const filterCompletedTasks = (tasks: TaskWithDueDate[]): TaskWithDueDate[] => {
+        return tasks.filter(task => {
+          const dueDateStr = format(task.currentDueDate, "yyyy-MM-dd");
+          return !completedTaskDates.has(`${task.id}-${dueDateStr}`);
+        });
+      };
+
+      // Sort by due date (overdue first, then by date)
+      const sortTasks = (tasks: TaskWithDueDate[]): TaskWithDueDate[] => {
+        return tasks.sort((a, b) => {
+          // Overdue tasks first
+          if (a.isOverdue && !b.isOverdue) return -1;
+          if (!a.isOverdue && b.isOverdue) return 1;
+          // Then by due date
+          return a.currentDueDate.getTime() - b.currentDueDate.getTime();
+        });
+      };
+
+      const enrichedMyTasks = (myTasksData || [])
+        .map(transformTask)
+        .map(enrichTaskWithDueDate);
+      
+      const enrichedSiteTasks = siteTasksData
+        .map(transformTask)
+        .map(enrichTaskWithDueDate);
+
+      setMyTasks(sortTasks(filterCompletedTasks(enrichedMyTasks)));
+      setSiteTasks(sortTasks(filterCompletedTasks(enrichedSiteTasks)));
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    }
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -26,7 +163,7 @@ const Dashboard = () => {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("organisation_id")
+        .select("organisation_id, primary_site_id")
         .eq("id", session.user.id)
         .maybeSingle();
 
@@ -59,6 +196,9 @@ const Dashboard = () => {
             });
           }
         }
+
+        // Fetch tasks
+        await fetchTasks(session.user.id, profile.primary_site_id);
       }
 
       setUserName(session.user.user_metadata?.first_name || "there");
@@ -77,7 +217,7 @@ const Dashboard = () => {
       setLoading(false);
     };
     init();
-  }, []);
+  }, [fetchTasks]);
 
   const handleCopy = async () => {
     if (!inviteCode) return;
@@ -85,6 +225,24 @@ const Dashboard = () => {
     setCopied(true);
     toast.success("Code copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleTaskClick = (task: TaskWithDueDate) => {
+    setSelectedTask(task);
+    setTaskSheetOpen(true);
+  };
+
+  const handleTaskCompleted = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("primary_site_id")
+      .eq("id", session.user.id)
+      .maybeSingle();
+    
+    await fetchTasks(session.user.id, profile?.primary_site_id || null);
   };
 
   if (loading) {
@@ -138,7 +296,8 @@ const Dashboard = () => {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-3 animate-fade-in">
+      {/* Stats Cards */}
+      <div className="grid gap-6 md:grid-cols-3 mb-8 animate-fade-in">
         <StatCard
           icon={Building2}
           title="Sites"
@@ -158,6 +317,30 @@ const Dashboard = () => {
           description="Staff profiles"
         />
       </div>
+
+      {/* Task Widgets */}
+      <div className="grid gap-6 md:grid-cols-2 animate-fade-in">
+        <TaskWidget
+          title="Tasks Assigned to Me"
+          tasks={myTasks}
+          onTaskClick={handleTaskClick}
+          variant="personal"
+        />
+        <TaskWidget
+          title="Tasks at My Site"
+          tasks={siteTasks}
+          onTaskClick={handleTaskClick}
+          variant="site"
+        />
+      </div>
+
+      {/* Task Detail Sheet */}
+      <TaskDetailSheet
+        task={selectedTask}
+        open={taskSheetOpen}
+        onOpenChange={setTaskSheetOpen}
+        onTaskCompleted={handleTaskCompleted}
+      />
     </div>
   );
 };

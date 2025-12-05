@@ -412,6 +412,50 @@ export type Database = {
           },
         ]
       }
+      task_completions: {
+        Row: {
+          comments: string | null
+          completed_at: string
+          completed_by: string
+          created_at: string
+          declaration_confirmed: boolean
+          due_date: string
+          id: string
+          organisation_id: string
+          workflow_task_id: string
+        }
+        Insert: {
+          comments?: string | null
+          completed_at?: string
+          completed_by: string
+          created_at?: string
+          declaration_confirmed?: boolean
+          due_date: string
+          id?: string
+          organisation_id: string
+          workflow_task_id: string
+        }
+        Update: {
+          comments?: string | null
+          completed_at?: string
+          completed_by?: string
+          created_at?: string
+          declaration_confirmed?: boolean
+          due_date?: string
+          id?: string
+          organisation_id?: string
+          workflow_task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_completions_workflow_task_id_fkey"
+            columns: ["workflow_task_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
