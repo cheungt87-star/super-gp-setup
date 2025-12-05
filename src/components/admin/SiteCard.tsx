@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Building2, Clock, Mail, MapPin, Pencil, Phone, Plus, Trash2, User } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,8 +35,7 @@ interface SiteCardProps {
   openingHours: OpeningHour[];
   onEditSite: (site: Site) => void;
   onDeleteSite: (site: Site) => void;
-  onAddFacility: (siteId: string) => void;
-  onEditFacility: (facility: Facility) => void;
+  onSaveFacility: (siteId: string, name: string, capacity: number, facilityId?: string) => Promise<void>;
   onDeleteFacility: (facility: Facility) => void;
 }
 
@@ -45,10 +45,11 @@ export const SiteCard = ({
   openingHours,
   onEditSite,
   onDeleteSite,
-  onAddFacility,
-  onEditFacility,
+  onSaveFacility,
   onDeleteFacility,
 }: SiteCardProps) => {
+  const [isAddingFacility, setIsAddingFacility] = useState(false);
+
   const getManagerName = () => {
     if (!site.manager) return null;
     const { first_name, last_name } = site.manager;
@@ -56,6 +57,10 @@ export const SiteCard = ({
       return `${first_name || ''} ${last_name || ''}`.trim();
     }
     return null;
+  };
+
+  const handleSaveFacility = async (name: string, capacity: number, facilityId?: string) => {
+    await onSaveFacility(site.id, name, capacity, facilityId);
   };
 
   const managerName = getManagerName();
@@ -142,21 +147,26 @@ export const SiteCard = ({
             <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
               Facilities ({facilities.length})
             </h4>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onAddFacility(site.id)}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add
-            </Button>
+            {!isAddingFacility && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAddingFacility(true)}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            )}
           </div>
           
-          {facilities.length > 0 ? (
+          {facilities.length > 0 || isAddingFacility ? (
             <FacilityList
               facilities={facilities}
-              onEdit={onEditFacility}
+              onEdit={() => {}}
               onDelete={onDeleteFacility}
+              onSave={handleSaveFacility}
+              isAdding={isAddingFacility}
+              onCancelAdd={() => setIsAddingFacility(false)}
             />
           ) : (
             <p className="text-sm text-muted-foreground italic py-2">
