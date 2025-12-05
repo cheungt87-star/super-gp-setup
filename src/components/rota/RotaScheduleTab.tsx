@@ -1,18 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from "@dnd-kit/core";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, AlertCircle, Send, Users } from "lucide-react";
+import { Loader2, AlertCircle, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
 import { useRotaSchedule, RotaShift } from "@/hooks/useRotaSchedule";
 import { useRotaRules } from "@/hooks/useRotaRules";
 import { WeekSelector } from "./WeekSelector";
-import { DraggableStaffCard } from "./DraggableStaffCard";
-import { DroppableDayCell } from "./DroppableDayCell";
+import { RoleDayCell } from "./RoleDayCell";
 import { EditShiftDialog } from "./EditShiftDialog";
 import { getWeekDays, getWeekStartDate, formatDateKey, calculateShiftHours } from "@/lib/rotaUtils";
 import { toast } from "@/hooks/use-toast";
@@ -56,9 +53,6 @@ export const RotaScheduleTab = () => {
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
-
-  // Drag state
-  const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
   // Edit state
   const [editingShift, setEditingShift] = useState<RotaShift | null>(null);
@@ -156,7 +150,7 @@ export const RotaScheduleTab = () => {
 
     shifts.forEach((shift) => {
       const dayOfWeek = new Date(shift.shift_date).getDay();
-      const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to Mon=0
+      const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       const dayHours = openingHours.find((h) => h.day_of_week === adjustedDay);
 
       const shiftHours = calculateShiftHours(
@@ -200,43 +194,9 @@ export const RotaScheduleTab = () => {
     return byDay;
   }, [openingHours]);
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveDragId(event.active.id as string);
-  };
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    setActiveDragId(null);
-
-    const { active, over } = event;
-    if (!over) return;
-
-    const staffId = active.id as string;
-    const dropId = over.id as string;
-    const dropData = over.data.current as { dateKey?: string; isOnCall?: boolean } | undefined;
-    
-    // Determine if dropping on on-call zone or regular shift zone
-    const isOnCallDrop = dropId.startsWith("oncall-");
-    const dateKey = isOnCallDrop ? dropId.replace("oncall-", "") : dropId;
-
-    // Check if the day is closed
-    const dropDate = weekDays.find((d) => formatDateKey(d) === dateKey);
-    if (!dropDate) return;
-
-    const dayOfWeek = dropDate.getDay();
-    const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const dayHours = openingHoursByDay[adjustedDay];
-
-    if (dayHours?.is_closed) {
-      toast({
-        title: "Cannot assign shift",
-        description: "This day is marked as closed",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check for duplicate assignment (same staff on same day)
-    const existingShift = shiftsByDate[dateKey]?.find((s) => s.user_id === staffId);
+  const handleAddShift = async (userId: string, dateKey: string, isOnCall: boolean) => {
+    // Check for duplicate assignment
+    const existingShift = shiftsByDate[dateKey]?.find((s) => s.user_id === userId);
     if (existingShift) {
       toast({
         title: "Already assigned",
@@ -246,8 +206,8 @@ export const RotaScheduleTab = () => {
       return;
     }
 
-    // If dropping on on-call zone, check if there's already an on-call assigned
-    if (isOnCallDrop) {
+    // If adding on-call, check if there's already one
+    if (isOnCall) {
       const existingOnCall = shiftsByDate[dateKey]?.find((s) => s.is_oncall);
       if (existingOnCall) {
         toast({
@@ -259,20 +219,12 @@ export const RotaScheduleTab = () => {
       }
     }
 
-    // Add shift directly with full_day type (or as on-call)
-    const result = await addShift(
-      staffId,
-      dateKey,
-      "full_day",
-      undefined,
-      undefined,
-      isOnCallDrop
-    );
+    const result = await addShift(userId, dateKey, "full_day", undefined, undefined, isOnCall);
 
     if (result) {
       toast({
-        title: isOnCallDrop ? "On-call assigned" : "Shift added",
-        description: isOnCallDrop 
+        title: isOnCall ? "On-call assigned" : "Shift added",
+        description: isOnCall
           ? "Staff member has been assigned as on-call"
           : "Staff member has been assigned to a full day shift",
       });
@@ -308,8 +260,6 @@ export const RotaScheduleTab = () => {
     }
   };
 
-  const activeStaff = activeDragId ? staff.find((s) => s.id === activeDragId) : null;
-
   if (loadingInitial) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -330,157 +280,105 @@ export const RotaScheduleTab = () => {
   }
 
   return (
-    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="space-y-6">
-        {/* Controls */}
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <Select value={selectedSiteId || ""} onValueChange={setSelectedSiteId}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Select site" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sites.map((site) => (
-                      <SelectItem key={site.id} value={site.id}>
-                        {site.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+    <div className="space-y-6">
+      {/* Controls */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Select value={selectedSiteId || ""} onValueChange={setSelectedSiteId}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select site" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sites.map((site) => (
+                    <SelectItem key={site.id} value={site.id}>
+                      {site.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                <WeekSelector weekStart={weekStart} onWeekChange={setWeekStart} />
-              </div>
-
-              <div className="flex items-center gap-2">
-                {rotaWeek && (
-                  <Badge variant={rotaWeek.status === "published" ? "default" : "secondary"}>
-                    {rotaWeek.status}
-                  </Badge>
-                )}
-                {rotaWeek?.status === "draft" && (
-                  <Button
-                    size="sm"
-                    onClick={() => updateWeekStatus("published")}
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="mr-2 h-4 w-4" />
-                    )}
-                    Publish
-                  </Button>
-                )}
-              </div>
+              <WeekSelector weekStart={weekStart} onWeekChange={setWeekStart} />
             </div>
+
+            <div className="flex items-center gap-2">
+              {rotaWeek && (
+                <Badge variant={rotaWeek.status === "published" ? "default" : "secondary"}>
+                  {rotaWeek.status}
+                </Badge>
+              )}
+              {rotaWeek?.status === "draft" && (
+                <Button
+                  size="sm"
+                  onClick={() => updateWeekStatus("published")}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="mr-2 h-4 w-4" />
+                  )}
+                  Publish
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {selectedSiteId && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Weekly Schedule</CardTitle>
+            <CardDescription>
+              {!rotaRule
+                ? "Configure shift rules in the Rules tab first"
+                : staffingRules.length === 0
+                ? "Add staffing requirements in the Rules tab"
+                : "Click + to add staff to each role"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loadingSchedule || loadingRules ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-7 border-t">
+                {weekDays.map((day) => {
+                  const dateKey = formatDateKey(day);
+                  const dayOfWeek = day.getDay();
+                  const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                  const dayHours = openingHoursByDay[adjustedDay] || {
+                    is_closed: true,
+                    open_time: null,
+                    close_time: null,
+                  };
+
+                  return (
+                    <RoleDayCell
+                      key={dateKey}
+                      date={day}
+                      dateKey={dateKey}
+                      shifts={shiftsByDate[dateKey] || []}
+                      openingHours={dayHours}
+                      staffingRules={staffingRules}
+                      jobTitles={jobTitles}
+                      availableStaff={staff}
+                      scheduledHours={staffScheduledHours}
+                      requireOnCall={rotaRule?.require_oncall ?? false}
+                      onAddShift={handleAddShift}
+                      onDeleteShift={handleDeleteShift}
+                      onEditShift={setEditingShift}
+                    />
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
-
-        {selectedSiteId && (
-          <div className="space-y-4">
-            {/* Staff Panel - Grouped by Job Title */}
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <CardTitle className="text-base">Available Staff</CardTitle>
-                  </div>
-                  <CardDescription className="text-xs">Drag to schedule</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent className="pb-4">
-                {staff.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-2">
-                    No staff assigned to this site
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {Object.entries(
-                      staff.reduce((acc, member) => {
-                        const title = member.job_title_name || "No Title";
-                        if (!acc[title]) acc[title] = [];
-                        acc[title].push(member);
-                        return acc;
-                      }, {} as Record<string, typeof staff>)
-                    ).map(([jobTitle, members]) => (
-                      <div key={jobTitle}>
-                        <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                          {jobTitle} ({members.length})
-                        </h4>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                          {members.map((member) => (
-                            <DraggableStaffCard
-                              key={member.id}
-                              staff={member}
-                              scheduledHours={staffScheduledHours[member.id] || 0}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Schedule Grid */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Weekly Schedule</CardTitle>
-                <CardDescription>
-                  {!rotaRule && "Configure shift rules in the Rules tab first"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {loadingSchedule || loadingRules ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-7 border-t">
-                    {weekDays.map((day) => {
-                      const dateKey = formatDateKey(day);
-                      const dayOfWeek = day.getDay();
-                      const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-                      const dayHours = openingHoursByDay[adjustedDay] || { is_closed: true, open_time: null, close_time: null };
-
-                      return (
-                        <DroppableDayCell
-                          key={dateKey}
-                          date={day}
-                          dateKey={dateKey}
-                          shifts={shiftsByDate[dateKey] || []}
-                          openingHours={dayHours}
-                          rotaRules={rotaRule}
-                          staffingRules={staffingRules}
-                          jobTitles={jobTitles}
-                          onShiftClick={setEditingShift}
-                          onDeleteShift={handleDeleteShift}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
-
-      {/* Drag Overlay */}
-      <DragOverlay>
-        {activeStaff && (
-          <div className="p-3 rounded-lg border bg-card shadow-lg opacity-90">
-            <p className="font-medium text-sm">
-              {activeStaff.first_name} {activeStaff.last_name}
-            </p>
-            <p className="text-xs text-muted-foreground">{activeStaff.job_title_name}</p>
-          </div>
-        )}
-      </DragOverlay>
+      )}
 
       {/* Edit Shift Dialog */}
       <EditShiftDialog
@@ -490,6 +388,6 @@ export const RotaScheduleTab = () => {
         rotaRules={rotaRule}
         onSave={handleEditShift}
       />
-    </DndContext>
+    </div>
   );
 };
