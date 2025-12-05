@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import {
   Select,
@@ -33,20 +33,30 @@ export const InlineSelectCell = ({
 }: InlineSelectCellProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [localValue, setLocalValue] = useState<string>(value || "none");
+
+  useEffect(() => {
+    setLocalValue(value || "none");
+  }, [value]);
 
   const handleChange = async (newValue: string) => {
+    setLocalValue(newValue);
     const actualValue = newValue === "none" ? null : newValue;
+    
     if (actualValue === value) {
       setIsEditing(false);
       return;
     }
 
+    setIsEditing(false);
     setIsSaving(true);
+    
     try {
       await onSave(actualValue);
+    } catch {
+      setLocalValue(value || "none");
     } finally {
       setIsSaving(false);
-      setIsEditing(false);
     }
   };
 
@@ -57,7 +67,7 @@ export const InlineSelectCell = ({
   if (isEditing) {
     return (
       <Select
-        defaultValue={value || "none"}
+        value={localValue}
         onValueChange={handleChange}
         open={true}
         onOpenChange={(open) => !open && setIsEditing(false)}
