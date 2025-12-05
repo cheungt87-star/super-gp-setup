@@ -38,6 +38,7 @@ interface RoleDayCellProps {
   availableStaff: StaffMember[];
   scheduledHours: Record<string, number>;
   requireOnCall: boolean;
+  loading?: boolean;
   onAddShift: (userId: string, dateKey: string, isOnCall: boolean) => Promise<void>;
   onDeleteShift: (shiftId: string) => void;
   onEditShift: (shift: RotaShift) => void;
@@ -53,6 +54,7 @@ export const RoleDayCell = ({
   availableStaff,
   scheduledHours,
   requireOnCall,
+  loading = false,
   onAddShift,
   onDeleteShift,
   onEditShift,
@@ -144,6 +146,7 @@ export const RoleDayCell = ({
                     variant="ghost"
                     size="icon"
                     className="h-5 w-5"
+                    disabled={loading}
                     onClick={() => handleAddClick("", "On-Call Staff", true)}
                   >
                     <Plus className="h-3 w-3" />
@@ -216,6 +219,7 @@ export const RoleDayCell = ({
                     variant="ghost"
                     size="icon"
                     className="h-5 w-5"
+                    disabled={loading}
                     onClick={() => handleAddClick(rule.job_title_id, jobTitle.name)}
                   >
                     <Plus className="h-3 w-3" />

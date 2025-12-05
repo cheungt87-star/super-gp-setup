@@ -57,10 +57,12 @@ export const StaffSelectionDialog = ({
           <div className="py-8 text-center">
             <User className="mx-auto h-12 w-12 text-muted-foreground/50 mb-2" />
             <p className="text-sm text-muted-foreground">
-              No available {jobTitleName.toLowerCase()} staff
+              No available {jobTitleName.toLowerCase()} staff at this site
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              All staff with this role are already assigned today
+              {availableStaff.length === 0
+                ? "No staff with this role are assigned to this site"
+                : "All staff with this role are already assigned today"}
             </p>
           </div>
         ) : (

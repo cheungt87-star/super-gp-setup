@@ -53,6 +53,7 @@ export const RotaScheduleTab = () => {
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
+  const [loadingSiteData, setLoadingSiteData] = useState(false);
 
   // Edit state
   const [editingShift, setEditingShift] = useState<RotaShift | null>(null);
@@ -101,11 +102,18 @@ export const RotaScheduleTab = () => {
     fetchSites();
   }, [organisationId]);
 
+  // Clear staff when site changes to prevent stale data
+  useEffect(() => {
+    setStaff([]);
+    setOpeningHours([]);
+  }, [selectedSiteId]);
+
   // Fetch staff, opening hours, and job titles when site changes
   useEffect(() => {
     const fetchSiteData = async () => {
       if (!selectedSiteId || !organisationId) return;
 
+      setLoadingSiteData(true);
       try {
         const [staffRes, hoursRes, jobTitlesRes] = await Promise.all([
           supabase
@@ -138,6 +146,8 @@ export const RotaScheduleTab = () => {
         setJobTitles(jobTitlesRes.data || []);
       } catch (error) {
         console.error("Error fetching site data:", error);
+      } finally {
+        setLoadingSiteData(false);
       }
     };
 
@@ -368,6 +378,7 @@ export const RotaScheduleTab = () => {
                       availableStaff={staff}
                       scheduledHours={staffScheduledHours}
                       requireOnCall={rotaRule?.require_oncall ?? false}
+                      loading={loadingSiteData}
                       onAddShift={handleAddShift}
                       onDeleteShift={handleDeleteShift}
                       onEditShift={setEditingShift}
