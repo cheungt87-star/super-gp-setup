@@ -49,7 +49,7 @@ export const SiteManagementCard = () => {
   const [users, setUsers] = useState<UserOption[]>([]);
   const [facilities, setFacilities] = useState<Record<string, Facility[]>>({});
   const [openingHours, setOpeningHours] = useState<Record<string, OpeningHour[]>>({});
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   
   // Site form state
   const [siteFormOpen, setSiteFormOpen] = useState(false);
@@ -67,10 +67,10 @@ export const SiteManagementCard = () => {
   const [facilityToDelete, setFacilityToDelete] = useState<Facility | null>(null);
   const [deletingFacility, setDeletingFacility] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = async (isRefetch = false) => {
     if (!organisationId) return;
     
-    setLoading(true);
+    if (!isRefetch) setInitialLoading(true);
     
     const [sitesResult, usersResult, facilitiesResult, hoursResult] = await Promise.all([
       supabase
@@ -127,7 +127,7 @@ export const SiteManagementCard = () => {
       setOpeningHours(grouped);
     }
     
-    setLoading(false);
+    setInitialLoading(false);
   };
 
   useEffect(() => {
@@ -224,7 +224,7 @@ export const SiteManagementCard = () => {
         description: `${data.name} has been ${selectedSite ? "updated" : "created"} successfully.`,
       });
 
-      fetchData();
+      fetchData(true);
     } catch (error: any) {
       toast({
         title: "Error saving site",
@@ -260,7 +260,7 @@ export const SiteManagementCard = () => {
         title: "Site deleted",
         description: `${siteToDelete.name} has been removed.`,
       });
-      fetchData();
+      fetchData(true);
     }
     
     setDeletingSite(false);
@@ -303,7 +303,7 @@ export const SiteManagementCard = () => {
         });
       }
 
-      fetchData();
+      fetchData(true);
     } catch (error: any) {
       toast({
         title: "Error saving facility",
@@ -340,7 +340,7 @@ export const SiteManagementCard = () => {
         title: "Facility deleted",
         description: `${facilityToDelete.name} has been removed.`,
       });
-      fetchData();
+      fetchData(true);
     }
     
     setDeletingFacility(false);
@@ -349,7 +349,7 @@ export const SiteManagementCard = () => {
   };
 
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <Card className="animate-fade-in">
         <CardHeader>
