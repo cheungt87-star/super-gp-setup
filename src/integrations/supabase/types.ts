@@ -444,6 +444,83 @@ export type Database = {
           },
         ]
       }
+      workflow_tasks: {
+        Row: {
+          assignee_id: string | null
+          created_at: string
+          description: string | null
+          facility_id: string | null
+          id: string
+          initial_due_date: string
+          is_active: boolean
+          name: string
+          organisation_id: string
+          recurrence_interval_days: number | null
+          recurrence_pattern: Database["public"]["Enums"]["recurrence_pattern"]
+          site_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          created_at?: string
+          description?: string | null
+          facility_id?: string | null
+          id?: string
+          initial_due_date: string
+          is_active?: boolean
+          name: string
+          organisation_id: string
+          recurrence_interval_days?: number | null
+          recurrence_pattern?: Database["public"]["Enums"]["recurrence_pattern"]
+          site_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          created_at?: string
+          description?: string | null
+          facility_id?: string | null
+          id?: string
+          initial_due_date?: string
+          is_active?: boolean
+          name?: string
+          organisation_id?: string
+          recurrence_interval_days?: number | null
+          recurrence_pattern?: Database["public"]["Enums"]["recurrence_pattern"]
+          site_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_tasks_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_tasks_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_tasks_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_tasks_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -497,6 +574,7 @@ export type Database = {
     }
     Enums: {
       app_role: "master" | "admin" | "manager" | "staff"
+      recurrence_pattern: "daily" | "weekly" | "monthly" | "custom"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -625,6 +703,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["master", "admin", "manager", "staff"],
+      recurrence_pattern: ["daily", "weekly", "monthly", "custom"],
     },
   },
 } as const
