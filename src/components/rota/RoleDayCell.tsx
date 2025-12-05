@@ -2,7 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Plus, X, Phone } from "lucide-react";
+import { Plus, X, Phone, Copy } from "lucide-react";
 import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
 import type { StaffingRule } from "@/hooks/useRotaRules";
@@ -39,9 +39,11 @@ interface RoleDayCellProps {
   scheduledHours: Record<string, number>;
   requireOnCall: boolean;
   loading?: boolean;
+  previousDateKey: string | null;
   onAddShift: (userId: string, dateKey: string, isOnCall: boolean) => Promise<void>;
   onDeleteShift: (shiftId: string) => void;
   onEditShift: (shift: RotaShift) => void;
+  onRepeatPreviousDay?: (dateKey: string, previousDateKey: string) => Promise<void>;
 }
 
 export const RoleDayCell = ({
@@ -55,9 +57,11 @@ export const RoleDayCell = ({
   scheduledHours,
   requireOnCall,
   loading = false,
+  previousDateKey,
   onAddShift,
   onDeleteShift,
   onEditShift,
+  onRepeatPreviousDay,
 }: RoleDayCellProps) => {
   const [selectionDialog, setSelectionDialog] = useState<{
     open: boolean;
@@ -121,6 +125,19 @@ export const RoleDayCell = ({
         )}
         {isClosed && (
           <p className="text-xs text-muted-foreground italic">Closed</p>
+        )}
+        {/* Copy Previous Day Button */}
+        {previousDateKey && onRepeatPreviousDay && !isClosed && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 mt-1 text-[10px] text-muted-foreground hover:text-foreground px-1.5"
+            disabled={loading}
+            onClick={() => onRepeatPreviousDay(dateKey, previousDateKey)}
+          >
+            <Copy className="h-3 w-3 mr-0.5" />
+            Copy prev
+          </Button>
         )}
       </div>
 
