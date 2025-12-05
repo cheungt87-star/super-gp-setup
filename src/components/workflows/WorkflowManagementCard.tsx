@@ -8,7 +8,7 @@ import { useOrganisation } from "@/contexts/OrganisationContext";
 import { toast } from "@/hooks/use-toast";
 import WorkflowTaskFilters from "./WorkflowTaskFilters";
 import WorkflowTaskList from "./WorkflowTaskList";
-import WorkflowTaskForm from "./WorkflowTaskForm";
+import WorkflowTaskForm, { WHOLE_SITE_VALUE, UNASSIGNED_VALUE } from "./WorkflowTaskForm";
 
 interface Site {
   id: string;
@@ -198,11 +198,11 @@ const WorkflowManagementCard = () => {
         name: data.name,
         description: data.description || null,
         site_id: data.site_id,
-        facility_id: data.facility_id || null,
+        facility_id: data.facility_id === WHOLE_SITE_VALUE ? null : (data.facility_id || null),
         initial_due_date: data.initial_due_date.toISOString().split("T")[0],
         recurrence_pattern: data.recurrence_pattern,
         recurrence_interval_days: data.recurrence_pattern === "custom" ? data.recurrence_interval_days : null,
-        assignee_id: data.assignee_id || null,
+        assignee_id: data.assignee_id === UNASSIGNED_VALUE ? null : (data.assignee_id || null),
       };
 
       if (selectedTask) {
