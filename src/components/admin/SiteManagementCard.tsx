@@ -48,6 +48,7 @@ export const SiteManagementCard = () => {
   const [sites, setSites] = useState<Site[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [facilities, setFacilities] = useState<Record<string, Facility[]>>({});
+  const [openingHours, setOpeningHours] = useState<Record<string, OpeningHour[]>>({});
   const [loading, setLoading] = useState(true);
   
   // Site form state
@@ -75,7 +76,7 @@ export const SiteManagementCard = () => {
     
     setLoading(true);
     
-    const [sitesResult, usersResult, facilitiesResult] = await Promise.all([
+    const [sitesResult, usersResult, facilitiesResult, hoursResult] = await Promise.all([
       supabase
         .from('sites')
         .select(`
@@ -96,6 +97,10 @@ export const SiteManagementCard = () => {
         .eq('organisation_id', organisationId)
         .eq('is_active', true)
         .order('name'),
+      supabase
+        .from('site_opening_hours')
+        .select('site_id, day_of_week, open_time, close_time, is_closed')
+        .eq('organisation_id', organisationId),
     ]);
     
     if (sitesResult.data) {
@@ -105,13 +110,25 @@ export const SiteManagementCard = () => {
       setUsers(usersResult.data);
     }
     if (facilitiesResult.data) {
-      // Group facilities by site_id
       const grouped: Record<string, Facility[]> = {};
       facilitiesResult.data.forEach((f) => {
         if (!grouped[f.site_id]) grouped[f.site_id] = [];
         grouped[f.site_id].push(f as Facility);
       });
       setFacilities(grouped);
+    }
+    if (hoursResult.data) {
+      const grouped: Record<string, OpeningHour[]> = {};
+      hoursResult.data.forEach((h) => {
+        if (!grouped[h.site_id]) grouped[h.site_id] = [];
+        grouped[h.site_id].push({
+          day_of_week: h.day_of_week,
+          open_time: h.open_time?.slice(0, 5) || null,
+          close_time: h.close_time?.slice(0, 5) || null,
+          is_closed: h.is_closed,
+        });
+      });
+      setOpeningHours(grouped);
     }
     
     setLoading(false);
@@ -401,12 +418,13 @@ export const SiteManagementCard = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-4">
             {sites.map((site) => (
               <SiteCard
                 key={site.id}
                 site={site}
                 facilities={facilities[site.id] || []}
+                openingHours={openingHours[site.id] || []}
                 onEditSite={handleEditSite}
                 onDeleteSite={handleDeleteSiteClick}
                 onAddFacility={handleAddFacility}
