@@ -379,34 +379,34 @@ export const RotaScheduleTab = () => {
         </Card>
 
         {selectedSiteId && (
-          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
-            {/* Staff Panel */}
+          <div className="space-y-4">
+            {/* Staff Panel - Horizontal */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="h-4 w-4" />
-                  Available Staff
-                </CardTitle>
-                <CardDescription>Drag staff to the schedule</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ScrollArea className="h-[500px] px-4 pb-4">
-                  <div className="space-y-2">
-                    {staff.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">
-                        No staff assigned to this site
-                      </p>
-                    ) : (
-                      staff.map((member) => (
-                        <DraggableStaffCard
-                          key={member.id}
-                          staff={member}
-                          scheduledHours={staffScheduledHours[member.id] || 0}
-                        />
-                      ))
-                    )}
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <CardTitle className="text-base">Available Staff</CardTitle>
                   </div>
-                </ScrollArea>
+                  <CardDescription className="text-xs">Drag to schedule</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="pb-4">
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {staff.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-2">
+                      No staff assigned to this site
+                    </p>
+                  ) : (
+                    staff.map((member) => (
+                      <DraggableStaffCard
+                        key={member.id}
+                        staff={member}
+                        scheduledHours={staffScheduledHours[member.id] || 0}
+                      />
+                    ))
+                  )}
+                </div>
               </CardContent>
             </Card>
 
