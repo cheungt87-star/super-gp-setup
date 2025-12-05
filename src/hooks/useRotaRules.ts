@@ -126,7 +126,7 @@ export const useRotaRules = ({ siteId, organisationId }: UseRotaRulesProps) => {
             am_shift_end: ruleData.am_shift_end || "13:00",
             pm_shift_start: ruleData.pm_shift_start || "13:00",
             pm_shift_end: ruleData.pm_shift_end || "18:00",
-            require_oncall: ruleData.require_oncall || false,
+            require_oncall: ruleData.require_oncall ?? true,
           })
           .select()
           .single();

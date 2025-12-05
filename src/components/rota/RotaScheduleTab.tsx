@@ -422,7 +422,7 @@ export const RotaScheduleTab = () => {
                       jobTitles={jobTitles}
                       availableStaff={staff}
                       scheduledHours={staffScheduledHours}
-                      requireOnCall={rotaRule?.require_oncall ?? false}
+                      requireOnCall={rotaRule?.require_oncall ?? true}
                       loading={loadingSiteData}
                       previousDateKey={previousDateKey}
                       onAddShift={handleAddShift}
