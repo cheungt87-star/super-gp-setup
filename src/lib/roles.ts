@@ -26,8 +26,8 @@ export function getRoleDisplayName(role: string | undefined | null): string {
     case 'master': return 'Master';
     case 'admin': return 'Admin';
     case 'manager': return 'Manager';
-    case 'staff': return 'Staff';
-    default: return 'Unknown';
+    case 'staff': return 'General User';
+    default: return 'Awaiting Registration';
   }
 }
 

@@ -25,11 +25,11 @@ export function RoleSelect({
   onRoleChange,
   disabled = false,
 }: RoleSelectProps) {
-  // Can't change role if user hasn't completed registration (no role)
+  // CSV users without auth accounts can't have roles yet - show pending registration
   if (!currentRole) {
     return (
-      <Badge variant="outline" className="bg-muted/50 text-muted-foreground">
-        Pending
+      <Badge variant="secondary" className="text-xs">
+        Awaiting Registration
       </Badge>
     );
   }
