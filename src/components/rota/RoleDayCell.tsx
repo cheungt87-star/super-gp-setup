@@ -132,11 +132,19 @@ export const RoleDayCell = ({
     setSelectionDialog({ open: true, jobTitleId, jobTitleName, shiftType });
   };
 
-  const handleSelectStaff = async (userId: string) => {
+  const handleSelectStaff = async (userId: string, makeFullDay?: boolean) => {
     if (!selectionDialog) return;
     const isOnCall = selectionDialog.shiftType === "oncall";
     const actualShiftType: ShiftType = isOnCall ? "full_day" : selectionDialog.shiftType as ShiftType;
+    
+    // Add the primary shift
     await onAddShift(userId, dateKey, actualShiftType, isOnCall);
+    
+    // If "Make Full Day" was checked, add the opposite shift too
+    if (makeFullDay && !isOnCall && (actualShiftType === "am" || actualShiftType === "pm")) {
+      const oppositeShiftType: ShiftType = actualShiftType === "am" ? "pm" : "am";
+      await onAddShift(userId, dateKey, oppositeShiftType, false);
+    }
   };
 
   const getStaffForJobTitle = (jobTitleId: string) => {
