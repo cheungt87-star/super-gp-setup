@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Settings, ArrowUpDown, Check, X, Loader2, ShieldAlert, Pencil } from "lucide-react";
+import { Settings, ArrowUpDown, Check, X, Loader2, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,9 @@ import { canManageRoles } from "@/lib/roles";
 import { UserFilters } from "@/components/admin/UserFilters";
 import { RoleSelect } from "@/components/admin/RoleSelect";
 import { SiteManagementCard } from "@/components/admin/SiteManagementCard";
-import { UserEditForm, WorkingDays } from "@/components/admin/UserEditForm";
+import { InlineEditCell } from "@/components/admin/InlineEditCell";
+import { InlineSelectCell } from "@/components/admin/InlineSelectCell";
+import { InlineWorkingDaysCell, WorkingDays } from "@/components/admin/InlineWorkingDaysCell";
 
 interface OrgUser {
   id: string;
@@ -50,9 +52,6 @@ const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   
-  // Edit dialog
-  const [editingUser, setEditingUser] = useState<OrgUser | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // Filters
   const [jobTitleFilter, setJobTitleFilter] = useState("");
@@ -121,9 +120,36 @@ const Admin = () => {
     }
   };
 
-  const handleEditUser = (user: OrgUser) => {
-    setEditingUser(user);
-    setEditDialogOpen(true);
+  const updateUserField = async (userId: string, field: string, value: any) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ [field]: value })
+      .eq("id", userId);
+
+    if (error) {
+      toast({
+        title: "Error updating user",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+
+    toast({ title: "Updated", description: "User updated successfully." });
+    
+    // Update local state
+    setUsers(users.map(u => {
+      if (u.id !== userId) return u;
+      const updated = { ...u, [field]: value };
+      // Update display names for select fields
+      if (field === "job_title_id") {
+        updated.job_title_name = jobTitles.find(j => j.id === value)?.name || null;
+      }
+      if (field === "primary_site_id") {
+        updated.site_name = sites.find(s => s.id === value)?.name || null;
+      }
+      return updated;
+    }));
   };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
@@ -321,13 +347,12 @@ const Admin = () => {
                   <TableHead>Working Days</TableHead>
                   <TableHead><SortableHeader field="role">Role</SortableHeader></TableHead>
                   <TableHead className="text-center"><SortableHeader field="registered">Registered</SortableHeader></TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAndSortedUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -335,34 +360,52 @@ const Admin = () => {
                   filteredAndSortedUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">
-                        {user.first_name || user.last_name 
-                          ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
-                          : '—'}
+                        <InlineEditCell
+                          value={user.first_name || user.last_name ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : null}
+                          onSave={async (val) => {
+                            const parts = val.trim().split(/\s+/);
+                            const firstName = parts[0] || "";
+                            const lastName = parts.slice(1).join(" ") || "";
+                            await updateUserField(user.id, "first_name", firstName || null);
+                            await updateUserField(user.id, "last_name", lastName || null);
+                          }}
+                        />
                       </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.phone || '—'}</TableCell>
-                      <TableCell>{user.job_title_name || '—'}</TableCell>
-                      <TableCell>{user.site_name || '—'}</TableCell>
-                      <TableCell>{user.contracted_hours ?? '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">{user.email}</TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
-                          {user.working_days ? (
-                            ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((day) => (
-                              <span
-                                key={day}
-                                className={`text-xs font-medium w-5 h-5 flex items-center justify-center rounded ${
-                                  (user.working_days as WorkingDays)?.[day as keyof WorkingDays]
-                                    ? 'bg-primary/10 text-primary'
-                                    : 'bg-muted text-muted-foreground'
-                                }`}
-                              >
-                                {day.charAt(0).toUpperCase()}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </div>
+                        <InlineEditCell
+                          value={user.phone}
+                          onSave={async (val) => updateUserField(user.id, "phone", val || null)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <InlineSelectCell
+                          value={user.job_title_id}
+                          displayValue={user.job_title_name}
+                          options={jobTitles}
+                          onSave={async (val) => updateUserField(user.id, "job_title_id", val)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <InlineSelectCell
+                          value={user.primary_site_id}
+                          displayValue={user.site_name}
+                          options={sites}
+                          onSave={async (val) => updateUserField(user.id, "primary_site_id", val)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <InlineEditCell
+                          value={user.contracted_hours}
+                          type="number"
+                          onSave={async (val) => updateUserField(user.id, "contracted_hours", val ? parseFloat(val) : null)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <InlineWorkingDaysCell
+                          value={user.working_days}
+                          onSave={async (val) => updateUserField(user.id, "working_days", val)}
+                        />
                       </TableCell>
                       <TableCell>
                         {updatingRole === user.id ? (
@@ -390,16 +433,6 @@ const Admin = () => {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleEditUser(user)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -410,13 +443,6 @@ const Admin = () => {
       </Card>
 
       <SiteManagementCard />
-
-      <UserEditForm
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        user={editingUser}
-        onSuccess={refetchUsers}
-      />
     </div>
   );
 };
