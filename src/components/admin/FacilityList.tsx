@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Pencil, Trash2, Users, Check, X } from "lucide-react";
+import { Pencil, Trash2, Users, Check, X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Facility } from "./FacilityForm";
@@ -10,6 +10,7 @@ interface FacilityListProps {
   onDelete: (facility: Facility) => void;
   onSave?: (name: string, capacity: number, facilityId?: string) => Promise<void>;
   isAdding?: boolean;
+  onStartAdd?: () => void;
   onCancelAdd?: () => void;
 }
 
@@ -19,6 +20,7 @@ export const FacilityList = ({
   onDelete,
   onSave,
   isAdding = false,
+  onStartAdd,
   onCancelAdd
 }: FacilityListProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -144,14 +146,16 @@ export const FacilityList = ({
     );
   };
 
-  if (facilities.length === 0 && !isAdding) return null;
+  const showAddButton = !isAdding && onStartAdd;
+
+  if (facilities.length === 0 && !isAdding && !showAddButton) return null;
 
   return (
     <div className="rounded-md border">
       {facilities.map((facility, index) => (
         <div
           key={facility.id}
-          className={`${index !== facilities.length - 1 || isAdding ? "border-b" : ""}`}
+          className={`${index !== facilities.length - 1 || isAdding || showAddButton ? "border-b" : ""}`}
         >
           {editingId === facility.id ? (
             renderInlineForm(false, facility)
@@ -187,6 +191,19 @@ export const FacilityList = ({
         </div>
       ))}
       {isAdding && renderInlineForm(true)}
+      {showAddButton && (
+        <div className="px-3 py-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs w-full justify-start text-muted-foreground hover:text-foreground"
+            onClick={onStartAdd}
+          >
+            <Plus className="h-3 w-3 mr-1" />
+            Add facility
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
