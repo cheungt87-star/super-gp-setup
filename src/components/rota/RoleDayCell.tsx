@@ -2,7 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Plus, X, Check, AlertTriangle, Phone } from "lucide-react";
+import { Plus, X, Phone } from "lucide-react";
 import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
 import type { StaffingRule } from "@/hooks/useRotaRules";
@@ -125,23 +125,30 @@ export const RoleDayCell = ({
       </div>
 
       {!isClosed && (
-        <div className="p-1.5 space-y-1.5">
-          {/* On-Call Row */}
+        <div className="p-1 space-y-0">
+          {/* On-Call Row - Compact */}
           {requireOnCall && (
-            <div
-              className={cn(
-                "rounded border p-1.5 transition-colors",
-                onCallShift
-                  ? "border-amber-500/50 bg-amber-500/10"
-                  : "border-dashed border-muted-foreground/30"
-              )}
-            >
-              <div className="flex items-center justify-between mb-1">
+            <div className="border-b border-border/50 py-1 px-1">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Phone className="h-3 w-3" />
                   <span className="font-medium">On-Call</span>
                 </div>
-                {!onCallShift && (
+                {onCallShift ? (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-medium truncate max-w-[60px]">
+                      {onCallShift.user_name?.split(" ")[0]}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4 hover:bg-destructive/20"
+                      onClick={() => onDeleteShift(onCallShift.id)}
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </Button>
+                  </div>
+                ) : (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -153,67 +160,43 @@ export const RoleDayCell = ({
                   </Button>
                 )}
               </div>
-
-              {onCallShift ? (
-                <div className="flex items-center justify-between gap-1 bg-amber-500/20 rounded px-2 py-1">
-                  <span className="text-xs font-medium truncate">
-                    {onCallShift.user_name}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5 hover:bg-destructive/20"
-                    onClick={() => onDeleteShift(onCallShift.id)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground/60 text-center">
-                  None assigned
-                </p>
-              )}
             </div>
           )}
 
-          {/* Role Rows from Staffing Rules */}
-          {staffingRules.map((rule) => {
+          {/* Role Rows - Compact with inline staff */}
+          {staffingRules.map((rule, index) => {
             const jobTitle = jobTitles.find((jt) => jt.id === rule.job_title_id);
             if (!jobTitle) return null;
 
             const assignedShifts = assignedByJobTitle[rule.job_title_id] || [];
             const assignedCount = assignedShifts.length;
             const met = assignedCount >= rule.min_staff;
+            const isLast = index === staffingRules.length - 1;
 
             return (
               <div
                 key={rule.id}
                 className={cn(
-                  "rounded border p-1.5 transition-colors",
-                  met
-                    ? "border-emerald-500/30 bg-emerald-500/5"
-                    : "border-amber-500/30 bg-amber-500/5"
+                  "py-1 px-1",
+                  !isLast && "border-b border-border/50"
                 )}
               >
-                {/* Header Row */}
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-medium truncate" title={jobTitle.name}>
-                      {jobTitle.name.length > 10 ? jobTitle.name.substring(0, 9) + "…" : jobTitle.name}
+                {/* Header Row - Always visible */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-medium truncate max-w-[50px]" title={jobTitle.name}>
+                      {jobTitle.name.length > 6 ? jobTitle.name.substring(0, 5) + "…" : jobTitle.name}
                     </span>
                     <span
                       className={cn(
-                        "text-xs font-mono px-1 rounded",
-                        met ? "bg-emerald-500/20 text-emerald-700" : "bg-amber-500/20 text-amber-700"
+                        "text-[10px] font-mono px-1 rounded",
+                        met 
+                          ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" 
+                          : "bg-amber-500/20 text-amber-700 dark:text-amber-400"
                       )}
                     >
                       {assignedCount}/{rule.min_staff}
                     </span>
-                    {met ? (
-                      <Check className="h-3 w-3 text-emerald-600" />
-                    ) : (
-                      <AlertTriangle className="h-3 w-3 text-amber-600" />
-                    )}
                   </div>
                   <Button
                     variant="ghost"
@@ -226,13 +209,13 @@ export const RoleDayCell = ({
                   </Button>
                 </div>
 
-                {/* Assigned Staff */}
-                {assignedShifts.length > 0 ? (
-                  <div className="space-y-0.5">
+                {/* Assigned Staff - Only show if there are any */}
+                {assignedShifts.length > 0 && (
+                  <div className="mt-0.5 space-y-0.5">
                     {assignedShifts.map((shift) => (
                       <div
                         key={shift.id}
-                        className="flex items-center justify-between gap-1 bg-background/60 rounded px-1.5 py-0.5 cursor-pointer hover:bg-background"
+                        className="flex items-center justify-between gap-1 bg-muted/50 rounded px-1.5 py-0.5 cursor-pointer hover:bg-muted"
                         onClick={() => onEditShift(shift)}
                       >
                         <span className="text-xs truncate">{shift.user_name}</span>
@@ -250,10 +233,6 @@ export const RoleDayCell = ({
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground/60 text-center py-0.5">
-                    No staff assigned
-                  </p>
                 )}
               </div>
             );
@@ -263,7 +242,7 @@ export const RoleDayCell = ({
           {staffingRules.length === 0 && (
             <div className="text-center py-4">
               <p className="text-xs text-muted-foreground">
-                No staffing rules configured
+                No staffing rules
               </p>
             </div>
           )}
