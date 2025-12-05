@@ -307,6 +307,268 @@ export type Database = {
           },
         ]
       }
+      rota_rule_overrides: {
+        Row: {
+          created_at: string
+          id: string
+          organisation_id: string
+          overridden_by: string
+          reason: string
+          rota_week_id: string
+          rule_description: string
+          rule_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organisation_id: string
+          overridden_by: string
+          reason: string
+          rota_week_id: string
+          rule_description: string
+          rule_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organisation_id?: string
+          overridden_by?: string
+          reason?: string
+          rota_week_id?: string
+          rule_description?: string
+          rule_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rota_rule_overrides_overridden_by_fkey"
+            columns: ["overridden_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rota_rule_overrides_rota_week_id_fkey"
+            columns: ["rota_week_id"]
+            isOneToOne: false
+            referencedRelation: "rota_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rota_rules: {
+        Row: {
+          am_shift_end: string
+          am_shift_start: string
+          created_at: string
+          id: string
+          organisation_id: string
+          pm_shift_end: string
+          pm_shift_start: string
+          require_oncall: boolean
+          site_id: string
+          updated_at: string
+        }
+        Insert: {
+          am_shift_end?: string
+          am_shift_start?: string
+          created_at?: string
+          id?: string
+          organisation_id: string
+          pm_shift_end?: string
+          pm_shift_start?: string
+          require_oncall?: boolean
+          site_id: string
+          updated_at?: string
+        }
+        Update: {
+          am_shift_end?: string
+          am_shift_start?: string
+          created_at?: string
+          id?: string
+          organisation_id?: string
+          pm_shift_end?: string
+          pm_shift_start?: string
+          require_oncall?: boolean
+          site_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rota_rules_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rota_rules_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: true
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rota_shifts: {
+        Row: {
+          created_at: string
+          custom_end_time: string | null
+          custom_start_time: string | null
+          id: string
+          is_oncall: boolean
+          notes: string | null
+          organisation_id: string
+          rota_week_id: string
+          shift_date: string
+          shift_type: Database["public"]["Enums"]["shift_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_end_time?: string | null
+          custom_start_time?: string | null
+          id?: string
+          is_oncall?: boolean
+          notes?: string | null
+          organisation_id: string
+          rota_week_id: string
+          shift_date: string
+          shift_type?: Database["public"]["Enums"]["shift_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_end_time?: string | null
+          custom_start_time?: string | null
+          id?: string
+          is_oncall?: boolean
+          notes?: string | null
+          organisation_id?: string
+          rota_week_id?: string
+          shift_date?: string
+          shift_type?: Database["public"]["Enums"]["shift_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rota_shifts_rota_week_id_fkey"
+            columns: ["rota_week_id"]
+            isOneToOne: false
+            referencedRelation: "rota_weeks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rota_shifts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rota_staffing_rules: {
+        Row: {
+          created_at: string
+          id: string
+          job_title_id: string
+          max_staff: number | null
+          min_staff: number
+          organisation_id: string
+          rota_rule_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_title_id: string
+          max_staff?: number | null
+          min_staff?: number
+          organisation_id: string
+          rota_rule_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_title_id?: string
+          max_staff?: number | null
+          min_staff?: number
+          organisation_id?: string
+          rota_rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rota_staffing_rules_job_title_id_fkey"
+            columns: ["job_title_id"]
+            isOneToOne: false
+            referencedRelation: "job_titles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rota_staffing_rules_rota_rule_id_fkey"
+            columns: ["rota_rule_id"]
+            isOneToOne: false
+            referencedRelation: "rota_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rota_weeks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          organisation_id: string
+          site_id: string
+          status: Database["public"]["Enums"]["rota_status"]
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organisation_id: string
+          site_id: string
+          status?: Database["public"]["Enums"]["rota_status"]
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organisation_id?: string
+          site_id?: string
+          status?: Database["public"]["Enums"]["rota_status"]
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rota_weeks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rota_weeks_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rota_weeks_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_opening_hours: {
         Row: {
           close_time: string | null
@@ -629,6 +891,8 @@ export type Database = {
     Enums: {
       app_role: "master" | "admin" | "manager" | "staff"
       recurrence_pattern: "daily" | "weekly" | "monthly" | "custom"
+      rota_status: "draft" | "published" | "archived"
+      shift_type: "full_day" | "am" | "pm" | "custom"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -758,6 +1022,8 @@ export const Constants = {
     Enums: {
       app_role: ["master", "admin", "manager", "staff"],
       recurrence_pattern: ["daily", "weekly", "monthly", "custom"],
+      rota_status: ["draft", "published", "archived"],
+      shift_type: ["full_day", "am", "pm", "custom"],
     },
   },
 } as const
