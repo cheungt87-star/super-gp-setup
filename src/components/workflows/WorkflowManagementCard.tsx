@@ -200,6 +200,9 @@ const WorkflowManagementCard = () => {
     setSaving(true);
 
     try {
+      // Get current user for created_by
+      const { data: { user } } = await supabase.auth.getUser();
+
       const taskData = {
         organisation_id: organisationId,
         name: data.name,
@@ -228,7 +231,10 @@ const WorkflowManagementCard = () => {
       } else {
         const { error } = await supabase
           .from("workflow_tasks")
-          .insert(taskData);
+          .insert({
+            ...taskData,
+            created_by: user?.id || null,
+          });
 
         if (error) throw error;
 
