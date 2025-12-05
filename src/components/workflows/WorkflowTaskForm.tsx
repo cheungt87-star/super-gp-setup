@@ -15,6 +15,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
+// Sentinel values for optional select fields (Radix UI doesn't support empty string values)
+export const WHOLE_SITE_VALUE = "__whole_site__";
+export const UNASSIGNED_VALUE = "__unassigned__";
+
 const formSchema = z.object({
   name: z.string().min(1, "Task name is required").max(200),
   description: z.string().max(1000).optional(),
@@ -83,10 +87,10 @@ const WorkflowTaskForm = ({
       name: "",
       description: "",
       site_id: "",
-      facility_id: "",
+      facility_id: WHOLE_SITE_VALUE,
       recurrence_pattern: "daily",
       recurrence_interval_days: 1,
-      assignee_id: "",
+      assignee_id: UNASSIGNED_VALUE,
     },
   });
 
@@ -101,21 +105,21 @@ const WorkflowTaskForm = ({
           name: task.name,
           description: task.description || "",
           site_id: task.site_id,
-          facility_id: task.facility_id || "",
+          facility_id: task.facility_id || WHOLE_SITE_VALUE,
           initial_due_date: new Date(task.initial_due_date),
           recurrence_pattern: task.recurrence_pattern,
           recurrence_interval_days: task.recurrence_interval_days || 1,
-          assignee_id: task.assignee_id || "",
+          assignee_id: task.assignee_id || UNASSIGNED_VALUE,
         });
       } else {
         form.reset({
           name: "",
           description: "",
           site_id: "",
-          facility_id: "",
+          facility_id: WHOLE_SITE_VALUE,
           recurrence_pattern: "daily",
           recurrence_interval_days: 1,
-          assignee_id: "",
+          assignee_id: UNASSIGNED_VALUE,
         });
       }
     }
@@ -165,8 +169,8 @@ const WorkflowTaskForm = ({
   const handleSiteChange = (value: string) => {
     form.setValue("site_id", value);
     if (!task || task.site_id !== value) {
-      form.setValue("facility_id", "");
-      form.setValue("assignee_id", "");
+      form.setValue("facility_id", WHOLE_SITE_VALUE);
+      form.setValue("assignee_id", UNASSIGNED_VALUE);
     }
   };
 
@@ -258,7 +262,7 @@ const WorkflowTaskForm = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Whole site</SelectItem>
+                        <SelectItem value={WHOLE_SITE_VALUE}>Whole site</SelectItem>
                         {facilities.map((facility) => (
                           <SelectItem key={facility.id} value={facility.id}>
                             {facility.name}
@@ -372,7 +376,7 @@ const WorkflowTaskForm = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
                       {users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {[user.first_name, user.last_name].filter(Boolean).join(" ") || "Unnamed User"}
