@@ -492,6 +492,7 @@ export type Database = {
         Row: {
           assignee_id: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           facility_id: string | null
           id: string
@@ -507,6 +508,7 @@ export type Database = {
         Insert: {
           assignee_id?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           facility_id?: string | null
           id?: string
@@ -522,6 +524,7 @@ export type Database = {
         Update: {
           assignee_id?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           facility_id?: string | null
           id?: string
