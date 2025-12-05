@@ -37,7 +37,7 @@ interface FilterOption {
   name: string;
 }
 
-type SortField = 'name' | 'email' | 'job_title' | 'site' | 'role' | 'registered' | 'hours';
+type SortField = 'name' | 'job_title' | 'site' | 'role' | 'registered' | 'hours';
 type SortDirection = 'asc' | 'desc';
 
 const Admin = () => {
@@ -230,10 +230,6 @@ const Admin = () => {
           aVal = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase();
           bVal = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase();
           break;
-        case 'email':
-          aVal = a.email.toLowerCase();
-          bVal = b.email.toLowerCase();
-          break;
         case 'job_title':
           aVal = (a.job_title_name || '').toLowerCase();
           bVal = (b.job_title_name || '').toLowerCase();
@@ -338,9 +334,7 @@ const Admin = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead><SortableHeader field="name">Full Name</SortableHeader></TableHead>
-                  <TableHead><SortableHeader field="email">Email</SortableHeader></TableHead>
-                  <TableHead>Phone</TableHead>
+                  <TableHead><SortableHeader field="name">Contact</SortableHeader></TableHead>
                   <TableHead><SortableHeader field="job_title">Job Title</SortableHeader></TableHead>
                   <TableHead><SortableHeader field="site">Site</SortableHeader></TableHead>
                   <TableHead><SortableHeader field="hours">Hours</SortableHeader></TableHead>
@@ -352,7 +346,7 @@ const Admin = () => {
               <TableBody>
                 {filteredAndSortedUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -360,23 +354,26 @@ const Admin = () => {
                   filteredAndSortedUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">
-                        <InlineEditCell
-                          value={user.first_name || user.last_name ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : null}
-                          onSave={async (val) => {
-                            const parts = val.trim().split(/\s+/);
-                            const firstName = parts[0] || "";
-                            const lastName = parts.slice(1).join(" ") || "";
-                            await updateUserField(user.id, "first_name", firstName || null);
-                            await updateUserField(user.id, "last_name", lastName || null);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                      <TableCell>
-                        <InlineEditCell
-                          value={user.phone}
-                          onSave={async (val) => updateUserField(user.id, "phone", val || null)}
-                        />
+                        <div className="space-y-1">
+                          <InlineEditCell
+                            value={user.first_name || user.last_name ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : null}
+                            onSave={async (val) => {
+                              const parts = val.trim().split(/\s+/);
+                              const firstName = parts[0] || "";
+                              const lastName = parts.slice(1).join(" ") || "";
+                              await updateUserField(user.id, "first_name", firstName || null);
+                              await updateUserField(user.id, "last_name", lastName || null);
+                            }}
+                            placeholder="Add name"
+                          />
+                          <div className="text-sm text-muted-foreground">{user.email}</div>
+                          <InlineEditCell
+                            value={user.phone}
+                            onSave={async (val) => updateUserField(user.id, "phone", val || null)}
+                            placeholder="Add phone"
+                            className="text-sm text-muted-foreground"
+                          />
+                        </div>
                       </TableCell>
                       <TableCell>
                         <InlineSelectCell
