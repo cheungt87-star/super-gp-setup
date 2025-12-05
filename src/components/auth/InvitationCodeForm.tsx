@@ -96,7 +96,7 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
     // Code is valid
     toast.success("Invitation code accepted");
     onValidCode({
-      code: result.code!,
+      code: code.trim(),
       organisationId: result.organisation_id ?? null,
       organisationName: result.organisation_name ?? null,
       onboardingComplete: result.onboarding_complete ?? false,
