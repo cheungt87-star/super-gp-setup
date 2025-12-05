@@ -21,7 +21,9 @@ interface InvitationValidationResult {
     lastName: string | null;
     phone: string | null;
     primarySiteId: string | null;
+    primarySiteName: string | null;
     jobTitleId: string | null;
+    jobTitleName: string | null;
   };
 }
 
@@ -79,7 +81,9 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
         last_name: string | null;
         phone: string | null;
         primary_site_id: string | null;
+        primary_site_name: string | null;
         job_title_id: string | null;
+        job_title_name: string | null;
       };
     } | null;
 
@@ -105,7 +109,9 @@ export const InvitationCodeForm = ({ onValidCode, onBackToLogin }: InvitationCod
         lastName: result.csv_profile.last_name ?? null,
         phone: result.csv_profile.phone ?? null,
         primarySiteId: result.csv_profile.primary_site_id ?? null,
+        primarySiteName: result.csv_profile.primary_site_name ?? null,
         jobTitleId: result.csv_profile.job_title_id ?? null,
+        jobTitleName: result.csv_profile.job_title_name ?? null,
       } : undefined,
     });
     setLoading(false);
