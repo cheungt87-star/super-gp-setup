@@ -2,6 +2,7 @@ import { Calendar, Settings, AlertTriangle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RulesConfigurationTab } from "@/components/rota/RulesConfigurationTab";
+import { RotaScheduleTab } from "@/components/rota/RotaScheduleTab";
 
 const Rota = () => {
   return (
@@ -28,22 +29,7 @@ const Rota = () => {
         </TabsList>
 
         <TabsContent value="schedule" className="animate-fade-in">
-          <Card>
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-primary" />
-              </div>
-              <CardTitle>Rota Schedule</CardTitle>
-              <CardDescription>
-                The weekly rota scheduling interface is coming soon. You'll be able to drag and drop staff to create shifts.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center">
-              <p className="text-sm text-muted-foreground">
-                Start by configuring your site rules in the "Rules" tab.
-              </p>
-            </CardContent>
-          </Card>
+          <RotaScheduleTab />
         </TabsContent>
 
         <TabsContent value="rules" className="animate-fade-in">
