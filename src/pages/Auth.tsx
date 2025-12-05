@@ -28,7 +28,9 @@ interface InvitationValidationResult {
     lastName: string | null;
     phone: string | null;
     primarySiteId: string | null;
+    primarySiteName: string | null;
     jobTitleId: string | null;
+    jobTitleName: string | null;
   };
 }
 
@@ -65,6 +67,8 @@ const Auth = () => {
   const [jobTitles, setJobTitles] = useState<{ id: string; name: string }[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string>("");
   const [selectedJobTitleId, setSelectedJobTitleId] = useState<string>("");
+  const [selectedSiteName, setSelectedSiteName] = useState<string>("");
+  const [selectedJobTitleName, setSelectedJobTitleName] = useState<string>("");
 
   useEffect(() => {
     // Check if user is already logged in and redirect appropriately
@@ -263,7 +267,9 @@ const Auth = () => {
       setLastName(result.csvProfile.lastName || "");
       setPhone(result.csvProfile.phone || "");
       setSelectedSiteId(result.csvProfile.primarySiteId || "");
+      setSelectedSiteName(result.csvProfile.primarySiteName || "");
       setSelectedJobTitleId(result.csvProfile.jobTitleId || "");
+      setSelectedJobTitleName(result.csvProfile.jobTitleName || "");
       setOrgConfirmed(true); // Auto-confirm org for CSV users
       toast.success("Welcome! We found your profile. Please set a password to activate your account.");
       setMode("register");
@@ -321,6 +327,8 @@ const Auth = () => {
     setJobTitles([]);
     setSelectedSiteId("");
     setSelectedJobTitleId("");
+    setSelectedSiteName("");
+    setSelectedJobTitleName("");
     setEmail("");
     setPassword("");
     setFirstName("");
@@ -589,8 +597,18 @@ const Auth = () => {
                 </div>
                 {(!isFirstUser || isCsvUser) && (
                   <>
-                    {/* Only show site/job title dropdowns if they're not pre-filled for CSV users, or if they need to be selected */}
-                    {(!isCsvUser || !selectedSiteId) && sites.length > 0 && (
+                    {/* Show read-only site name for CSV users with pre-filled data, otherwise show dropdown */}
+                    {isCsvUser && selectedSiteId && selectedSiteName ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="site">Primary Site</Label>
+                        <Input
+                          id="site"
+                          value={selectedSiteName}
+                          readOnly
+                          className="bg-muted"
+                        />
+                      </div>
+                    ) : !isCsvUser && sites.length > 0 && (
                       <div className="space-y-2">
                         <Label htmlFor="site">Primary Site</Label>
                         <Select value={selectedSiteId} onValueChange={setSelectedSiteId}>
@@ -605,7 +623,18 @@ const Auth = () => {
                         </Select>
                       </div>
                     )}
-                    {(!isCsvUser || !selectedJobTitleId) && jobTitles.length > 0 && (
+                    {/* Show read-only job title name for CSV users with pre-filled data, otherwise show dropdown */}
+                    {isCsvUser && selectedJobTitleId && selectedJobTitleName ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="jobTitle">Job Title</Label>
+                        <Input
+                          id="jobTitle"
+                          value={selectedJobTitleName}
+                          readOnly
+                          className="bg-muted"
+                        />
+                      </div>
+                    ) : !isCsvUser && jobTitles.length > 0 && (
                       <div className="space-y-2">
                         <Label htmlFor="jobTitle">Job Title</Label>
                         <Select value={selectedJobTitleId} onValueChange={setSelectedJobTitleId}>
