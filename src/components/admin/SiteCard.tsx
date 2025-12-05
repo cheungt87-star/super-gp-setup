@@ -1,11 +1,17 @@
-import { useState } from "react";
-import { Building2, ChevronDown, Mail, MapPin, Pencil, Phone, Plus, Trash2, User } from "lucide-react";
+import { Building2, Clock, Mail, MapPin, Pencil, Phone, Plus, Trash2, User } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 import { FacilityList } from "./FacilityList";
 import { Facility } from "./FacilityForm";
+import { OpeningHoursDisplay } from "./OpeningHoursDisplay";
+
+interface OpeningHour {
+  day_of_week: number;
+  open_time: string | null;
+  close_time: string | null;
+  is_closed: boolean | null;
+}
 
 interface Site {
   id: string;
@@ -25,6 +31,7 @@ interface Site {
 interface SiteCardProps {
   site: Site;
   facilities: Facility[];
+  openingHours: OpeningHour[];
   onEditSite: (site: Site) => void;
   onDeleteSite: (site: Site) => void;
   onAddFacility: (siteId: string) => void;
@@ -35,14 +42,13 @@ interface SiteCardProps {
 export const SiteCard = ({
   site,
   facilities,
+  openingHours,
   onEditSite,
   onDeleteSite,
   onAddFacility,
   onEditFacility,
   onDeleteFacility,
 }: SiteCardProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-
   const getManagerName = () => {
     if (!site.manager) return null;
     const { first_name, last_name } = site.manager;
@@ -53,10 +59,11 @@ export const SiteCard = ({
   };
 
   const managerName = getManagerName();
+  const hasContactInfo = site.address || site.phone || site.email || managerName;
 
   return (
     <Card className="animate-fade-in">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -74,67 +81,89 @@ export const SiteCard = ({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-2 text-sm">
-          {site.address && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="h-4 w-4 shrink-0" />
-              <span>{site.address}</span>
-            </div>
-          )}
-          <div className="flex flex-wrap gap-x-6 gap-y-2">
-            {site.phone && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Phone className="h-4 w-4 shrink-0" />
-                <span>{site.phone}</span>
+      
+      <CardContent className="space-y-6">
+        {/* Details and Opening Hours - Side by Side */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Contact Details */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Details</h4>
+            {hasContactInfo ? (
+              <div className="space-y-2 text-sm">
+                {site.address && (
+                  <div className="flex items-start gap-2 text-muted-foreground">
+                    <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>{site.address}</span>
+                  </div>
+                )}
+                {site.phone && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="h-4 w-4 shrink-0" />
+                    <span>{site.phone}</span>
+                  </div>
+                )}
+                {site.email && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-4 w-4 shrink-0" />
+                    <span>{site.email}</span>
+                  </div>
+                )}
+                {managerName && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <User className="h-4 w-4 shrink-0" />
+                    <span>Manager: {managerName}</span>
+                  </div>
+                )}
               </div>
-            )}
-            {site.email && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Mail className="h-4 w-4 shrink-0" />
-                <span>{site.email}</span>
-              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">No contact details added</p>
             )}
           </div>
-          {managerName && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <User className="h-4 w-4 shrink-0" />
-              <span>Manager: {managerName}</span>
+
+          {/* Opening Hours */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Opening Hours</h4>
             </div>
-          )}
+            {openingHours.length > 0 ? (
+              <OpeningHoursDisplay hours={openingHours} />
+            ) : (
+              <p className="text-sm text-muted-foreground italic">No opening hours set</p>
+            )}
+          </div>
         </div>
 
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="w-full justify-between px-3 py-2 h-auto">
-              <span className="font-medium text-sm">
-                Facilities ({facilities.length})
-              </span>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 transition-transform duration-200",
-                  isOpen && "rotate-180"
-                )}
-              />
+        <Separator />
+
+        {/* Facilities Section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Facilities ({facilities.length})
+            </h4>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onAddFacility(site.id)}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add
             </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-3 space-y-3 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+          </div>
+          
+          {facilities.length > 0 ? (
             <FacilityList
               facilities={facilities}
               onEdit={onEditFacility}
               onDelete={onDeleteFacility}
             />
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={() => onAddFacility(site.id)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Facility
-            </Button>
-          </CollapsibleContent>
-        </Collapsible>
+          ) : (
+            <p className="text-sm text-muted-foreground italic py-2">
+              No facilities added yet
+            </p>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
