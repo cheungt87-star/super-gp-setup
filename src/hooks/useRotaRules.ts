@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-interface RotaRule {
+export interface RotaRule {
   id: string;
   site_id: string;
   organisation_id: string;
@@ -13,7 +13,7 @@ interface RotaRule {
   require_oncall: boolean;
 }
 
-interface StaffingRule {
+export interface StaffingRule {
   id: string;
   rota_rule_id: string;
   job_title_id: string;

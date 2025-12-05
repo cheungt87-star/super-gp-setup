@@ -19,6 +19,7 @@ export interface RotaShift {
   notes: string | null;
   user_name?: string;
   job_title_name?: string;
+  job_title_id?: string;
 }
 
 export interface RotaWeek {
@@ -99,6 +100,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
             ? `${shift.profiles.first_name || ""} ${shift.profiles.last_name || ""}`.trim()
             : "Unknown",
           job_title_name: shift.profiles?.job_titles?.name || "",
+          job_title_id: shift.profiles?.job_title_id || null,
         }))
       );
     } catch (error: any) {

@@ -2,12 +2,20 @@ import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ShiftCard } from "./ShiftCard";
+import { OnCallDropZone } from "./OnCallDropZone";
+import { StaffingRequirements } from "./StaffingRequirements";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
+import type { StaffingRule } from "@/hooks/useRotaRules";
 
 interface OpeningHours {
   is_closed: boolean;
   open_time: string | null;
   close_time: string | null;
+}
+
+interface JobTitle {
+  id: string;
+  name: string;
 }
 
 interface DroppableDayCellProps {
@@ -21,6 +29,8 @@ interface DroppableDayCellProps {
     pm_shift_start: string;
     pm_shift_end: string;
   } | null;
+  staffingRules: StaffingRule[];
+  jobTitles: JobTitle[];
   onShiftClick: (shift: RotaShift) => void;
   onDeleteShift: (shiftId: string) => void;
 }
@@ -31,25 +41,29 @@ export const DroppableDayCell = ({
   shifts,
   openingHours,
   rotaRules,
+  staffingRules,
+  jobTitles,
   onShiftClick,
   onDeleteShift,
 }: DroppableDayCellProps) => {
   const { isOver, setNodeRef } = useDroppable({
     id: dateKey,
-    data: { date, dateKey },
+    data: { date, dateKey, isOnCall: false },
   });
 
   const isClosed = openingHours?.is_closed ?? true;
   const dayName = format(date, "EEE");
   const dayNum = format(date, "d");
 
+  // Separate on-call and regular shifts
+  const onCallShift = shifts.find((s) => s.is_oncall) || null;
+  const regularShifts = shifts.filter((s) => !s.is_oncall);
+
   return (
     <div
-      ref={setNodeRef}
       className={cn(
-        "min-h-[160px] border-r last:border-r-0 p-2 transition-colors",
-        isClosed && "bg-muted/30",
-        isOver && !isClosed && "bg-primary/10"
+        "min-h-[200px] border-r last:border-r-0 p-2 transition-colors",
+        isClosed && "bg-muted/30"
       )}
     >
       <div className="text-center mb-2">
@@ -66,22 +80,50 @@ export const DroppableDayCell = ({
       </div>
 
       {!isClosed && (
-        <div className="space-y-1">
-          {shifts.map((shift) => (
-            <ShiftCard
-              key={shift.id}
-              shift={shift}
-              rotaRules={rotaRules}
-              onClick={() => onShiftClick(shift)}
-              onDelete={() => onDeleteShift(shift.id)}
-            />
-          ))}
-          {shifts.length === 0 && isOver && (
-            <div className="h-12 border-2 border-dashed border-primary/50 rounded flex items-center justify-center">
-              <span className="text-xs text-primary">Drop here</span>
-            </div>
-          )}
-        </div>
+        <>
+          {/* On-Call Drop Zone */}
+          <OnCallDropZone
+            dateKey={dateKey}
+            onCallShift={onCallShift}
+            onRemoveOnCall={onDeleteShift}
+          />
+
+          {/* Staffing Requirements Countdown */}
+          <StaffingRequirements
+            shifts={shifts}
+            staffingRules={staffingRules}
+            jobTitles={jobTitles}
+          />
+
+          {/* Regular Shifts Drop Zone */}
+          <div
+            ref={setNodeRef}
+            className={cn(
+              "space-y-1 min-h-[60px] rounded p-1 transition-colors",
+              isOver && "bg-primary/10 border border-dashed border-primary/50"
+            )}
+          >
+            {regularShifts.map((shift) => (
+              <ShiftCard
+                key={shift.id}
+                shift={shift}
+                rotaRules={rotaRules}
+                onClick={() => onShiftClick(shift)}
+                onDelete={() => onDeleteShift(shift.id)}
+              />
+            ))}
+            {regularShifts.length === 0 && (
+              <div className={cn(
+                "h-10 border border-dashed rounded flex items-center justify-center",
+                isOver ? "border-primary/50" : "border-muted-foreground/20"
+              )}>
+                <span className="text-xs text-muted-foreground">
+                  {isOver ? "Drop here" : "No shifts"}
+                </span>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
