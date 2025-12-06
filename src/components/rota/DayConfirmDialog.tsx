@@ -151,17 +151,17 @@ export const DayConfirmDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Confirm {format(date, "EEEE do MMMM")}</DialogTitle>
           <DialogDescription>
             Issues found - fix them or provide override reasons
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 min-h-0 flex flex-col space-y-4">
           {/* Summary */}
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-sm flex-shrink-0">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             <span className="font-medium">
               {errorCount + warningCount} issue{errorCount + warningCount !== 1 ? "s" : ""} found
@@ -172,7 +172,7 @@ export const DayConfirmDialog = ({
           </div>
 
           {/* Violations List */}
-          <ScrollArea className="max-h-[300px]">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-3 pr-4">
               {violations.map((v, i) => {
                 const override = overrides[i];
