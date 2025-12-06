@@ -98,14 +98,10 @@ export const useRotaRules = ({ siteId, organisationId }: UseRotaRulesProps) => {
     setSaving(true);
     try {
       if (rotaRule) {
-        // Update existing rule
+        // Update existing rule - only update require_oncall (shift times inherited from site opening hours)
         const { data, error } = await supabase
           .from("rota_rules")
           .update({
-            am_shift_start: ruleData.am_shift_start,
-            am_shift_end: ruleData.am_shift_end,
-            pm_shift_start: ruleData.pm_shift_start,
-            pm_shift_end: ruleData.pm_shift_end,
             require_oncall: ruleData.require_oncall,
           })
           .eq("id", rotaRule.id)
@@ -116,16 +112,12 @@ export const useRotaRules = ({ siteId, organisationId }: UseRotaRulesProps) => {
         setRotaRule(data);
         return data;
       } else {
-        // Create new rule
+        // Create new rule with defaults (shift times inherited from site opening hours)
         const { data, error } = await supabase
           .from("rota_rules")
           .insert({
             site_id: siteId,
             organisation_id: organisationId,
-            am_shift_start: ruleData.am_shift_start || "09:00",
-            am_shift_end: ruleData.am_shift_end || "13:00",
-            pm_shift_start: ruleData.pm_shift_start || "13:00",
-            pm_shift_end: ruleData.pm_shift_end || "18:00",
             require_oncall: ruleData.require_oncall ?? true,
           })
           .select()
