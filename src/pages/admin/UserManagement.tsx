@@ -244,6 +244,49 @@ const UserManagement = () => {
     setSelectedUserIds(new Set());
   };
 
+  const handleBulkDelete = async () => {
+    const selectedIds = Array.from(selectedUserIds);
+    
+    // Safety: filter out current user (can't delete yourself) and master users
+    const idsToDelete = selectedIds.filter(id => {
+      if (id === currentUserId) return false;
+      const user = users.find(u => u.id === id);
+      if (user?.role === 'master') return false;
+      return true;
+    });
+
+    if (idsToDelete.length === 0) {
+      toast({
+        title: "Cannot delete",
+        description: "You cannot delete yourself or the master user.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .delete()
+      .in("id", idsToDelete);
+
+    if (error) {
+      toast({
+        title: "Error deleting users",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Users deleted",
+      description: `Deleted ${idsToDelete.length} user${idsToDelete.length !== 1 ? 's' : ''}.`,
+    });
+
+    setUsers(prev => prev.filter(u => !idsToDelete.includes(u.id)));
+    setSelectedUserIds(new Set());
+  };
+
   const filteredAndSortedUsers = useMemo(() => {
     let result = [...users];
     
@@ -361,6 +404,7 @@ const UserManagement = () => {
             sites={sites}
             jobTitles={jobTitles}
             onApply={handleBulkUpdate}
+            onDelete={handleBulkDelete}
             onClearSelection={() => setSelectedUserIds(new Set())}
           />
         )}
