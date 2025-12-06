@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, Lock, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,6 +43,7 @@ interface Site {
 interface ProfileFormProps {
   defaultValues: ProfileFormValues;
   email: string;
+  organisationName: string | null;
   jobTitles: JobTitle[];
   sites: Site[];
   onSubmit: (values: ProfileFormValues) => Promise<void>;
@@ -52,6 +53,7 @@ interface ProfileFormProps {
 const ProfileForm = ({
   defaultValues,
   email,
+  organisationName,
   jobTitles,
   sites,
   onSubmit,
@@ -107,6 +109,21 @@ const ProfileForm = ({
           />
           <p className="text-xs text-muted-foreground">
             Email cannot be changed
+          </p>
+        </FormItem>
+
+        <FormItem>
+          <FormLabel className="flex items-center gap-2">
+            Organisation
+            <Building2 className="h-3 w-3 text-muted-foreground" />
+          </FormLabel>
+          <Input
+            value={organisationName || "—"}
+            disabled
+            className="bg-muted text-muted-foreground"
+          />
+          <p className="text-xs text-muted-foreground">
+            Organisation cannot be changed
           </p>
         </FormItem>
 

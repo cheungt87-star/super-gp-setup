@@ -25,7 +25,7 @@ interface Option {
 
 const Profile = () => {
   const { toast } = useToast();
-  const { organisationId } = useOrganisation();
+  const { organisationId, organisationName } = useOrganisation();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [jobTitles, setJobTitles] = useState<Option[]>([]);
   const [sites, setSites] = useState<Option[]>([]);
@@ -190,6 +190,7 @@ const Profile = () => {
               primary_site_id: profile.primary_site_id,
             }}
             email={profile.email}
+            organisationName={organisationName}
             jobTitles={jobTitles}
             sites={sites}
             onSubmit={handleSubmit}
