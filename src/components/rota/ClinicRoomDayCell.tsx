@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen } from "lucide-react";
+import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock } from "lucide-react";
 import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
 import type { Database } from "@/integrations/supabase/types";
@@ -67,7 +67,7 @@ interface ClinicRoomDayCellProps {
   amShiftEnd?: string;
   pmShiftStart?: string;
   pmShiftEnd?: string;
-  onAddShift: (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string) => Promise<void>;
+  onAddShift: (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string) => Promise<void>;
   onDeleteShift: (shiftId: string) => void;
   onEditShift: (shift: RotaShift) => void;
   onRepeatPreviousDay?: (dateKey: string, previousDateKey: string) => Promise<void>;
@@ -110,9 +110,6 @@ export const ClinicRoomDayCell = ({
   // Separate shifts by type
   const onCallShift = shifts.find((s) => s.is_oncall) || null;
   const regularShifts = shifts.filter((s) => !s.is_oncall);
-  const amShifts = regularShifts.filter((s) => s.shift_type === "am");
-  const pmShifts = regularShifts.filter((s) => s.shift_type === "pm");
-  const fullDayShifts = regularShifts.filter((s) => s.shift_type === "full_day");
 
   // Get user IDs that conflict with a given shift type for a given facility
   const getConflictingUserIds = (targetShiftType: ShiftType | "oncall", facilityId?: string): string[] => {
@@ -131,31 +128,54 @@ export const ClinicRoomDayCell = ({
     if (targetShiftType === "am") {
       // AM conflicts with existing AM or Full Day in this room
       return facilityShifts
-        .filter((s) => s.shift_type === "am" || s.shift_type === "full_day")
+        .filter((s) => s.shift_type === "am" || s.shift_type === "full_day" || (s.shift_type === "custom" && isCustomInAM(s)))
         .map((s) => s.user_id);
     }
     if (targetShiftType === "pm") {
       // PM conflicts with existing PM or Full Day in this room
       return facilityShifts
-        .filter((s) => s.shift_type === "pm" || s.shift_type === "full_day")
+        .filter((s) => s.shift_type === "pm" || s.shift_type === "full_day" || (s.shift_type === "custom" && isCustomInPM(s)))
         .map((s) => s.user_id);
     }
     return [];
   };
 
-  // Get shifts for a specific room and period
+  // Helper to determine if a custom shift falls in AM period
+  const isCustomInAM = (shift: RotaShift): boolean => {
+    if (!shift.custom_start_time) return false;
+    const startTime = shift.custom_start_time.slice(0, 5);
+    return startTime < amShiftEnd;
+  };
+
+  // Helper to determine if a custom shift falls in PM period
+  const isCustomInPM = (shift: RotaShift): boolean => {
+    if (!shift.custom_end_time) return false;
+    const endTime = shift.custom_end_time.slice(0, 5);
+    return endTime > pmShiftStart;
+  };
+
+  // Get shifts for a specific room and period, including custom shifts
   const getShiftsForRoom = (roomId: string, period: "am" | "pm") => {
     const roomShifts = regularShifts.filter((s) => s.facility_id === roomId);
+    
     if (period === "am") {
-      return {
-        periodShifts: roomShifts.filter((s) => s.shift_type === "am"),
-        fullDayShifts: roomShifts.filter((s) => s.shift_type === "full_day"),
-      };
+      // Standard AM shifts
+      const periodShifts = roomShifts.filter((s) => s.shift_type === "am");
+      // Full day shifts (show in both)
+      const fullDayShifts = roomShifts.filter((s) => s.shift_type === "full_day");
+      // Custom shifts that fall in AM period
+      const customShifts = roomShifts.filter((s) => s.shift_type === "custom" && isCustomInAM(s));
+      
+      return { periodShifts, fullDayShifts, customShifts };
     } else {
-      return {
-        periodShifts: roomShifts.filter((s) => s.shift_type === "pm"),
-        fullDayShifts: roomShifts.filter((s) => s.shift_type === "full_day"),
-      };
+      // Standard PM shifts
+      const periodShifts = roomShifts.filter((s) => s.shift_type === "pm");
+      // Full day shifts (show in both)
+      const fullDayShifts = roomShifts.filter((s) => s.shift_type === "full_day");
+      // Custom shifts that fall in PM period
+      const customShifts = roomShifts.filter((s) => s.shift_type === "custom" && isCustomInPM(s));
+      
+      return { periodShifts, fullDayShifts, customShifts };
     }
   };
 
@@ -163,35 +183,50 @@ export const ClinicRoomDayCell = ({
     setSelectionDialog({ open: true, facilityId, facilityName, shiftType });
   };
 
-  const handleSelectStaff = async (userId: string, makeFullDay?: boolean) => {
+  const handleSelectStaff = async (userId: string, makeFullDay?: boolean, customStartTime?: string, customEndTime?: string) => {
     if (!selectionDialog) return;
     const isOnCall = selectionDialog.shiftType === "oncall";
-    const actualShiftType: ShiftType = isOnCall ? "full_day" : selectionDialog.shiftType as ShiftType;
     const facilityId = isOnCall ? undefined : selectionDialog.facilityId;
     
+    // Determine actual shift type
+    let actualShiftType: ShiftType;
+    if (isOnCall) {
+      actualShiftType = "full_day";
+    } else if (customStartTime && customEndTime) {
+      actualShiftType = "custom";
+    } else {
+      actualShiftType = selectionDialog.shiftType as ShiftType;
+    }
+    
     // Add the primary shift
-    await onAddShift(userId, dateKey, actualShiftType, isOnCall, facilityId);
+    await onAddShift(userId, dateKey, actualShiftType, isOnCall, facilityId, customStartTime, customEndTime);
     
     // If "Make Full Day" was checked, add the opposite shift too
-    if (makeFullDay && !isOnCall && (actualShiftType === "am" || actualShiftType === "pm")) {
-      const oppositeShiftType: ShiftType = actualShiftType === "am" ? "pm" : "am";
+    if (makeFullDay && !isOnCall && (selectionDialog.shiftType === "am" || selectionDialog.shiftType === "pm")) {
+      const oppositeShiftType: ShiftType = selectionDialog.shiftType === "am" ? "pm" : "am";
       await onAddShift(userId, dateKey, oppositeShiftType, false, facilityId);
     }
   };
 
-  const renderShiftCard = (shift: RotaShift, showFullBadge = false) => (
+  const renderShiftCard = (shift: RotaShift, showFullBadge = false, isCustom = false) => (
     <div
       key={shift.id}
       className="flex items-center justify-between gap-2 bg-muted/50 rounded-md px-3 py-2 cursor-pointer hover:bg-muted transition-colors"
       onClick={() => onEditShift(shift)}
     >
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center gap-2 min-w-0 flex-wrap">
         <span className="text-sm truncate">{shift.user_name}</span>
         {shift.job_title_name && (
           <Badge variant="outline" className={cn("text-[10px] px-1 py-0 shrink-0", getJobTitleColors(shift.job_title_name))}>{shift.job_title_name}</Badge>
         )}
         {showFullBadge && (
           <Badge variant="secondary" className="text-[10px] px-1 py-0 shrink-0">Full</Badge>
+        )}
+        {isCustom && shift.custom_start_time && shift.custom_end_time && (
+          <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
+            <Clock className="h-3 w-3 mr-0.5" />
+            {shift.custom_start_time.slice(0, 5)}-{shift.custom_end_time.slice(0, 5)}
+          </Badge>
         )}
       </div>
       <Button
@@ -328,8 +363,12 @@ export const ClinicRoomDayCell = ({
 
                     {/* AM Column */}
                     <div className="px-4 py-3 border-l space-y-2">
+                      {/* Standard AM shifts */}
                       {amData.periodShifts.map((shift) => renderShiftCard(shift))}
+                      {/* Full day shifts */}
                       {amData.fullDayShifts.map((shift) => renderShiftCard(shift, true))}
+                      {/* Custom partial shifts */}
+                      {amData.customShifts.map((shift) => renderShiftCard(shift, false, true))}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -344,8 +383,12 @@ export const ClinicRoomDayCell = ({
 
                     {/* PM Column */}
                     <div className="px-4 py-3 border-l space-y-2">
+                      {/* Standard PM shifts */}
                       {pmData.periodShifts.map((shift) => renderShiftCard(shift))}
+                      {/* Full day shifts */}
                       {pmData.fullDayShifts.map((shift) => renderShiftCard(shift, true))}
+                      {/* Custom partial shifts */}
+                      {pmData.customShifts.map((shift) => renderShiftCard(shift, false, true))}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -392,6 +435,10 @@ export const ClinicRoomDayCell = ({
           currentSiteId={currentSiteId}
           sites={sites}
           jobTitles={jobTitles}
+          amShiftStart={amShiftStart}
+          amShiftEnd={amShiftEnd}
+          pmShiftStart={pmShiftStart}
+          pmShiftEnd={pmShiftEnd}
           onSelectStaff={handleSelectStaff}
         />
       )}

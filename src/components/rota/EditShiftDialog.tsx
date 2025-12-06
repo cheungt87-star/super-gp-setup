@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -50,15 +50,47 @@ export const EditShiftDialog = ({
   const [isOncall, setIsOncall] = useState(false);
   const [notes, setNotes] = useState("");
 
+  // Determine original period (AM or PM) based on shift data
+  const originalPeriod = useMemo(() => {
+    if (!shift) return null;
+    if (shift.shift_type === "am") return "am";
+    if (shift.shift_type === "pm") return "pm";
+    if (shift.shift_type === "custom" && shift.custom_start_time) {
+      // Determine period based on start time
+      const startHour = parseInt(shift.custom_start_time.slice(0, 2));
+      return startHour < 13 ? "am" : "pm";
+    }
+    return null;
+  }, [shift]);
+
+  // Period constraints for custom time editing
+  const periodConstraints = useMemo(() => {
+    if (!rotaRules || !originalPeriod) return null;
+    if (originalPeriod === "am") {
+      return { 
+        min: rotaRules.am_shift_start.slice(0, 5), 
+        max: rotaRules.am_shift_end.slice(0, 5),
+        label: "AM"
+      };
+    } else if (originalPeriod === "pm") {
+      return { 
+        min: rotaRules.pm_shift_start.slice(0, 5), 
+        max: rotaRules.pm_shift_end.slice(0, 5),
+        label: "PM"
+      };
+    }
+    return null;
+  }, [rotaRules, originalPeriod]);
+
   useEffect(() => {
     if (shift) {
       setShiftType(shift.shift_type);
-      setCustomStart(shift.custom_start_time?.slice(0, 5) || "09:00");
-      setCustomEnd(shift.custom_end_time?.slice(0, 5) || "17:00");
+      setCustomStart(shift.custom_start_time?.slice(0, 5) || rotaRules?.am_shift_start.slice(0, 5) || "09:00");
+      setCustomEnd(shift.custom_end_time?.slice(0, 5) || rotaRules?.pm_shift_end.slice(0, 5) || "17:00");
       setIsOncall(shift.is_oncall);
       setNotes(shift.notes || "");
     }
-  }, [shift]);
+  }, [shift, rotaRules]);
 
   const handleSave = () => {
     onSave({
@@ -69,6 +101,9 @@ export const EditShiftDialog = ({
       notes: notes || null,
     });
   };
+
+  // Validation
+  const isTimeValid = shiftType !== "custom" || (customStart && customEnd && customStart < customEnd);
 
   if (!shift) return null;
 
@@ -118,20 +153,36 @@ export const EditShiftDialog = ({
           </div>
 
           {shiftType === "custom" && (
-            <div className="flex items-center gap-2 pl-6">
-              <Input
-                type="time"
-                value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-                className="w-32"
-              />
-              <span className="text-muted-foreground">to</span>
-              <Input
-                type="time"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                className="w-32"
-              />
+            <div className="space-y-2 pl-6">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="time"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  min={periodConstraints?.min}
+                  max={periodConstraints?.max}
+                  className="w-32"
+                />
+                <span className="text-muted-foreground">to</span>
+                <Input
+                  type="time"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  min={periodConstraints?.min}
+                  max={periodConstraints?.max}
+                  className="w-32"
+                />
+              </div>
+              {periodConstraints && (
+                <p className="text-xs text-muted-foreground">
+                  Must be within {periodConstraints.label} period: {periodConstraints.min} - {periodConstraints.max}
+                </p>
+              )}
+              {!isTimeValid && (
+                <p className="text-xs text-destructive">
+                  End time must be after start time
+                </p>
+              )}
             </div>
           )}
 
@@ -160,7 +211,9 @@ export const EditShiftDialog = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button onClick={handleSave} disabled={!isTimeValid}>
+            Save Changes
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
