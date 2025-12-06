@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertCircle, Send } from "lucide-react";
+import { Loader2, AlertCircle, Send, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
@@ -13,6 +13,7 @@ import { useRotaSchedule, RotaShift } from "@/hooks/useRotaSchedule";
 import { useRotaRules } from "@/hooks/useRotaRules";
 import { WeekSelector } from "./WeekSelector";
 import { ClinicRoomDayCell } from "./ClinicRoomDayCell";
+import { RotaPreviewDialog } from "./RotaPreviewDialog";
 import { EditShiftDialog } from "./EditShiftDialog";
 import { getWeekDays, getWeekStartDate, formatDateKey, calculateShiftHours } from "@/lib/rotaUtils";
 import { toast } from "@/hooks/use-toast";
@@ -71,6 +72,7 @@ export const RotaScheduleTab = () => {
 
   // Edit state
   const [editingShift, setEditingShift] = useState<RotaShift | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const weekStartStr = formatDateKey(weekStart);
   const weekDays = getWeekDays(weekStart);
@@ -448,6 +450,16 @@ export const RotaScheduleTab = () => {
                   {rotaWeek.status}
                 </Badge>
               )}
+              {selectedSiteId && rotaWeek && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPreview(true)}
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Preview
+                </Button>
+              )}
               {rotaWeek?.status === "draft" && (
                 <Button
                   size="sm"
@@ -585,6 +597,24 @@ export const RotaScheduleTab = () => {
         shift={editingShift}
         rotaRules={rotaRule}
         onSave={handleEditShift}
+      />
+
+      {/* Preview Dialog */}
+      <RotaPreviewDialog
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        shifts={shifts}
+        clinicRooms={clinicRooms}
+        weekDays={weekDays}
+        openingHoursByDay={openingHoursByDay}
+        currentSiteId={selectedSiteId || ""}
+        allStaff={allStaff}
+        requireOnCall={rotaRule?.require_oncall ?? true}
+        onPublish={rotaWeek?.status === "draft" ? () => {
+          updateWeekStatus("published");
+          setShowPreview(false);
+        } : undefined}
+        saving={saving}
       />
     </div>
   );
