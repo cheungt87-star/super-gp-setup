@@ -80,6 +80,9 @@ export const RotaScheduleTab = () => {
   // Day confirmation state
   const [confirmingDate, setConfirmingDate] = useState<Date | null>(null);
   const [confirmViolations, setConfirmViolations] = useState<RuleViolation[]>([]);
+  
+  // Selected day tab index
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
 
   const weekStartStr = formatDateKey(weekStart);
   const weekDays = getWeekDays(weekStart);
@@ -554,12 +557,71 @@ export const RotaScheduleTab = () => {
       {selectedSiteId && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Weekly Schedule</CardTitle>
-            <CardDescription>
-              {clinicRooms.length === 0
-                ? "No clinic rooms configured. Add them in Site Management."
-                : "Click + to add staff to each clinic room"}
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Weekly Schedule</CardTitle>
+                <CardDescription>
+                  {clinicRooms.length === 0
+                    ? "No clinic rooms configured. Add them in Site Management."
+                    : "Click + to add staff to each clinic room"}
+                </CardDescription>
+              </div>
+              {/* Confirm Day button - dynamically shows for selected day */}
+              {(() => {
+                const selectedDay = weekDays[selectedDayIndex];
+                if (!selectedDay) return null;
+                const dateKey = formatDateKey(selectedDay);
+                const confirmation = getConfirmationStatus(dateKey);
+                
+                if (confirmation) {
+                  return (
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={confirmation.status === "confirmed" ? "default" : "secondary"}
+                        className={cn(
+                          "gap-1",
+                          confirmation.status === "confirmed" 
+                            ? "bg-green-100 text-green-700 hover:bg-green-100" 
+                            : "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                        )}
+                      >
+                        {confirmation.status === "confirmed" ? (
+                          <><CheckCircle2 className="h-3 w-3" /> Confirmed</>
+                        ) : (
+                          <><AlertTriangle className="h-3 w-3" /> Confirmed with overrides</>
+                        )}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => handleResetConfirmation(dateKey)}
+                        disabled={savingConfirmation}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => handleConfirmDay(selectedDay)}
+                    disabled={savingConfirmation}
+                  >
+                    {savingConfirmation ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Confirm Day
+                  </Button>
+                );
+              })()}
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {loadingSchedule || loadingRules ? (
@@ -578,7 +640,9 @@ export const RotaScheduleTab = () => {
                   }
                   return "0";
                 })()
-              } className="w-full">
+              } 
+              onValueChange={(value) => setSelectedDayIndex(parseInt(value))}
+              className="w-full">
                 <TabsList className="w-full justify-start h-auto p-1 bg-muted/50 rounded-none border-t">
                   {weekDays.map((day, index) => {
                     const dayOfWeek = day.getDay();
@@ -595,19 +659,19 @@ export const RotaScheduleTab = () => {
                       <TabsTrigger
                         key={index}
                         value={String(index)}
-                        className="flex-1 py-2 px-3 data-[state=active]:bg-background"
+                        className="flex-1 py-2.5 px-4 rounded-md transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-muted/60"
                       >
                         <div className="flex flex-col items-center gap-0.5">
                           <div className="flex items-center gap-1">
-                            <span className="text-xs">{format(day, "EEE")}</span>
+                            <span className="text-sm font-medium">{format(day, "EEE")}</span>
                             {confirmation?.status === "confirmed" && (
-                              <CheckCircle2 className="h-3 w-3 text-green-500" />
+                              <CheckCircle2 className="h-3 w-3 text-green-500 data-[state=active]:text-green-200" />
                             )}
                             {confirmation?.status === "confirmed_with_overrides" && (
-                              <AlertTriangle className="h-3 w-3 text-amber-500" />
+                              <AlertTriangle className="h-3 w-3 text-amber-500 data-[state=active]:text-amber-200" />
                             )}
                           </div>
-                          <span className="font-semibold">{format(day, "d")}</span>
+                          <span className="text-xs">{format(day, "do MMM")}</span>
                         </div>
                       </TabsTrigger>
                     );
@@ -638,59 +702,17 @@ export const RotaScheduleTab = () => {
                   const previousDateKey = index > 0 ? formatDateKey(weekDays[index - 1]) : null;
                   const confirmation = getConfirmationStatus(dateKey);
 
+                  // Render confirm button in header via portal-like pattern
+                  const isSelectedDay = selectedDayIndex === index;
+                  
                   return (
                     <TabsContent key={dateKey} value={String(index)} className="mt-0">
-                      {/* Confirm Day Header */}
-                      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
-                        <span className="text-sm font-medium">
-                          {format(day, "EEEE, MMMM d")}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {confirmation ? (
-                            <div className="flex items-center gap-2">
-                              <Badge 
-                                variant={confirmation.status === "confirmed" ? "default" : "secondary"}
-                                className={cn(
-                                  "gap-1",
-                                  confirmation.status === "confirmed" 
-                                    ? "bg-green-100 text-green-700 hover:bg-green-100" 
-                                    : "bg-amber-100 text-amber-700 hover:bg-amber-100"
-                                )}
-                              >
-                                {confirmation.status === "confirmed" ? (
-                                  <><CheckCircle2 className="h-3 w-3" /> Confirmed</>
-                                ) : (
-                                  <><AlertTriangle className="h-3 w-3" /> Confirmed with overrides</>
-                                )}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => handleResetConfirmation(dateKey)}
-                                disabled={savingConfirmation}
-                              >
-                                Reset
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7"
-                              onClick={() => handleConfirmDay(day)}
-                              disabled={savingConfirmation}
-                            >
-                              {savingConfirmation ? (
-                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                              ) : (
-                                <CheckCircle2 className="mr-1 h-3 w-3" />
-                              )}
-                              Confirm Day
-                            </Button>
-                          )}
+                      {/* Confirm Day Button - rendered inline with CardHeader title */}
+                      {isSelectedDay && (
+                        <div className="hidden">
+                          {/* Portal target - actual button rendered in header */}
                         </div>
-                      </div>
+                      )}
                       <ClinicRoomDayCell
                         date={day}
                         dateKey={dateKey}
