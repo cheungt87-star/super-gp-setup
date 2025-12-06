@@ -33,7 +33,7 @@ type SortField = "name" | "site_name" | "initial_due_date" | "recurrence_pattern
 type SortDirection = "asc" | "desc";
 
 const WorkflowManagementCard = () => {
-  const { organisationId } = useOrganisation();
+  const { organisationId, loading: orgLoading } = useOrganisation();
   
   // Data state
   const [tasks, setTasks] = useState<WorkflowTask[]>([]);
@@ -58,7 +58,7 @@ const WorkflowManagementCard = () => {
   const [deleting, setDeleting] = useState(false);
 
   const fetchData = async (isRefetch = false) => {
-    if (!organisationId) return;
+    if (!organisationId || orgLoading) return;
     
     if (!isRefetch) setInitialLoading(true);
 
@@ -119,7 +119,7 @@ const WorkflowManagementCard = () => {
 
   useEffect(() => {
     fetchData();
-  }, [organisationId]);
+  }, [organisationId, orgLoading]);
 
   // Filter and sort tasks
   const filteredAndSortedTasks = useMemo(() => {
@@ -285,7 +285,7 @@ const WorkflowManagementCard = () => {
     setTaskToDelete(null);
   };
 
-  if (initialLoading) {
+  if (initialLoading || orgLoading) {
     return (
       <Card className="animate-fade-in">
         <CardHeader>
