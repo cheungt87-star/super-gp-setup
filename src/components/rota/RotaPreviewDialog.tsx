@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -20,6 +20,8 @@ import {
   Clock,
   Users,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RotaShift } from "@/hooks/useRotaSchedule";
@@ -194,6 +196,14 @@ export const RotaPreviewDialog = ({
     }));
   }, [violations]);
 
+  // State for issues expander
+  const [issuesExpanded, setIssuesExpanded] = useState(false);
+  const INITIAL_ISSUES_SHOWN = 4;
+  const visibleViolations = issuesExpanded 
+    ? violations 
+    : violations.slice(0, INITIAL_ISSUES_SHOWN);
+  const hiddenCount = violations.length - INITIAL_ISSUES_SHOWN;
+
   // Group violations by type for display
   const errorCount = violations.filter((v) => v.severity === "error").length;
   const warningCount = violations.filter((v) => v.severity === "warning").length;
@@ -301,28 +311,47 @@ export const RotaPreviewDialog = ({
                   </Badge>
                 )}
               </div>
-              <ScrollArea className="max-h-32">
-                <div className="space-y-1.5">
-                  {violations.map((v, i) => (
-                    <div
-                      key={i}
-                      className={cn(
-                        "flex items-center gap-2 text-sm py-1 px-2 rounded",
-                        v.severity === "error"
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-amber-50 text-amber-700"
-                      )}
-                    >
-                      {v.severity === "error" ? (
-                        <XCircle className="h-4 w-4 flex-shrink-0" />
-                      ) : (
-                        getViolationIcon(v.type)
-                      )}
-                      <span>{v.message}</span>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
+              <div className="space-y-1.5">
+                {visibleViolations.map((v, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex items-center gap-2 text-sm py-1 px-2 rounded",
+                      v.severity === "error"
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-amber-50 text-amber-700"
+                    )}
+                  >
+                    {v.severity === "error" ? (
+                      <XCircle className="h-4 w-4 flex-shrink-0" />
+                    ) : (
+                      getViolationIcon(v.type)
+                    )}
+                    <span>{v.message}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Show more/less toggle */}
+              {hiddenCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={() => setIssuesExpanded(!issuesExpanded)}
+                >
+                  {issuesExpanded ? (
+                    <>
+                      Show less
+                      <ChevronUp className="ml-1 h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      Show {hiddenCount} more issue{hiddenCount !== 1 ? "s" : ""}
+                      <ChevronDown className="ml-1 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           ) : (
             <div className="border rounded-lg p-4 bg-green-50 flex items-center gap-2 text-green-700">
@@ -334,16 +363,16 @@ export const RotaPreviewDialog = ({
           {/* Week Summary Table */}
           <ScrollArea className="flex-1 border rounded-lg">
             <div className="min-w-[600px]">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-fixed">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="text-left p-2 font-medium sticky left-0 bg-muted/50 min-w-[120px]">
+                    <th className="text-left p-2 font-medium sticky left-0 bg-muted/50 w-[100px]">
                       Room
                     </th>
                     {weekSummary.map((day) => (
                       <th
                         key={day.dateKey}
-                        className="text-center p-2 font-medium min-w-[100px]"
+                        className="text-center p-2 font-medium w-[140px]"
                       >
                         {day.dayLabel}
                       </th>
@@ -397,32 +426,33 @@ export const RotaPreviewDialog = ({
                                     : "bg-green-50 text-green-700"
                                 )}
                               >
-                                <span className="font-medium">AM: </span>
+                                <span className="font-medium">AM:</span>
                                 {amStaff.length === 0 ? (
-                                  "Empty"
+                                  <span className="ml-1">Empty</span>
                                 ) : (
-                                  amStaff.map((s, i) => (
-                                    <span key={i} className="inline-flex items-center gap-0.5">
-                                      {i > 0 && ", "}
-                                      {s.name}
-                                      {s.isTemp && (
-                                        <Badge
-                                          variant={s.tempConfirmed ? "secondary" : "destructive"}
-                                          className="text-[10px] px-1 py-0 ml-0.5"
-                                        >
-                                          {s.tempConfirmed ? "T" : "T?"}
-                                        </Badge>
-                                      )}
-                                      {s.isCrossSite && (
-                                        <Badge
-                                          variant="outline"
-                                          className="text-[10px] px-1 py-0 ml-0.5"
-                                        >
-                                          ✱
-                                        </Badge>
-                                      )}
-                                    </span>
-                                  ))
+                                  <div className="flex flex-col gap-0.5 mt-0.5">
+                                    {amStaff.map((s, i) => (
+                                      <div key={i} className="flex items-center gap-0.5">
+                                        <span className="truncate">{s.name}</span>
+                                        {s.isTemp && (
+                                          <Badge
+                                            variant={s.tempConfirmed ? "secondary" : "destructive"}
+                                            className="text-[10px] px-1 py-0 flex-shrink-0"
+                                          >
+                                            {s.tempConfirmed ? "T" : "T?"}
+                                          </Badge>
+                                        )}
+                                        {s.isCrossSite && (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-[10px] px-1 py-0 flex-shrink-0"
+                                          >
+                                            ✱
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                               {/* PM */}
@@ -434,32 +464,33 @@ export const RotaPreviewDialog = ({
                                     : "bg-green-50 text-green-700"
                                 )}
                               >
-                                <span className="font-medium">PM: </span>
+                                <span className="font-medium">PM:</span>
                                 {pmStaff.length === 0 ? (
-                                  "Empty"
+                                  <span className="ml-1">Empty</span>
                                 ) : (
-                                  pmStaff.map((s, i) => (
-                                    <span key={i} className="inline-flex items-center gap-0.5">
-                                      {i > 0 && ", "}
-                                      {s.name}
-                                      {s.isTemp && (
-                                        <Badge
-                                          variant={s.tempConfirmed ? "secondary" : "destructive"}
-                                          className="text-[10px] px-1 py-0 ml-0.5"
-                                        >
-                                          {s.tempConfirmed ? "T" : "T?"}
-                                        </Badge>
-                                      )}
-                                      {s.isCrossSite && (
-                                        <Badge
-                                          variant="outline"
-                                          className="text-[10px] px-1 py-0 ml-0.5"
-                                        >
-                                          ✱
-                                        </Badge>
-                                      )}
-                                    </span>
-                                  ))
+                                  <div className="flex flex-col gap-0.5 mt-0.5">
+                                    {pmStaff.map((s, i) => (
+                                      <div key={i} className="flex items-center gap-0.5">
+                                        <span className="truncate">{s.name}</span>
+                                        {s.isTemp && (
+                                          <Badge
+                                            variant={s.tempConfirmed ? "secondary" : "destructive"}
+                                            className="text-[10px] px-1 py-0 flex-shrink-0"
+                                          >
+                                            {s.tempConfirmed ? "T" : "T?"}
+                                          </Badge>
+                                        )}
+                                        {s.isCrossSite && (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-[10px] px-1 py-0 flex-shrink-0"
+                                          >
+                                            ✱
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                             </div>
