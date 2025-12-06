@@ -172,16 +172,22 @@ export const RotaScheduleTab = () => {
       const openTime = dayHours?.am_open_time || null;
       const closeTime = dayHours?.pm_close_time || null;
 
+      // Use site opening hours for AM/PM shift times
+      const amStart = dayHours?.am_open_time || "09:00";
+      const amEnd = dayHours?.am_close_time || "13:00";
+      const pmStart = dayHours?.pm_open_time || "13:00";
+      const pmEnd = dayHours?.pm_close_time || "18:00";
+
       const shiftHours = calculateShiftHours(
         shift.shift_type,
         shift.custom_start_time,
         shift.custom_end_time,
         openTime,
         closeTime,
-        rotaRule?.am_shift_start || "09:00",
-        rotaRule?.am_shift_end || "13:00",
-        rotaRule?.pm_shift_start || "13:00",
-        rotaRule?.pm_shift_end || "18:00"
+        amStart,
+        amEnd,
+        pmStart,
+        pmEnd
       );
 
       hours[shift.user_id] = (hours[shift.user_id] || 0) + shiftHours;
@@ -491,10 +497,10 @@ export const RotaScheduleTab = () => {
                         requireOnCall={rotaRule?.require_oncall ?? true}
                         loading={loadingSiteData}
                         previousDateKey={previousDateKey}
-                        amShiftStart={rotaRule?.am_shift_start || "09:00"}
-                        amShiftEnd={rotaRule?.am_shift_end || "13:00"}
-                        pmShiftStart={rotaRule?.pm_shift_start || "13:00"}
-                        pmShiftEnd={rotaRule?.pm_shift_end || "18:00"}
+                        amShiftStart={openingHoursByDay[adjustedDay]?.am_open_time || "09:00"}
+                        amShiftEnd={openingHoursByDay[adjustedDay]?.am_close_time || "13:00"}
+                        pmShiftStart={openingHoursByDay[adjustedDay]?.pm_open_time || "13:00"}
+                        pmShiftEnd={openingHoursByDay[adjustedDay]?.pm_close_time || "18:00"}
                         onAddShift={handleAddShift}
                         onDeleteShift={handleDeleteShift}
                         onEditShift={setEditingShift}
