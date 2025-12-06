@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { User, Clock, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
@@ -48,7 +49,12 @@ interface StaffSelectionDialogProps {
   currentSiteId?: string;
   sites?: Site[];
   jobTitles?: JobTitle[];
-  onSelectStaff: (userId: string, makeFullDay?: boolean) => void;
+  // AM/PM timing constraints for custom time selection
+  amShiftStart?: string;
+  amShiftEnd?: string;
+  pmShiftStart?: string;
+  pmShiftEnd?: string;
+  onSelectStaff: (userId: string, makeFullDay?: boolean, customStartTime?: string, customEndTime?: string) => void;
 }
 
 const getShiftTypeDisplay = (shiftType: ShiftType | "oncall") => {
@@ -80,22 +86,47 @@ export const StaffSelectionDialog = ({
   currentSiteId,
   sites,
   jobTitles,
+  amShiftStart = "09:00",
+  amShiftEnd = "13:00",
+  pmShiftStart = "13:00",
+  pmShiftEnd = "18:00",
   onSelectStaff,
 }: StaffSelectionDialogProps) => {
   const [makeFullDay, setMakeFullDay] = useState(false);
+  const [useCustomTime, setUseCustomTime] = useState(false);
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [selectedSiteId, setSelectedSiteId] = useState(currentSiteId || "");
   const [selectedJobTitleId, setSelectedJobTitleId] = useState<string>("all");
 
   const hasFilters = sites && sites.length > 0 && currentSiteId;
 
+  // Determine the period constraints based on shift type
+  const periodConstraints = useMemo(() => {
+    if (shiftType === "am") {
+      return { min: amShiftStart.slice(0, 5), max: amShiftEnd.slice(0, 5), label: "AM" };
+    } else if (shiftType === "pm") {
+      return { min: pmShiftStart.slice(0, 5), max: pmShiftEnd.slice(0, 5), label: "PM" };
+    }
+    return null;
+  }, [shiftType, amShiftStart, amShiftEnd, pmShiftStart, pmShiftEnd]);
+
   // Reset filters when dialog opens/closes or site changes
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setMakeFullDay(false);
+      setUseCustomTime(false);
+      setCustomStart("");
+      setCustomEnd("");
     } else {
       // Reset to current site when opening
       setSelectedSiteId(currentSiteId || "");
       setSelectedJobTitleId("all");
+      // Set default custom times to period boundaries
+      if (periodConstraints) {
+        setCustomStart(periodConstraints.min);
+        setCustomEnd(periodConstraints.max);
+      }
     }
     onOpenChange(newOpen);
   };
@@ -112,8 +143,12 @@ export const StaffSelectionDialog = ({
         // If we have dayOfWeek, filter by working days
         if (dayOfWeek) {
           const worksDayKey = dayOfWeek.toLowerCase();
-          const worksThisDay = s.working_days?.[worksDayKey] === true;
-          if (!worksThisDay) return false;
+          // If working_days is null or has no true values, treat as available any day
+          const hasConfiguredDays = s.working_days && Object.values(s.working_days).some(v => v === true);
+          if (hasConfiguredDays) {
+            const worksThisDay = s.working_days?.[worksDayKey] === true;
+            if (!worksThisDay) return false;
+          }
         }
         
         return true;
@@ -131,8 +166,12 @@ export const StaffSelectionDialog = ({
       // Filter by working day
       if (dayOfWeek) {
         const worksDayKey = dayOfWeek.toLowerCase();
-        const worksThisDay = s.working_days?.[worksDayKey] === true;
-        if (!worksThisDay) return false;
+        // If working_days is null or has no true values, treat as available any day
+        const hasConfiguredDays = s.working_days && Object.values(s.working_days).some(v => v === true);
+        if (hasConfiguredDays) {
+          const worksThisDay = s.working_days?.[worksDayKey] === true;
+          if (!worksThisDay) return false;
+        }
       }
       
       // Filter by job title if selected
@@ -143,15 +182,24 @@ export const StaffSelectionDialog = ({
   }, [availableStaff, allStaff, selectedSiteId, currentSiteId, excludeUserIds, dayOfWeek, selectedJobTitleId, hasFilters]);
 
   const handleSelect = (userId: string) => {
-    onSelectStaff(userId, makeFullDay);
+    if (useCustomTime && customStart && customEnd) {
+      onSelectStaff(userId, false, customStart, customEnd);
+    } else {
+      onSelectStaff(userId, makeFullDay);
+    }
     setMakeFullDay(false);
+    setUseCustomTime(false);
     onOpenChange(false);
   };
 
   const shiftDisplay = getShiftTypeDisplay(shiftType);
   const ShiftIcon = shiftDisplay.icon;
-  const showMakeFullDayOption = shiftType === "am" || shiftType === "pm";
+  const showMakeFullDayOption = (shiftType === "am" || shiftType === "pm") && !useCustomTime;
+  const showCustomTimeOption = shiftType === "am" || shiftType === "pm";
   const oppositeShift = shiftType === "am" ? "PM" : "AM";
+
+  // Validate custom times
+  const isCustomTimeValid = !useCustomTime || (customStart && customEnd && customStart < customEnd);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -215,18 +263,75 @@ export const StaffSelectionDialog = ({
           </div>
         ) : (
           <>
-            {showMakeFullDayOption && (
-              <div className="flex items-center gap-2 px-1 py-2 border-b">
-                <Checkbox 
-                  id="makeFullDay" 
-                  checked={makeFullDay} 
-                  onCheckedChange={(checked) => setMakeFullDay(checked === true)}
-                />
-                <Label htmlFor="makeFullDay" className="text-sm cursor-pointer">
-                  Make Full Day (add to {oppositeShift} as well)
-                </Label>
-              </div>
-            )}
+            {/* Options */}
+            <div className="space-y-3 py-2 border-b">
+              {showMakeFullDayOption && (
+                <div className="flex items-center gap-2 px-1">
+                  <Checkbox 
+                    id="makeFullDay" 
+                    checked={makeFullDay} 
+                    onCheckedChange={(checked) => {
+                      setMakeFullDay(checked === true);
+                      if (checked) setUseCustomTime(false);
+                    }}
+                  />
+                  <Label htmlFor="makeFullDay" className="text-sm cursor-pointer">
+                    Make Full Day (add to {oppositeShift} as well)
+                  </Label>
+                </div>
+              )}
+              
+              {showCustomTimeOption && (
+                <div className="space-y-2 px-1">
+                  <div className="flex items-center gap-2">
+                    <Checkbox 
+                      id="useCustomTime" 
+                      checked={useCustomTime} 
+                      onCheckedChange={(checked) => {
+                        setUseCustomTime(checked === true);
+                        if (checked) {
+                          setMakeFullDay(false);
+                          // Reset to period boundaries
+                          if (periodConstraints) {
+                            setCustomStart(periodConstraints.min);
+                            setCustomEnd(periodConstraints.max);
+                          }
+                        }
+                      }}
+                    />
+                    <Label htmlFor="useCustomTime" className="text-sm cursor-pointer">
+                      Custom Time
+                    </Label>
+                  </div>
+                  
+                  {useCustomTime && periodConstraints && (
+                    <div className="flex items-center gap-2 pl-6">
+                      <Input
+                        type="time"
+                        value={customStart}
+                        onChange={(e) => setCustomStart(e.target.value)}
+                        min={periodConstraints.min}
+                        max={periodConstraints.max}
+                        className="w-28 h-8"
+                      />
+                      <span className="text-sm text-muted-foreground">to</span>
+                      <Input
+                        type="time"
+                        value={customEnd}
+                        onChange={(e) => setCustomEnd(e.target.value)}
+                        min={periodConstraints.min}
+                        max={periodConstraints.max}
+                        className="w-28 h-8"
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        ({periodConstraints.label}: {periodConstraints.min}-{periodConstraints.max})
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <ScrollArea className="max-h-[300px]">
               <div className="space-y-2">
                 {filteredStaff.map((staff) => {
@@ -241,6 +346,7 @@ export const StaffSelectionDialog = ({
                       variant="outline"
                       className="w-full justify-start h-auto py-3"
                       onClick={() => handleSelect(staff.id)}
+                      disabled={useCustomTime && !isCustomTimeValid}
                     >
                       <div className="flex items-center gap-3 w-full">
                         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">

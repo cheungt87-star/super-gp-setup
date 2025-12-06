@@ -255,7 +255,7 @@ export const RotaScheduleTab = () => {
     return byDay;
   }, [openingHours]);
 
-  const handleAddShift = async (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string) => {
+  const handleAddShift = async (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string) => {
     const dayShifts = shiftsByDate[dateKey] || [];
     
     // If adding on-call, check if there's already one
@@ -285,7 +285,7 @@ export const RotaScheduleTab = () => {
           });
           return;
         }
-      } else if (shiftType === "am") {
+      } else if (shiftType === "am" || (shiftType === "custom" && customStartTime && customStartTime < "13:00")) {
         const hasConflict = userFacilityShifts.some((s) => s.shift_type === "am" || s.shift_type === "full_day");
         if (hasConflict) {
           toast({
@@ -295,7 +295,7 @@ export const RotaScheduleTab = () => {
           });
           return;
         }
-      } else if (shiftType === "pm") {
+      } else if (shiftType === "pm" || (shiftType === "custom" && customEndTime && customEndTime > "13:00")) {
         const hasConflict = userFacilityShifts.some((s) => s.shift_type === "pm" || s.shift_type === "full_day");
         if (hasConflict) {
           toast({
@@ -308,7 +308,7 @@ export const RotaScheduleTab = () => {
       }
     }
 
-    const result = await addShift(userId, dateKey, shiftType, undefined, undefined, isOnCall, facilityId);
+    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, isOnCall, facilityId);
 
     if (result) {
       const shiftLabel = isOnCall ? "On-call" : shiftType === "full_day" ? "Full Day" : shiftType.toUpperCase();
