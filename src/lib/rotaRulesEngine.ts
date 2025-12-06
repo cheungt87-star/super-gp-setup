@@ -37,13 +37,15 @@ interface OpeningHour {
 
 interface Shift {
   id: string;
-  user_id: string;
+  user_id: string | null;
   shift_date: string;
   shift_type: string;
   is_oncall: boolean;
   facility_id: string | null;
   is_temp_staff: boolean;
   temp_confirmed: boolean;
+  temp_staff_name?: string | null;
+  user_name?: string;
 }
 
 /**
@@ -117,13 +119,23 @@ export function validateDay(
 
   // Rule 3 & 4: Check each shift for cross-site staff and unconfirmed temps
   dayShifts.forEach((shift) => {
-    const staffMember = allStaff.find((s) => s.id === shift.user_id);
-    const staffName = staffMember
-      ? `${staffMember.first_name || ""} ${staffMember.last_name || ""}`.trim()
-      : "Unknown";
+    // Handle external temp staff (no user_id)
+    const isExternalTemp = shift.is_temp_staff && !shift.user_id;
+    
+    let staffName: string;
+    let staffMember: StaffMember | undefined;
+    
+    if (isExternalTemp) {
+      staffName = shift.temp_staff_name || shift.user_name || "External Temp";
+    } else {
+      staffMember = allStaff.find((s) => s.id === shift.user_id);
+      staffName = staffMember
+        ? `${staffMember.first_name || ""} ${staffMember.last_name || ""}`.trim()
+        : shift.user_name || "Unknown";
+    }
 
-    // Cross-site staff
-    if (staffMember?.primary_site_id && staffMember.primary_site_id !== currentSiteId) {
+    // Cross-site staff (skip for external temps - they don't have a primary site)
+    if (!isExternalTemp && staffMember?.primary_site_id && staffMember.primary_site_id !== currentSiteId) {
       const room = clinicRooms.find((r) => r.id === shift.facility_id);
       results.push({
         type: "cross_site",
@@ -134,7 +146,7 @@ export function validateDay(
         roomId: room?.id,
         slot: shift.shift_type.toUpperCase(),
         staffName,
-        userId: shift.user_id,
+        userId: shift.user_id || undefined,
         message: `${staffName} is from another site`,
       });
     }
@@ -151,8 +163,8 @@ export function validateDay(
         roomId: room?.id,
         slot: shift.shift_type === "full_day" ? "Full Day" : shift.shift_type.toUpperCase(),
         staffName,
-        userId: shift.user_id,
-        message: `Temp not confirmed: ${staffName}`,
+        userId: shift.user_id || undefined,
+        message: `Temp not confirmed: ${staffName}${isExternalTemp ? " (External)" : ""}`,
       });
     }
   });

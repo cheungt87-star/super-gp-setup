@@ -55,7 +55,7 @@ interface StaffSelectionDialogProps {
   amShiftEnd?: string;
   pmShiftStart?: string;
   pmShiftEnd?: string;
-  onSelectStaff: (userId: string, makeFullDay?: boolean, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean) => void;
+  onSelectStaff: (userId: string | null, makeFullDay?: boolean, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string) => void;
 }
 
 const getShiftTypeDisplay = (shiftType: ShiftType | "oncall") => {
@@ -101,6 +101,8 @@ export const StaffSelectionDialog = ({
   const [selectedJobTitleId, setSelectedJobTitleId] = useState<string>("all");
   const [isTempStaff, setIsTempStaff] = useState(false);
   const [tempConfirmed, setTempConfirmed] = useState(false);
+  const [isExternalTemp, setIsExternalTemp] = useState(false);
+  const [externalTempName, setExternalTempName] = useState("");
 
   const hasFilters = sites && sites.length > 0 && currentSiteId;
 
@@ -123,12 +125,16 @@ export const StaffSelectionDialog = ({
       setCustomEnd("");
       setIsTempStaff(false);
       setTempConfirmed(false);
+      setIsExternalTemp(false);
+      setExternalTempName("");
     } else {
       // Reset to current site when opening
       setSelectedSiteId(currentSiteId || "");
       setSelectedJobTitleId("all");
       setIsTempStaff(false);
       setTempConfirmed(false);
+      setIsExternalTemp(false);
+      setExternalTempName("");
       // Set default custom times to period boundaries
       if (periodConstraints) {
         setCustomStart(periodConstraints.min);
@@ -188,17 +194,26 @@ export const StaffSelectionDialog = ({
     });
   }, [availableStaff, allStaff, selectedSiteId, currentSiteId, excludeUserIds, dayOfWeek, selectedJobTitleId, hasFilters]);
 
-  const handleSelect = (userId: string) => {
+  const handleSelect = (userId: string | null, tempName?: string) => {
     if (useCustomTime && customStart && customEnd) {
-      onSelectStaff(userId, false, customStart, customEnd, isTempStaff, isTempStaff ? tempConfirmed : false);
+      onSelectStaff(userId, false, customStart, customEnd, isTempStaff || isExternalTemp, (isTempStaff || isExternalTemp) ? tempConfirmed : false, tempName);
     } else {
-      onSelectStaff(userId, makeFullDay, undefined, undefined, isTempStaff, isTempStaff ? tempConfirmed : false);
+      onSelectStaff(userId, makeFullDay, undefined, undefined, isTempStaff || isExternalTemp, (isTempStaff || isExternalTemp) ? tempConfirmed : false, tempName);
     }
     setMakeFullDay(false);
     setUseCustomTime(false);
     setIsTempStaff(false);
     setTempConfirmed(false);
+    setIsExternalTemp(false);
+    setExternalTempName("");
     onOpenChange(false);
+  };
+
+  const handleAddExternalTemp = () => {
+    if (!externalTempName.trim()) {
+      return;
+    }
+    handleSelect(null, externalTempName.trim());
   };
 
   const shiftDisplay = getShiftTypeDisplay(shiftType);
@@ -349,11 +364,12 @@ export const StaffSelectionDialog = ({
                     onCheckedChange={(checked) => {
                       setIsTempStaff(checked === true);
                       if (!checked) setTempConfirmed(false);
+                      if (checked) setIsExternalTemp(false);
                     }}
                   />
                   <Label htmlFor="isTempStaff" className="text-sm cursor-pointer flex items-center gap-1">
                     <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                    Temp/Agency Staff
+                    Mark as Temp (from staff list)
                   </Label>
                 </div>
                 
@@ -378,6 +394,72 @@ export const StaffSelectionDialog = ({
                   </RadioGroup>
                 )}
               </div>
+
+              {/* External Temp Staff Option */}
+              <div className="space-y-2 px-1 pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <Checkbox 
+                    id="isExternalTemp" 
+                    checked={isExternalTemp} 
+                    onCheckedChange={(checked) => {
+                      setIsExternalTemp(checked === true);
+                      if (checked) {
+                        setIsTempStaff(false);
+                        setTempConfirmed(false);
+                      }
+                      if (!checked) {
+                        setExternalTempName("");
+                        setTempConfirmed(false);
+                      }
+                    }}
+                  />
+                  <Label htmlFor="isExternalTemp" className="text-sm cursor-pointer flex items-center gap-1">
+                    <User className="h-3.5 w-3.5 text-orange-500" />
+                    Add External Agency Staff
+                  </Label>
+                </div>
+                
+                {isExternalTemp && (
+                  <div className="pl-6 space-y-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="externalTempName" className="text-xs text-muted-foreground">Staff Name</Label>
+                      <Input
+                        id="externalTempName"
+                        placeholder="Enter temp staff name..."
+                        value={externalTempName}
+                        onChange={(e) => setExternalTempName(e.target.value)}
+                        className="h-9"
+                      />
+                    </div>
+                    <RadioGroup 
+                      value={tempConfirmed ? "confirmed" : "unconfirmed"} 
+                      onValueChange={(v) => setTempConfirmed(v === "confirmed")}
+                      className="space-y-1"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="unconfirmed" id="ext_temp_unconfirmed" />
+                        <Label htmlFor="ext_temp_unconfirmed" className="text-sm font-normal cursor-pointer text-destructive">
+                          Not Confirmed
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="confirmed" id="ext_temp_confirmed" />
+                        <Label htmlFor="ext_temp_confirmed" className="text-sm font-normal cursor-pointer text-amber-600">
+                          Confirmed
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                    <Button
+                      onClick={handleAddExternalTemp}
+                      disabled={!externalTempName.trim() || (useCustomTime && !isCustomTimeValid)}
+                      className="w-full"
+                      variant="default"
+                    >
+                      Add External Temp Staff
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <ScrollArea className="max-h-[300px]">
@@ -393,8 +475,8 @@ export const StaffSelectionDialog = ({
                       key={staff.id}
                       variant="outline"
                       className="w-full justify-start h-auto py-3"
-                      onClick={() => handleSelect(staff.id)}
-                      disabled={useCustomTime && !isCustomTimeValid}
+                      onClick={() => handleSelect(staff.id, undefined)}
+                      disabled={(useCustomTime && !isCustomTimeValid) || isExternalTemp}
                     >
                       <div className="flex items-center gap-3 w-full">
                         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">

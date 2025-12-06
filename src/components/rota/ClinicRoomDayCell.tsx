@@ -67,7 +67,7 @@ interface ClinicRoomDayCellProps {
   amShiftEnd?: string;
   pmShiftStart?: string;
   pmShiftEnd?: string;
-  onAddShift: (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean) => Promise<void>;
+  onAddShift: (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string) => Promise<void>;
   onDeleteShift: (shiftId: string) => void;
   onEditShift: (shift: RotaShift) => void;
   onRepeatPreviousDay?: (dateKey: string, previousDateKey: string) => Promise<void>;
@@ -136,7 +136,7 @@ export const ClinicRoomDayCell = ({
   // Get user IDs that conflict with a given shift type - checks ALL shifts site-wide
   const getConflictingUserIds = (targetShiftType: ShiftType | "oncall", facilityId?: string, customStart?: string, customEnd?: string): string[] => {
     if (targetShiftType === "oncall") {
-      return onCallShift ? [onCallShift.user_id] : [];
+      return onCallShift?.user_id ? [onCallShift.user_id] : [];
     }
 
     // Determine the target time range
@@ -159,13 +159,15 @@ export const ClinicRoomDayCell = ({
       return [];
     }
 
-    // Check ALL regular shifts (not just same room) for time overlap
+    // Check ALL regular shifts (not just same room) for time overlap - filter out external temps with no user_id
     const conflictingUserIds = regularShifts
       .filter((shift) => {
+        if (!shift.user_id) return false; // Skip external temps
         const shiftRange = getShiftTimeRange(shift);
         return doTimesOverlap(targetStart, targetEnd, shiftRange.start, shiftRange.end);
       })
-      .map((s) => s.user_id);
+      .map((s) => s.user_id)
+      .filter((id): id is string => id !== null);
 
     return [...new Set(conflictingUserIds)];
   };
@@ -213,7 +215,7 @@ export const ClinicRoomDayCell = ({
     setSelectionDialog({ open: true, facilityId, facilityName, shiftType });
   };
 
-  const handleSelectStaff = async (userId: string, makeFullDay?: boolean, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean) => {
+  const handleSelectStaff = async (userId: string | null, makeFullDay?: boolean, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string) => {
     if (!selectionDialog) return;
     const isOnCall = selectionDialog.shiftType === "oncall";
     const facilityId = isOnCall ? undefined : selectionDialog.facilityId;
@@ -229,12 +231,12 @@ export const ClinicRoomDayCell = ({
     }
     
     // Add the primary shift
-    await onAddShift(userId, dateKey, actualShiftType, isOnCall, facilityId, customStartTime, customEndTime, isTempStaff, tempConfirmed);
+    await onAddShift(userId, dateKey, actualShiftType, isOnCall, facilityId, customStartTime, customEndTime, isTempStaff, tempConfirmed, tempStaffName);
     
-    // If "Make Full Day" was checked, add the opposite shift too
-    if (makeFullDay && !isOnCall && (selectionDialog.shiftType === "am" || selectionDialog.shiftType === "pm")) {
+    // If "Make Full Day" was checked and we have a user (not external temp), add the opposite shift too
+    if (makeFullDay && userId && !isOnCall && (selectionDialog.shiftType === "am" || selectionDialog.shiftType === "pm")) {
       const oppositeShiftType: ShiftType = selectionDialog.shiftType === "am" ? "pm" : "am";
-      await onAddShift(userId, dateKey, oppositeShiftType, false, facilityId, undefined, undefined, isTempStaff, tempConfirmed);
+      await onAddShift(userId, dateKey, oppositeShiftType, false, facilityId, undefined, undefined, isTempStaff, tempConfirmed, tempStaffName);
     }
   };
 
