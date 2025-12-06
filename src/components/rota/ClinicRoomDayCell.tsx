@@ -248,7 +248,7 @@ export const ClinicRoomDayCell = ({
       <div
         key={shift.id}
         className={cn(
-          "relative flex items-center justify-between gap-2 rounded-md px-3 py-2 cursor-pointer transition-colors",
+          "relative flex items-center justify-between gap-2 rounded-md px-3 py-2 cursor-pointer transition-colors min-h-[40px]",
           isTempUnconfirmed && "bg-destructive/10 border-2 border-destructive ring-2 ring-destructive/20",
           isTempConfirmed && "bg-amber-50 border border-amber-300",
           !shift.is_temp_staff && "bg-muted/50 hover:bg-muted"
@@ -339,7 +339,7 @@ export const ClinicRoomDayCell = ({
         <div className="p-4 space-y-4">
           {/* On-Call Row */}
           {requireOnCall && (
-            <div className="rounded-lg border p-3">
+            <div className="rounded-lg border p-3 min-h-[56px]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
@@ -404,7 +404,7 @@ export const ClinicRoomDayCell = ({
                 return (
                   <div key={room.id} className="grid grid-cols-[1fr_1fr_1fr] border-b last:border-b-0">
                     {/* Room Name */}
-                    <div className="px-4 py-3 flex items-start">
+                    <div className="px-4 py-3 flex items-start min-h-[80px]">
                       <div>
                         <span className="font-medium text-sm">{room.name}</span>
                         {room.capacity > 0 && (
@@ -416,7 +416,7 @@ export const ClinicRoomDayCell = ({
                     </div>
 
                     {/* AM Column */}
-                    <div className="px-4 py-3 border-l space-y-2">
+                    <div className="px-4 py-3 border-l space-y-2 min-h-[80px]">
                       {/* Standard AM shifts */}
                       {amData.periodShifts.map((shift) => renderShiftCard(shift))}
                       {/* Full day shifts */}
@@ -436,7 +436,7 @@ export const ClinicRoomDayCell = ({
                     </div>
 
                     {/* PM Column */}
-                    <div className="px-4 py-3 border-l space-y-2">
+                    <div className="px-4 py-3 border-l space-y-2 min-h-[80px]">
                       {/* Standard PM shifts */}
                       {pmData.periodShifts.map((shift) => renderShiftCard(shift))}
                       {/* Full day shifts */}
