@@ -17,9 +17,11 @@ export interface RotaShift {
   custom_end_time: string | null;
   is_oncall: boolean;
   notes: string | null;
+  facility_id: string | null;
   user_name?: string;
   job_title_name?: string;
   job_title_id?: string;
+  facility_name?: string;
 }
 
 export interface RotaWeek {
@@ -82,12 +84,13 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
 
       setRotaWeek(weekData);
 
-      // Fetch shifts with user info
+      // Fetch shifts with user info and facility info
       const { data: shiftsData, error: shiftsError } = await supabase
         .from("rota_shifts")
         .select(`
           *,
-          profiles!rota_shifts_user_id_fkey(first_name, last_name, job_title_id, job_titles(name))
+          profiles!rota_shifts_user_id_fkey(first_name, last_name, job_title_id, job_titles(name)),
+          facilities(name)
         `)
         .eq("rota_week_id", weekData.id);
 
@@ -101,6 +104,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
             : "Unknown",
           job_title_name: shift.profiles?.job_titles?.name || "",
           job_title_id: shift.profiles?.job_title_id || null,
+          facility_name: shift.facilities?.name || null,
         }))
       );
     } catch (error: any) {
@@ -125,7 +129,8 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
     shiftType: ShiftType,
     customStartTime?: string,
     customEndTime?: string,
-    isOncall: boolean = false
+    isOncall: boolean = false,
+    facilityId?: string
   ) => {
     if (!rotaWeek || !organisationId) return null;
 
@@ -142,6 +147,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
           custom_end_time: shiftType === "custom" ? customEndTime : null,
           is_oncall: isOncall,
           organisation_id: organisationId,
+          facility_id: facilityId || null,
         })
         .select()
         .single();

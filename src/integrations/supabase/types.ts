@@ -417,6 +417,7 @@ export type Database = {
           created_at: string
           custom_end_time: string | null
           custom_start_time: string | null
+          facility_id: string | null
           id: string
           is_oncall: boolean
           notes: string | null
@@ -431,6 +432,7 @@ export type Database = {
           created_at?: string
           custom_end_time?: string | null
           custom_start_time?: string | null
+          facility_id?: string | null
           id?: string
           is_oncall?: boolean
           notes?: string | null
@@ -445,6 +447,7 @@ export type Database = {
           created_at?: string
           custom_end_time?: string | null
           custom_start_time?: string | null
+          facility_id?: string | null
           id?: string
           is_oncall?: boolean
           notes?: string | null
@@ -456,6 +459,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "rota_shifts_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rota_shifts_rota_week_id_fkey"
             columns: ["rota_week_id"]

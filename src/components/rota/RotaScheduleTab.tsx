@@ -12,18 +12,13 @@ import { useOrganisation } from "@/contexts/OrganisationContext";
 import { useRotaSchedule, RotaShift } from "@/hooks/useRotaSchedule";
 import { useRotaRules } from "@/hooks/useRotaRules";
 import { WeekSelector } from "./WeekSelector";
-import { RoleDayCell } from "./RoleDayCell";
+import { ClinicRoomDayCell } from "./ClinicRoomDayCell";
 import { EditShiftDialog } from "./EditShiftDialog";
 import { getWeekDays, getWeekStartDate, formatDateKey, calculateShiftHours } from "@/lib/rotaUtils";
 import { toast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type ShiftType = Database["public"]["Enums"]["shift_type"];
-
-interface JobTitle {
-  id: string;
-  name: string;
-}
 
 interface Site {
   id: string;
@@ -49,6 +44,12 @@ interface OpeningHour {
   pm_close_time: string | null;
 }
 
+interface ClinicRoom {
+  id: string;
+  name: string;
+  capacity: number;
+}
+
 export const RotaScheduleTab = () => {
   const { organisationId } = useOrganisation();
   const [sites, setSites] = useState<Site[]>([]);
@@ -56,7 +57,7 @@ export const RotaScheduleTab = () => {
   const [weekStart, setWeekStart] = useState(getWeekStartDate(new Date()));
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
-  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
+  const [clinicRooms, setClinicRooms] = useState<ClinicRoom[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [loadingSiteData, setLoadingSiteData] = useState(false);
 
@@ -66,7 +67,8 @@ export const RotaScheduleTab = () => {
   const weekStartStr = formatDateKey(weekStart);
   const weekDays = getWeekDays(weekStart);
 
-  const { rotaRule, staffingRules, loading: loadingRules } = useRotaRules({
+  // Keep useRotaRules for on-call configuration only
+  const { rotaRule, loading: loadingRules } = useRotaRules({
     siteId: selectedSiteId,
     organisationId,
   });
@@ -107,20 +109,21 @@ export const RotaScheduleTab = () => {
     fetchSites();
   }, [organisationId]);
 
-  // Clear staff when site changes to prevent stale data
+  // Clear data when site changes to prevent stale data
   useEffect(() => {
     setStaff([]);
     setOpeningHours([]);
+    setClinicRooms([]);
   }, [selectedSiteId]);
 
-  // Fetch staff, opening hours, and job titles when site changes
+  // Fetch staff, opening hours, and clinic rooms when site changes
   useEffect(() => {
     const fetchSiteData = async () => {
       if (!selectedSiteId || !organisationId) return;
 
       setLoadingSiteData(true);
       try {
-        const [staffRes, hoursRes, jobTitlesRes] = await Promise.all([
+        const [staffRes, hoursRes, roomsRes] = await Promise.all([
           supabase
             .from("profiles")
             .select("id, first_name, last_name, working_days, contracted_hours, job_title_id, job_titles(name)")
@@ -132,14 +135,17 @@ export const RotaScheduleTab = () => {
             .select("day_of_week, is_closed, am_open_time, am_close_time, pm_open_time, pm_close_time")
             .eq("site_id", selectedSiteId),
           supabase
-            .from("job_titles")
-            .select("id, name")
-            .eq("organisation_id", organisationId),
+            .from("facilities")
+            .select("id, name, capacity")
+            .eq("site_id", selectedSiteId)
+            .eq("facility_type", "clinic_room")
+            .eq("is_active", true)
+            .order("name"),
         ]);
 
         if (staffRes.error) throw staffRes.error;
         if (hoursRes.error) throw hoursRes.error;
-        if (jobTitlesRes.error) throw jobTitlesRes.error;
+        if (roomsRes.error) throw roomsRes.error;
 
         setStaff(
           (staffRes.data || []).map((s: any) => ({
@@ -148,7 +154,7 @@ export const RotaScheduleTab = () => {
           }))
         );
         setOpeningHours(hoursRes.data || []);
-        setJobTitles(jobTitlesRes.data || []);
+        setClinicRooms(roomsRes.data || []);
       } catch (error) {
         console.error("Error fetching site data:", error);
       } finally {
@@ -194,7 +200,7 @@ export const RotaScheduleTab = () => {
     });
 
     return hours;
-  }, [shifts, openingHours, rotaRule]);
+  }, [shifts, openingHours]);
 
   // Group shifts by date
   const shiftsByDate = useMemo(() => {
@@ -219,7 +225,7 @@ export const RotaScheduleTab = () => {
     return byDay;
   }, [openingHours]);
 
-  const handleAddShift = async (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean) => {
+  const handleAddShift = async (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string) => {
     const dayShifts = shiftsByDate[dateKey] || [];
     
     // If adding on-call, check if there's already one
@@ -235,44 +241,44 @@ export const RotaScheduleTab = () => {
       }
     }
 
-    // Check for conflicting assignments based on shift type
-    const userShifts = dayShifts.filter((s) => s.user_id === userId && !s.is_oncall);
-    
-    if (shiftType === "full_day") {
-      // Full day conflicts with any existing shift for this user
-      if (userShifts.length > 0) {
-        toast({
-          title: "Conflict detected",
-          description: "This staff member already has a shift assigned today",
-          variant: "destructive",
-        });
-        return;
-      }
-    } else if (shiftType === "am") {
-      // AM conflicts with existing AM or Full Day
-      const hasConflict = userShifts.some((s) => s.shift_type === "am" || s.shift_type === "full_day");
-      if (hasConflict) {
-        toast({
-          title: "Conflict detected",
-          description: "This staff member already has an AM or Full Day shift",
-          variant: "destructive",
-        });
-        return;
-      }
-    } else if (shiftType === "pm") {
-      // PM conflicts with existing PM or Full Day
-      const hasConflict = userShifts.some((s) => s.shift_type === "pm" || s.shift_type === "full_day");
-      if (hasConflict) {
-        toast({
-          title: "Conflict detected",
-          description: "This staff member already has a PM or Full Day shift",
-          variant: "destructive",
-        });
-        return;
+    // For facility-based scheduling, check conflicts within the same facility
+    if (facilityId) {
+      const facilityShifts = dayShifts.filter((s) => s.facility_id === facilityId && !s.is_oncall);
+      const userFacilityShifts = facilityShifts.filter((s) => s.user_id === userId);
+      
+      if (shiftType === "full_day") {
+        if (userFacilityShifts.length > 0) {
+          toast({
+            title: "Conflict detected",
+            description: "This staff member already has a shift in this room today",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else if (shiftType === "am") {
+        const hasConflict = userFacilityShifts.some((s) => s.shift_type === "am" || s.shift_type === "full_day");
+        if (hasConflict) {
+          toast({
+            title: "Conflict detected",
+            description: "This staff member already has an AM or Full Day shift in this room",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else if (shiftType === "pm") {
+        const hasConflict = userFacilityShifts.some((s) => s.shift_type === "pm" || s.shift_type === "full_day");
+        if (hasConflict) {
+          toast({
+            title: "Conflict detected",
+            description: "This staff member already has a PM or Full Day shift in this room",
+            variant: "destructive",
+          });
+          return;
+        }
       }
     }
 
-    const result = await addShift(userId, dateKey, shiftType, undefined, undefined, isOnCall);
+    const result = await addShift(userId, dateKey, shiftType, undefined, undefined, isOnCall, facilityId);
 
     if (result) {
       const shiftLabel = isOnCall ? "On-call" : shiftType === "full_day" ? "Full Day" : shiftType.toUpperCase();
@@ -327,13 +333,18 @@ export const RotaScheduleTab = () => {
 
     let copiedCount = 0;
     for (const shift of previousShifts) {
-      // Skip if user already assigned today
-      if (currentUserIds.has(shift.user_id)) continue;
-
       // If on-call, check if there's already one assigned
       if (shift.is_oncall) {
         const existingOnCall = currentShifts.find((s) => s.is_oncall);
         if (existingOnCall) continue;
+      }
+
+      // For facility-based shifts, check if same user+facility+type already exists
+      if (shift.facility_id) {
+        const alreadyExists = currentShifts.some(
+          (s) => s.user_id === shift.user_id && s.facility_id === shift.facility_id && s.shift_type === shift.shift_type
+        );
+        if (alreadyExists) continue;
       }
 
       const result = await addShift(
@@ -342,7 +353,8 @@ export const RotaScheduleTab = () => {
         shift.shift_type,
         shift.custom_start_time || undefined,
         shift.custom_end_time || undefined,
-        shift.is_oncall
+        shift.is_oncall,
+        shift.facility_id || undefined
       );
       if (result) copiedCount++;
     }
@@ -428,11 +440,9 @@ export const RotaScheduleTab = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Weekly Schedule</CardTitle>
             <CardDescription>
-              {!rotaRule
-                ? "Configure shift rules in the Rules tab first"
-                : staffingRules.length === 0
-                ? "Add staffing requirements in the Rules tab"
-                : "Click + to add staff to each role"}
+              {clinicRooms.length === 0
+                ? "No clinic rooms configured. Add them in Site Management."
+                : "Click + to add staff to each clinic room"}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -486,22 +496,29 @@ export const RotaScheduleTab = () => {
                     is_closed: openingHoursByDay[adjustedDay].is_closed,
                     open_time: openingHoursByDay[adjustedDay].am_open_time,
                     close_time: openingHoursByDay[adjustedDay].pm_close_time,
+                    am_open_time: openingHoursByDay[adjustedDay].am_open_time,
+                    am_close_time: openingHoursByDay[adjustedDay].am_close_time,
+                    pm_open_time: openingHoursByDay[adjustedDay].pm_open_time,
+                    pm_close_time: openingHoursByDay[adjustedDay].pm_close_time,
                   } : {
                     is_closed: true,
                     open_time: null,
                     close_time: null,
+                    am_open_time: null,
+                    am_close_time: null,
+                    pm_open_time: null,
+                    pm_close_time: null,
                   };
                   const previousDateKey = index > 0 ? formatDateKey(weekDays[index - 1]) : null;
 
                   return (
                     <TabsContent key={dateKey} value={String(index)} className="mt-0">
-                      <RoleDayCell
+                      <ClinicRoomDayCell
                         date={day}
                         dateKey={dateKey}
                         shifts={shiftsByDate[dateKey] || []}
                         openingHours={dayHours}
-                        staffingRules={staffingRules}
-                        jobTitles={jobTitles}
+                        clinicRooms={clinicRooms}
                         availableStaff={staff}
                         scheduledHours={staffScheduledHours}
                         requireOnCall={rotaRule?.require_oncall ?? true}
