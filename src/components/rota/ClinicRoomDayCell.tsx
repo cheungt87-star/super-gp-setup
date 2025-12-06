@@ -111,33 +111,63 @@ export const ClinicRoomDayCell = ({
   const onCallShift = shifts.find((s) => s.is_oncall) || null;
   const regularShifts = shifts.filter((s) => !s.is_oncall);
 
-  // Get user IDs that conflict with a given shift type for a given facility
-  const getConflictingUserIds = (targetShiftType: ShiftType | "oncall", facilityId?: string): string[] => {
+  // Check if two time ranges overlap
+  const doTimesOverlap = (start1: string, end1: string, start2: string, end2: string): boolean => {
+    return start1 < end2 && start2 < end1;
+  };
+
+  // Get the effective time range for any shift
+  const getShiftTimeRange = (shift: RotaShift): { start: string; end: string } => {
+    if (shift.shift_type === "full_day") {
+      return { start: amShiftStart, end: pmShiftEnd };
+    }
+    if (shift.shift_type === "am") {
+      return { start: amShiftStart, end: amShiftEnd };
+    }
+    if (shift.shift_type === "pm") {
+      return { start: pmShiftStart, end: pmShiftEnd };
+    }
+    if (shift.shift_type === "custom" && shift.custom_start_time && shift.custom_end_time) {
+      return { start: shift.custom_start_time.slice(0, 5), end: shift.custom_end_time.slice(0, 5) };
+    }
+    return { start: "00:00", end: "23:59" };
+  };
+
+  // Get user IDs that conflict with a given shift type - checks ALL shifts site-wide
+  const getConflictingUserIds = (targetShiftType: ShiftType | "oncall", facilityId?: string, customStart?: string, customEnd?: string): string[] => {
     if (targetShiftType === "oncall") {
-      // On-call doesn't conflict with regular shifts - any staff can be on-call
       return onCallShift ? [onCallShift.user_id] : [];
     }
-    
-    // For facility-specific shifts, get users already assigned to this facility + period
-    const facilityShifts = regularShifts.filter((s) => s.facility_id === facilityId);
-    
-    if (targetShiftType === "full_day") {
-      // Full day in this room - conflicts with any existing assignment in this room
-      return facilityShifts.map((s) => s.user_id);
+
+    // Determine the target time range
+    let targetStart: string;
+    let targetEnd: string;
+
+    if (targetShiftType === "custom" && customStart && customEnd) {
+      targetStart = customStart;
+      targetEnd = customEnd;
+    } else if (targetShiftType === "full_day") {
+      targetStart = amShiftStart;
+      targetEnd = pmShiftEnd;
+    } else if (targetShiftType === "am") {
+      targetStart = amShiftStart;
+      targetEnd = amShiftEnd;
+    } else if (targetShiftType === "pm") {
+      targetStart = pmShiftStart;
+      targetEnd = pmShiftEnd;
+    } else {
+      return [];
     }
-    if (targetShiftType === "am") {
-      // AM conflicts with existing AM or Full Day in this room
-      return facilityShifts
-        .filter((s) => s.shift_type === "am" || s.shift_type === "full_day" || (s.shift_type === "custom" && isCustomInAM(s)))
-        .map((s) => s.user_id);
-    }
-    if (targetShiftType === "pm") {
-      // PM conflicts with existing PM or Full Day in this room
-      return facilityShifts
-        .filter((s) => s.shift_type === "pm" || s.shift_type === "full_day" || (s.shift_type === "custom" && isCustomInPM(s)))
-        .map((s) => s.user_id);
-    }
-    return [];
+
+    // Check ALL regular shifts (not just same room) for time overlap
+    const conflictingUserIds = regularShifts
+      .filter((shift) => {
+        const shiftRange = getShiftTimeRange(shift);
+        return doTimesOverlap(targetStart, targetEnd, shiftRange.start, shiftRange.end);
+      })
+      .map((s) => s.user_id);
+
+    return [...new Set(conflictingUserIds)];
   };
 
   // Helper to determine if a custom shift falls in AM period
