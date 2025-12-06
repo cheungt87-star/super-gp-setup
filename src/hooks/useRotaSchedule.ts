@@ -44,16 +44,21 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
   const [rotaWeek, setRotaWeek] = useState<RotaWeek | null>(null);
   const [shifts, setShifts] = useState<RotaShift[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refetching, setRefetching] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const fetchSchedule = useCallback(async () => {
+  const fetchSchedule = useCallback(async (silent: boolean = false) => {
     if (!siteId || !organisationId || !weekStart) {
       setRotaWeek(null);
       setShifts([]);
       return;
     }
 
-    setLoading(true);
+    if (silent) {
+      setRefetching(true);
+    } else {
+      setLoading(true);
+    }
     try {
       // Fetch or create rota week
       let { data: weekData, error: weekError } = await supabase
@@ -117,7 +122,11 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefetching(false);
+      } else {
+        setLoading(false);
+      }
     }
   }, [siteId, organisationId, weekStart]);
 
@@ -160,7 +169,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
 
       if (error) throw error;
 
-      await fetchSchedule();
+      await fetchSchedule(true);
       return data;
     } catch (error: any) {
       console.error("Error adding shift:", error);
@@ -196,7 +205,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
 
       if (error) throw error;
 
-      await fetchSchedule();
+      await fetchSchedule(true);
       return true;
     } catch (error: any) {
       console.error("Error updating shift:", error);
@@ -218,7 +227,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
 
       if (error) throw error;
 
-      await fetchSchedule();
+      await fetchSchedule(true);
       return true;
     } catch (error: any) {
       console.error("Error deleting shift:", error);
@@ -268,6 +277,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
     rotaWeek,
     shifts,
     loading,
+    refetching,
     saving,
     addShift,
     updateShift,
