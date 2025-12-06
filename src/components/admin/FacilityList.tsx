@@ -2,13 +2,23 @@ import { useState, useRef, useEffect } from "react";
 import { Pencil, Trash2, Users, Check, X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Facility } from "./FacilityForm";
+
+type FacilityType = "clinic_room" | "general_facility";
 
 interface FacilityListProps {
   facilities: Facility[];
   onEdit: (facility: Facility) => void;
   onDelete: (facility: Facility) => void;
-  onSave?: (name: string, capacity: number, facilityId?: string) => Promise<void>;
+  onSave?: (name: string, capacity: number, facilityType: FacilityType, facilityId?: string) => Promise<void>;
   isAdding?: boolean;
   onStartAdd?: () => void;
   onCancelAdd?: () => void;
@@ -26,8 +36,10 @@ export const FacilityList = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editCapacity, setEditCapacity] = useState(0);
+  const [editType, setEditType] = useState<FacilityType>("general_facility");
   const [newName, setNewName] = useState("");
   const [newCapacity, setNewCapacity] = useState(0);
+  const [newType, setNewType] = useState<FacilityType>("general_facility");
   const [isSaving, setIsSaving] = useState(false);
   const addInputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -49,22 +61,25 @@ export const FacilityList = ({
     setEditingId(facility.id);
     setEditName(facility.name);
     setEditCapacity(facility.capacity);
+    setEditType(facility.facility_type || "general_facility");
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditName("");
     setEditCapacity(0);
+    setEditType("general_facility");
   };
 
   const handleSaveEdit = async () => {
     if (!editName.trim() || !onSave || !editingId) return;
     setIsSaving(true);
     try {
-      await onSave(editName.trim(), editCapacity, editingId);
+      await onSave(editName.trim(), editCapacity, editType, editingId);
       setEditingId(null);
       setEditName("");
       setEditCapacity(0);
+      setEditType("general_facility");
     } finally {
       setIsSaving(false);
     }
@@ -74,9 +89,10 @@ export const FacilityList = ({
     if (!newName.trim() || !onSave) return;
     setIsSaving(true);
     try {
-      await onSave(newName.trim(), newCapacity);
+      await onSave(newName.trim(), newCapacity, newType);
       setNewName("");
       setNewCapacity(0);
+      setNewType("general_facility");
       onCancelAdd?.();
     } finally {
       setIsSaving(false);
@@ -95,23 +111,38 @@ export const FacilityList = ({
   const renderInlineForm = (isNew: boolean, facility?: Facility) => {
     const name = isNew ? newName : editName;
     const capacity = isNew ? newCapacity : editCapacity;
+    const facilityType = isNew ? newType : editType;
     const setName = isNew ? setNewName : setEditName;
     const setCapacity = isNew ? setNewCapacity : setEditCapacity;
+    const setType = isNew ? setNewType : setEditType;
     const onSaveClick = isNew ? handleSaveNew : handleSaveEdit;
     const onCancel = isNew ? onCancelAdd : handleCancelEdit;
     const inputRef = isNew ? addInputRef : editInputRef;
 
     return (
-      <div className="flex items-center gap-2 px-3 py-2">
+      <div className="flex items-center gap-2 px-3 py-2 flex-wrap">
         <Input
           ref={inputRef}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => handleKeyDown(e, isNew)}
           placeholder="Facility name"
-          className="h-8 flex-1"
+          className="h-8 flex-1 min-w-[120px]"
           disabled={isSaving}
         />
+        <Select
+          value={facilityType}
+          onValueChange={(value: FacilityType) => setType(value)}
+          disabled={isSaving}
+        >
+          <SelectTrigger className="h-8 w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="clinic_room">Clinic Room</SelectItem>
+            <SelectItem value="general_facility">General Facility</SelectItem>
+          </SelectContent>
+        </Select>
         <div className="flex items-center gap-1">
           <Users className="h-3 w-3 text-muted-foreground" />
           <Input
@@ -163,6 +194,15 @@ export const FacilityList = ({
             <div className="flex items-center justify-between px-3 py-2">
               <div className="flex items-center gap-3">
                 <span className="font-medium text-sm">{facility.name}</span>
+                <Badge 
+                  variant="secondary" 
+                  className={facility.facility_type === "clinic_room" 
+                    ? "bg-blue-100 text-blue-700 hover:bg-blue-100" 
+                    : "bg-muted text-muted-foreground hover:bg-muted"
+                  }
+                >
+                  {facility.facility_type === "clinic_room" ? "Clinic Room" : "General Facility"}
+                </Badge>
                 <div className="flex items-center gap-1 text-muted-foreground text-xs">
                   <Users className="h-3 w-3" />
                   <span>{facility.capacity}</span>

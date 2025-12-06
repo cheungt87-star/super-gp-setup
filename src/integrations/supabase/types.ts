@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           capacity: number
           created_at: string
+          facility_type: string
           id: string
           is_active: boolean
           name: string
@@ -28,6 +29,7 @@ export type Database = {
         Insert: {
           capacity?: number
           created_at?: string
+          facility_type?: string
           id?: string
           is_active?: boolean
           name: string
@@ -38,6 +40,7 @@ export type Database = {
         Update: {
           capacity?: number
           created_at?: string
+          facility_type?: string
           id?: string
           is_active?: boolean
           name?: string

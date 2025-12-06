@@ -269,14 +269,14 @@ export const SiteManagementCard = () => {
   };
 
   // Facility handlers - inline save
-  const handleSaveFacility = async (siteId: string, name: string, capacity: number, facilityId?: string) => {
+  const handleSaveFacility = async (siteId: string, name: string, capacity: number, facilityType: "clinic_room" | "general_facility", facilityId?: string) => {
     if (!organisationId) return;
 
     try {
       if (facilityId) {
         const { error } = await supabase
           .from('facilities')
-          .update({ name, capacity })
+          .update({ name, capacity, facility_type: facilityType })
           .eq('id', facilityId);
 
         if (error) throw error;
@@ -291,6 +291,7 @@ export const SiteManagementCard = () => {
           .insert({
             name,
             capacity,
+            facility_type: facilityType,
             site_id: siteId,
             organisation_id: organisationId,
           });

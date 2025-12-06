@@ -35,7 +35,7 @@ interface SiteCardProps {
   openingHours: OpeningHour[];
   onEditSite: (site: Site) => void;
   onDeleteSite: (site: Site) => void;
-  onSaveFacility: (siteId: string, name: string, capacity: number, facilityId?: string) => Promise<void>;
+  onSaveFacility: (siteId: string, name: string, capacity: number, facilityType: "clinic_room" | "general_facility", facilityId?: string) => Promise<void>;
   onDeleteFacility: (facility: Facility) => void;
 }
 
@@ -59,8 +59,8 @@ export const SiteCard = ({
     return null;
   };
 
-  const handleSaveFacility = async (name: string, capacity: number, facilityId?: string) => {
-    await onSaveFacility(site.id, name, capacity, facilityId);
+  const handleSaveFacility = async (name: string, capacity: number, facilityType: "clinic_room" | "general_facility", facilityId?: string) => {
+    await onSaveFacility(site.id, name, capacity, facilityType, facilityId);
   };
 
   const managerName = getManagerName();
