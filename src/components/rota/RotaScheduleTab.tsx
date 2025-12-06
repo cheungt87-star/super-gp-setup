@@ -558,15 +558,16 @@ export const RotaScheduleTab = () => {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div>
-                  <CardTitle className="text-base">Weekly Schedule</CardTitle>
-                  <CardDescription>
-                    {clinicRooms.length === 0
-                      ? "No clinic rooms configured. Add them in Site Management."
-                      : "Click + to add staff to each clinic room"}
-                  </CardDescription>
-                </div>
+              <div>
+                <CardTitle className="text-base">Weekly Schedule</CardTitle>
+                <CardDescription>
+                  {clinicRooms.length === 0
+                    ? "No clinic rooms configured. Add them in Site Management."
+                    : "Click + to add staff to each clinic room"}
+                </CardDescription>
+              </div>
+              {/* Week status + Confirm Day button area */}
+              <div className="flex items-center gap-2">
                 {/* Week status callout */}
                 {(() => {
                   const openDayDates = weekDays.filter((day) => {
@@ -578,7 +579,8 @@ export const RotaScheduleTab = () => {
                   
                   const confirmedCount = openDayDates.filter((day) => {
                     const dateKey = formatDateKey(day);
-                    return getConfirmationStatus(dateKey) !== null;
+                    const status = getConfirmationStatus(dateKey);
+                    return status && status.status;
                   }).length;
                   
                   const totalOpenDays = openDayDates.length;
@@ -587,79 +589,78 @@ export const RotaScheduleTab = () => {
                   if (totalOpenDays === 0) return null;
                   
                   return (
-                    <Badge 
-                      variant="secondary"
+                    <div 
                       className={cn(
-                        "gap-1.5 text-xs font-medium",
+                        "flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border",
                         isCompleted 
-                          ? "bg-green-100 text-green-700 hover:bg-green-100" 
-                          : "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                          ? "border-green-300 bg-green-50 text-green-700" 
+                          : "border-amber-300 bg-amber-50 text-amber-700"
                       )}
                     >
                       {isCompleted ? (
-                        <><CheckCircle2 className="h-3 w-3" /> Completed</>
+                        <><CheckCircle2 className="h-3.5 w-3.5" /> Completed</>
                       ) : (
-                        <><Clock className="h-3 w-3" /> In Progress ({confirmedCount}/{totalOpenDays})</>
+                        <><Clock className="h-3.5 w-3.5" /> In Progress ({confirmedCount}/{totalOpenDays})</>
                       )}
-                    </Badge>
+                    </div>
+                  );
+                })()}
+                
+                {/* Confirm Day button - dynamically shows for selected day */}
+                {(() => {
+                  const selectedDay = weekDays[selectedDayIndex];
+                  if (!selectedDay) return null;
+                  const dateKey = formatDateKey(selectedDay);
+                  const confirmation = getConfirmationStatus(dateKey);
+                  
+                  if (confirmation && confirmation.status) {
+                    return (
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className={cn(
+                            "flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border",
+                            confirmation.status === "confirmed" 
+                              ? "border-green-300 bg-green-50 text-green-700" 
+                              : "border-amber-300 bg-amber-50 text-amber-700"
+                          )}
+                        >
+                          {confirmation.status === "confirmed" ? (
+                            <><CheckCircle2 className="h-3.5 w-3.5" /> Day Confirmed</>
+                          ) : (
+                            <><AlertTriangle className="h-3.5 w-3.5" /> Overrides Applied</>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => handleResetConfirmation(dateKey)}
+                          disabled={savingConfirmation}
+                        >
+                          Reset
+                        </Button>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => handleConfirmDay(selectedDay)}
+                      disabled={savingConfirmation}
+                    >
+                      {savingConfirmation ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                      )}
+                      Confirm Day
+                    </Button>
                   );
                 })()}
               </div>
-              {/* Confirm Day button - dynamically shows for selected day */}
-              {(() => {
-                const selectedDay = weekDays[selectedDayIndex];
-                if (!selectedDay) return null;
-                const dateKey = formatDateKey(selectedDay);
-                const confirmation = getConfirmationStatus(dateKey);
-                
-                if (confirmation) {
-                  return (
-                    <div className="flex items-center gap-2">
-                      <Badge 
-                        variant={confirmation.status === "confirmed" ? "default" : "secondary"}
-                        className={cn(
-                          "gap-1",
-                          confirmation.status === "confirmed" 
-                            ? "bg-green-100 text-green-700 hover:bg-green-100" 
-                            : "bg-amber-100 text-amber-700 hover:bg-amber-100"
-                        )}
-                      >
-                        {confirmation.status === "confirmed" ? (
-                          <><CheckCircle2 className="h-3 w-3" /> Confirmed</>
-                        ) : (
-                          <><AlertTriangle className="h-3 w-3" /> Confirmed with overrides</>
-                        )}
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => handleResetConfirmation(dateKey)}
-                        disabled={savingConfirmation}
-                      >
-                        Reset
-                      </Button>
-                    </div>
-                  );
-                }
-                
-                return (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                    onClick={() => handleConfirmDay(selectedDay)}
-                    disabled={savingConfirmation}
-                  >
-                    {savingConfirmation ? (
-                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-                    )}
-                    Confirm Day
-                  </Button>
-                );
-              })()}
             </div>
           </CardHeader>
           <CardContent className="p-0">
