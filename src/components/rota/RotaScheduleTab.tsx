@@ -441,7 +441,18 @@ export const RotaScheduleTab = () => {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <Tabs defaultValue="0" className="w-full">
+              <Tabs defaultValue={
+                // Find first open day index
+                (() => {
+                  for (let i = 0; i < weekDays.length; i++) {
+                    const dayOfWeek = weekDays[i].getDay();
+                    const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                    const dayHours = openingHoursByDay[adjustedDay];
+                    if (!dayHours?.is_closed) return String(i);
+                  }
+                  return "0";
+                })()
+              } className="w-full">
                 <TabsList className="w-full justify-start h-auto p-1 bg-muted/50 rounded-none border-t">
                   {weekDays.map((day, index) => {
                     const dayOfWeek = day.getDay();
@@ -449,19 +460,18 @@ export const RotaScheduleTab = () => {
                     const dayHours = openingHoursByDay[adjustedDay];
                     const isClosed = dayHours?.is_closed ?? true;
 
+                    // Hide closed days
+                    if (isClosed) return null;
+
                     return (
                       <TabsTrigger
                         key={index}
                         value={String(index)}
-                        className={cn(
-                          "flex-1 py-2 px-3 data-[state=active]:bg-background",
-                          isClosed && "text-muted-foreground"
-                        )}
+                        className="flex-1 py-2 px-3 data-[state=active]:bg-background"
                       >
                         <div className="flex flex-col items-center">
                           <span className="text-xs">{format(day, "EEE")}</span>
                           <span className="font-semibold">{format(day, "d")}</span>
-                          {isClosed && <span className="text-[10px] italic">Closed</span>}
                         </div>
                       </TabsTrigger>
                     );
