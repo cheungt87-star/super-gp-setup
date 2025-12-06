@@ -420,11 +420,13 @@ export type Database = {
           facility_id: string | null
           id: string
           is_oncall: boolean
+          is_temp_staff: boolean
           notes: string | null
           organisation_id: string
           rota_week_id: string
           shift_date: string
           shift_type: Database["public"]["Enums"]["shift_type"]
+          temp_confirmed: boolean
           updated_at: string
           user_id: string
         }
@@ -435,11 +437,13 @@ export type Database = {
           facility_id?: string | null
           id?: string
           is_oncall?: boolean
+          is_temp_staff?: boolean
           notes?: string | null
           organisation_id: string
           rota_week_id: string
           shift_date: string
           shift_type?: Database["public"]["Enums"]["shift_type"]
+          temp_confirmed?: boolean
           updated_at?: string
           user_id: string
         }
@@ -450,11 +454,13 @@ export type Database = {
           facility_id?: string | null
           id?: string
           is_oncall?: boolean
+          is_temp_staff?: boolean
           notes?: string | null
           organisation_id?: string
           rota_week_id?: string
           shift_date?: string
           shift_type?: Database["public"]["Enums"]["shift_type"]
+          temp_confirmed?: boolean
           updated_at?: string
           user_id?: string
         }

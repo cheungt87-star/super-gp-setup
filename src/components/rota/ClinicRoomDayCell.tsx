@@ -67,7 +67,7 @@ interface ClinicRoomDayCellProps {
   amShiftEnd?: string;
   pmShiftStart?: string;
   pmShiftEnd?: string;
-  onAddShift: (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string) => Promise<void>;
+  onAddShift: (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean) => Promise<void>;
   onDeleteShift: (shiftId: string) => void;
   onEditShift: (shift: RotaShift) => void;
   onRepeatPreviousDay?: (dateKey: string, previousDateKey: string) => Promise<void>;
@@ -183,7 +183,7 @@ export const ClinicRoomDayCell = ({
     setSelectionDialog({ open: true, facilityId, facilityName, shiftType });
   };
 
-  const handleSelectStaff = async (userId: string, makeFullDay?: boolean, customStartTime?: string, customEndTime?: string) => {
+  const handleSelectStaff = async (userId: string, makeFullDay?: boolean, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean) => {
     if (!selectionDialog) return;
     const isOnCall = selectionDialog.shiftType === "oncall";
     const facilityId = isOnCall ? undefined : selectionDialog.facilityId;
@@ -199,49 +199,72 @@ export const ClinicRoomDayCell = ({
     }
     
     // Add the primary shift
-    await onAddShift(userId, dateKey, actualShiftType, isOnCall, facilityId, customStartTime, customEndTime);
+    await onAddShift(userId, dateKey, actualShiftType, isOnCall, facilityId, customStartTime, customEndTime, isTempStaff, tempConfirmed);
     
     // If "Make Full Day" was checked, add the opposite shift too
     if (makeFullDay && !isOnCall && (selectionDialog.shiftType === "am" || selectionDialog.shiftType === "pm")) {
       const oppositeShiftType: ShiftType = selectionDialog.shiftType === "am" ? "pm" : "am";
-      await onAddShift(userId, dateKey, oppositeShiftType, false, facilityId);
+      await onAddShift(userId, dateKey, oppositeShiftType, false, facilityId, undefined, undefined, isTempStaff, tempConfirmed);
     }
   };
 
-  const renderShiftCard = (shift: RotaShift, showFullBadge = false, isCustom = false) => (
-    <div
-      key={shift.id}
-      className="flex items-center justify-between gap-2 bg-muted/50 rounded-md px-3 py-2 cursor-pointer hover:bg-muted transition-colors"
-      onClick={() => onEditShift(shift)}
-    >
-      <div className="flex items-center gap-2 min-w-0 flex-wrap">
-        <span className="text-sm truncate">{shift.user_name}</span>
-        {shift.job_title_name && (
-          <Badge variant="outline" className={cn("text-[10px] px-1 py-0 shrink-0", getJobTitleColors(shift.job_title_name))}>{shift.job_title_name}</Badge>
+  const renderShiftCard = (shift: RotaShift, showFullBadge = false, isCustom = false) => {
+    const isTempUnconfirmed = shift.is_temp_staff && !shift.temp_confirmed;
+    const isTempConfirmed = shift.is_temp_staff && shift.temp_confirmed;
+    
+    return (
+      <div
+        key={shift.id}
+        className={cn(
+          "relative flex items-center justify-between gap-2 rounded-md px-3 py-2 cursor-pointer transition-colors",
+          isTempUnconfirmed && "bg-destructive/10 border-2 border-destructive ring-2 ring-destructive/20",
+          isTempConfirmed && "bg-amber-50 border border-amber-300",
+          !shift.is_temp_staff && "bg-muted/50 hover:bg-muted"
         )}
-        {showFullBadge && (
-          <Badge variant="secondary" className="text-[10px] px-1 py-0 shrink-0">Full</Badge>
-        )}
-        {isCustom && shift.custom_start_time && shift.custom_end_time && (
-          <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
-            <Clock className="h-3 w-3 mr-0.5" />
-            {shift.custom_start_time.slice(0, 5)}-{shift.custom_end_time.slice(0, 5)}
+        onClick={() => onEditShift(shift)}
+      >
+        {/* Temp Badge */}
+        {shift.is_temp_staff && (
+          <Badge 
+            variant={isTempUnconfirmed ? "destructive" : "outline"}
+            className={cn(
+              "absolute -top-2 -left-1 text-[9px] px-1 py-0",
+              isTempConfirmed && "bg-amber-100 text-amber-700 border-amber-300"
+            )}
+          >
+            {isTempUnconfirmed ? "⚠️ TEMP" : "✓ Temp"}
           </Badge>
         )}
+        
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+          <span className="text-sm truncate">{shift.user_name}</span>
+          {shift.job_title_name && (
+            <Badge variant="outline" className={cn("text-[10px] px-1 py-0 shrink-0", getJobTitleColors(shift.job_title_name))}>{shift.job_title_name}</Badge>
+          )}
+          {showFullBadge && (
+            <Badge variant="secondary" className="text-[10px] px-1 py-0 shrink-0">Full</Badge>
+          )}
+          {isCustom && shift.custom_start_time && shift.custom_end_time && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
+              <Clock className="h-3 w-3 mr-0.5" />
+              {shift.custom_start_time.slice(0, 5)}-{shift.custom_end_time.slice(0, 5)}
+            </Badge>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 hover:bg-destructive/20 shrink-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteShift(shift.id);
+          }}
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 hover:bg-destructive/20 shrink-0"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDeleteShift(shift.id);
-        }}
-      >
-        <X className="h-4 w-4" />
-      </Button>
-    </div>
-  );
+    );
+  };
 
   return (
     <div

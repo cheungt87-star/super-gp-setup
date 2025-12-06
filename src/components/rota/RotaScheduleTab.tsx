@@ -255,7 +255,7 @@ export const RotaScheduleTab = () => {
     return byDay;
   }, [openingHours]);
 
-  const handleAddShift = async (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string) => {
+  const handleAddShift = async (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean) => {
     const dayShifts = shiftsByDate[dateKey] || [];
     
     // If adding on-call, check if there's already one
@@ -308,13 +308,13 @@ export const RotaScheduleTab = () => {
       }
     }
 
-    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, isOnCall, facilityId);
+    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, isOnCall, facilityId, isTempStaff || false, tempConfirmed || false);
 
     if (result) {
       const shiftLabel = isOnCall ? "On-call" : shiftType === "full_day" ? "Full Day" : shiftType.toUpperCase();
       toast({
         title: isOnCall ? "On-call assigned" : "Shift added",
-        description: `Staff member has been assigned to ${shiftLabel} shift`,
+        description: `Staff member has been assigned to ${shiftLabel} shift${isTempStaff ? " (Temp)" : ""}`,
       });
     }
   };
@@ -325,6 +325,8 @@ export const RotaScheduleTab = () => {
     custom_end_time: string | null;
     is_oncall: boolean;
     notes: string | null;
+    is_temp_staff: boolean;
+    temp_confirmed: boolean;
   }) => {
     if (!editingShift) return;
 

@@ -18,6 +18,8 @@ export interface RotaShift {
   is_oncall: boolean;
   notes: string | null;
   facility_id: string | null;
+  is_temp_staff: boolean;
+  temp_confirmed: boolean;
   user_name?: string;
   job_title_name?: string;
   job_title_id?: string;
@@ -130,7 +132,9 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
     customStartTime?: string,
     customEndTime?: string,
     isOncall: boolean = false,
-    facilityId?: string
+    facilityId?: string,
+    isTempStaff: boolean = false,
+    tempConfirmed: boolean = false
   ) => {
     if (!rotaWeek || !organisationId) return null;
 
@@ -148,6 +152,8 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
           is_oncall: isOncall,
           organisation_id: organisationId,
           facility_id: facilityId || null,
+          is_temp_staff: isTempStaff,
+          temp_confirmed: tempConfirmed,
         })
         .select()
         .single();
@@ -177,6 +183,8 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
       custom_end_time?: string | null;
       is_oncall?: boolean;
       notes?: string | null;
+      is_temp_staff?: boolean;
+      temp_confirmed?: boolean;
     }
   ) => {
     setSaving(true);

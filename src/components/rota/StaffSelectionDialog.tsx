@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { User, Clock, Sun, Moon } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { User, Clock, Sun, Moon, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
 import type { Database } from "@/integrations/supabase/types";
@@ -54,7 +55,7 @@ interface StaffSelectionDialogProps {
   amShiftEnd?: string;
   pmShiftStart?: string;
   pmShiftEnd?: string;
-  onSelectStaff: (userId: string, makeFullDay?: boolean, customStartTime?: string, customEndTime?: string) => void;
+  onSelectStaff: (userId: string, makeFullDay?: boolean, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean) => void;
 }
 
 const getShiftTypeDisplay = (shiftType: ShiftType | "oncall") => {
@@ -98,6 +99,8 @@ export const StaffSelectionDialog = ({
   const [customEnd, setCustomEnd] = useState("");
   const [selectedSiteId, setSelectedSiteId] = useState(currentSiteId || "");
   const [selectedJobTitleId, setSelectedJobTitleId] = useState<string>("all");
+  const [isTempStaff, setIsTempStaff] = useState(false);
+  const [tempConfirmed, setTempConfirmed] = useState(false);
 
   const hasFilters = sites && sites.length > 0 && currentSiteId;
 
@@ -118,10 +121,14 @@ export const StaffSelectionDialog = ({
       setUseCustomTime(false);
       setCustomStart("");
       setCustomEnd("");
+      setIsTempStaff(false);
+      setTempConfirmed(false);
     } else {
       // Reset to current site when opening
       setSelectedSiteId(currentSiteId || "");
       setSelectedJobTitleId("all");
+      setIsTempStaff(false);
+      setTempConfirmed(false);
       // Set default custom times to period boundaries
       if (periodConstraints) {
         setCustomStart(periodConstraints.min);
@@ -183,12 +190,14 @@ export const StaffSelectionDialog = ({
 
   const handleSelect = (userId: string) => {
     if (useCustomTime && customStart && customEnd) {
-      onSelectStaff(userId, false, customStart, customEnd);
+      onSelectStaff(userId, false, customStart, customEnd, isTempStaff, isTempStaff ? tempConfirmed : false);
     } else {
-      onSelectStaff(userId, makeFullDay);
+      onSelectStaff(userId, makeFullDay, undefined, undefined, isTempStaff, isTempStaff ? tempConfirmed : false);
     }
     setMakeFullDay(false);
     setUseCustomTime(false);
+    setIsTempStaff(false);
+    setTempConfirmed(false);
     onOpenChange(false);
   };
 
@@ -330,6 +339,45 @@ export const StaffSelectionDialog = ({
                   )}
                 </div>
               )}
+
+              {/* Temp Staff Option */}
+              <div className="space-y-2 px-1">
+                <div className="flex items-center gap-2">
+                  <Checkbox 
+                    id="isTempStaff" 
+                    checked={isTempStaff} 
+                    onCheckedChange={(checked) => {
+                      setIsTempStaff(checked === true);
+                      if (!checked) setTempConfirmed(false);
+                    }}
+                  />
+                  <Label htmlFor="isTempStaff" className="text-sm cursor-pointer flex items-center gap-1">
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                    Temp/Agency Staff
+                  </Label>
+                </div>
+                
+                {isTempStaff && (
+                  <RadioGroup 
+                    value={tempConfirmed ? "confirmed" : "unconfirmed"} 
+                    onValueChange={(v) => setTempConfirmed(v === "confirmed")}
+                    className="pl-6 space-y-1"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="unconfirmed" id="temp_unconfirmed" />
+                      <Label htmlFor="temp_unconfirmed" className="text-sm font-normal cursor-pointer text-destructive">
+                        Not Confirmed
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="confirmed" id="temp_confirmed" />
+                      <Label htmlFor="temp_confirmed" className="text-sm font-normal cursor-pointer text-amber-600">
+                        Confirmed
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                )}
+              </div>
             </div>
 
             <ScrollArea className="max-h-[300px]">
