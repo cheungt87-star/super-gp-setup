@@ -309,7 +309,6 @@ export const ClinicRoomDayCell = ({
       {!isClosed && (
         <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/20">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">{dateLabel}</span>
             {openingHours?.open_time && openingHours?.close_time && (
               <span className="text-sm text-muted-foreground">
                 {openingHours.open_time.slice(0, 5)} - {openingHours.close_time.slice(0, 5)}
