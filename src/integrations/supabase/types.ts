@@ -574,35 +574,41 @@ export type Database = {
       }
       site_opening_hours: {
         Row: {
-          close_time: string | null
+          am_close_time: string | null
+          am_open_time: string | null
           created_at: string
           day_of_week: number
           id: string
           is_closed: boolean | null
-          open_time: string | null
           organisation_id: string | null
+          pm_close_time: string | null
+          pm_open_time: string | null
           site_id: string
           updated_at: string
         }
         Insert: {
-          close_time?: string | null
+          am_close_time?: string | null
+          am_open_time?: string | null
           created_at?: string
           day_of_week: number
           id?: string
           is_closed?: boolean | null
-          open_time?: string | null
           organisation_id?: string | null
+          pm_close_time?: string | null
+          pm_open_time?: string | null
           site_id: string
           updated_at?: string
         }
         Update: {
-          close_time?: string | null
+          am_close_time?: string | null
+          am_open_time?: string | null
           created_at?: string
           day_of_week?: number
           id?: string
           is_closed?: boolean | null
-          open_time?: string | null
           organisation_id?: string | null
+          pm_close_time?: string | null
+          pm_open_time?: string | null
           site_id?: string
           updated_at?: string
         }

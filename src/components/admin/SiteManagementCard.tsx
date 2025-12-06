@@ -95,7 +95,7 @@ export const SiteManagementCard = () => {
         .order('name'),
       supabase
         .from('site_opening_hours')
-        .select('site_id, day_of_week, open_time, close_time, is_closed')
+        .select('site_id, day_of_week, am_open_time, am_close_time, pm_open_time, pm_close_time, is_closed')
         .eq('organisation_id', organisationId),
     ]);
     
@@ -119,8 +119,10 @@ export const SiteManagementCard = () => {
         if (!grouped[h.site_id]) grouped[h.site_id] = [];
         grouped[h.site_id].push({
           day_of_week: h.day_of_week,
-          open_time: h.open_time?.slice(0, 5) || null,
-          close_time: h.close_time?.slice(0, 5) || null,
+          am_open_time: h.am_open_time?.slice(0, 5) || null,
+          am_close_time: h.am_close_time?.slice(0, 5) || null,
+          pm_open_time: h.pm_open_time?.slice(0, 5) || null,
+          pm_close_time: h.pm_close_time?.slice(0, 5) || null,
           is_closed: h.is_closed,
         });
       });
@@ -138,15 +140,17 @@ export const SiteManagementCard = () => {
   const handleEditSite = async (site: Site) => {
     const { data: hoursData } = await supabase
       .from('site_opening_hours')
-      .select('day_of_week, open_time, close_time, is_closed')
+      .select('day_of_week, am_open_time, am_close_time, pm_open_time, pm_close_time, is_closed')
       .eq('site_id', site.id);
     
     setSelectedSite(site);
     setSelectedSiteHours(
       (hoursData || []).map(h => ({
         day_of_week: h.day_of_week,
-        open_time: h.open_time?.slice(0, 5) || "09:00",
-        close_time: h.close_time?.slice(0, 5) || "17:00",
+        am_open_time: h.am_open_time?.slice(0, 5) || "09:00",
+        am_close_time: h.am_close_time?.slice(0, 5) || "13:00",
+        pm_open_time: h.pm_open_time?.slice(0, 5) || "14:00",
+        pm_close_time: h.pm_close_time?.slice(0, 5) || "17:00",
         is_closed: h.is_closed || false,
       }))
     );
@@ -206,8 +210,10 @@ export const SiteManagementCard = () => {
         site_id: siteId,
         organisation_id: organisationId,
         day_of_week: h.day_of_week,
-        open_time: h.open_time,
-        close_time: h.close_time,
+        am_open_time: h.am_open_time,
+        am_close_time: h.am_close_time,
+        pm_open_time: h.pm_open_time,
+        pm_close_time: h.pm_close_time,
         is_closed: h.is_closed,
       }));
 
