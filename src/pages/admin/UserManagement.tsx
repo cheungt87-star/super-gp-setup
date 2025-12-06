@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
@@ -12,6 +13,7 @@ import { RoleSelect } from "@/components/admin/RoleSelect";
 import { InlineEditCell } from "@/components/admin/InlineEditCell";
 import { InlineSelectCell } from "@/components/admin/InlineSelectCell";
 import { InlineWorkingDaysCell, WorkingDays } from "@/components/admin/InlineWorkingDaysCell";
+import { BulkEditBar } from "@/components/admin/BulkEditBar";
 
 interface OrgUser {
   id: string;
@@ -58,6 +60,9 @@ const UserManagement = () => {
   // Sorting
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  
+  // Bulk selection
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -172,6 +177,73 @@ const UserManagement = () => {
     setSearchQuery("");
   };
 
+  // Bulk selection handlers
+  const handleSelectUser = (userId: string, checked: boolean) => {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(userId);
+      } else {
+        next.delete(userId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = filteredAndSortedUsers.map((u) => u.id);
+      setSelectedUserIds(new Set(allIds));
+    } else {
+      setSelectedUserIds(new Set());
+    }
+  };
+
+  const handleBulkUpdate = async (field: string, value: any) => {
+    const selectedIds = Array.from(selectedUserIds);
+    
+    if (field === "role") {
+      // Update roles in user_roles table
+      const promises = selectedIds.map((userId) =>
+        supabase
+          .from("user_roles")
+          .update({ role: value as 'admin' | 'manager' | 'staff' })
+          .eq("user_id", userId)
+      );
+      await Promise.all(promises);
+      setUsers((prev) =>
+        prev.map((u) =>
+          selectedUserIds.has(u.id) ? { ...u, role: value } : u
+        )
+      );
+    } else {
+      // Update profiles table
+      const promises = selectedIds.map((userId) =>
+        supabase.from("profiles").update({ [field]: value }).eq("id", userId)
+      );
+      await Promise.all(promises);
+      setUsers((prev) =>
+        prev.map((u) => {
+          if (!selectedUserIds.has(u.id)) return u;
+          const updated = { ...u, [field]: value };
+          if (field === "job_title_id") {
+            updated.job_title_name = jobTitles.find((j) => j.id === value)?.name || null;
+          }
+          if (field === "primary_site_id") {
+            updated.site_name = sites.find((s) => s.id === value)?.name || null;
+          }
+          return updated;
+        })
+      );
+    }
+
+    toast({
+      title: "Bulk update complete",
+      description: `Updated ${selectedIds.length} users.`,
+    });
+    setSelectedUserIds(new Set());
+  };
+
   const filteredAndSortedUsers = useMemo(() => {
     let result = [...users];
     
@@ -233,6 +305,10 @@ const UserManagement = () => {
     return result;
   }, [users, jobTitleFilter, siteFilter, searchQuery, sortField, sortDirection]);
 
+  const allVisibleSelected =
+    filteredAndSortedUsers.length > 0 &&
+    filteredAndSortedUsers.every((u) => selectedUserIds.has(u.id));
+
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <Button
       variant="ghost"
@@ -279,10 +355,26 @@ const UserManagement = () => {
           onClearFilters={clearFilters}
         />
 
+        {selectedUserIds.size > 0 && (
+          <BulkEditBar
+            selectedCount={selectedUserIds.size}
+            sites={sites}
+            jobTitles={jobTitles}
+            onApply={handleBulkUpdate}
+            onClearSelection={() => setSelectedUserIds(new Set())}
+          />
+        )}
+
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allVisibleSelected}
+                    onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                  />
+                </TableHead>
                 <TableHead><SortableHeader field="name">Contact</SortableHeader></TableHead>
                 <TableHead><SortableHeader field="job_title">Job Title</SortableHeader></TableHead>
                 <TableHead><SortableHeader field="site">Site</SortableHeader></TableHead>
@@ -295,13 +387,19 @@ const UserManagement = () => {
             <TableBody>
               {filteredAndSortedUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No users found
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredAndSortedUsers.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow key={user.id} data-state={selectedUserIds.has(user.id) ? "selected" : undefined}>
+                    <TableCell className="w-10">
+                      <Checkbox
+                        checked={selectedUserIds.has(user.id)}
+                        onCheckedChange={(checked) => handleSelectUser(user.id, !!checked)}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       <div className="space-y-1">
                         <InlineEditCell

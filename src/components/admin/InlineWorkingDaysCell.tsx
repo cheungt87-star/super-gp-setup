@@ -12,7 +12,7 @@ export interface WorkingDays {
   sun: boolean;
 }
 
-const defaultWorkingDays: WorkingDays = {
+export const defaultWorkingDays: WorkingDays = {
   mon: false,
   tue: false,
   wed: false,
