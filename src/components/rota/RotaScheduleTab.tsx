@@ -247,7 +247,10 @@ export const RotaScheduleTab = () => {
         pmEnd
       );
 
-      hours[shift.user_id] = (hours[shift.user_id] || 0) + shiftHours;
+      // Only track hours for staff with user_id (not external temps)
+      if (shift.user_id) {
+        hours[shift.user_id] = (hours[shift.user_id] || 0) + shiftHours;
+      }
     });
 
     return hours;
@@ -276,7 +279,7 @@ export const RotaScheduleTab = () => {
     return byDay;
   }, [openingHours]);
 
-  const handleAddShift = async (userId: string, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean) => {
+  const handleAddShift = async (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string) => {
     const dayShifts = shiftsByDate[dateKey] || [];
     
     // If adding on-call, check if there's already one
@@ -292,8 +295,8 @@ export const RotaScheduleTab = () => {
       }
     }
 
-    // For facility-based scheduling, check conflicts within the same facility
-    if (facilityId) {
+    // For facility-based scheduling, check conflicts within the same facility (skip for external temps with no userId)
+    if (facilityId && userId) {
       const facilityShifts = dayShifts.filter((s) => s.facility_id === facilityId && !s.is_oncall);
       const userFacilityShifts = facilityShifts.filter((s) => s.user_id === userId);
       
@@ -329,13 +332,14 @@ export const RotaScheduleTab = () => {
       }
     }
 
-    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, isOnCall, facilityId, isTempStaff || false, tempConfirmed || false);
+    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, isOnCall, facilityId, isTempStaff || false, tempConfirmed || false, tempStaffName);
 
     if (result) {
       const shiftLabel = isOnCall ? "On-call" : shiftType === "full_day" ? "Full Day" : shiftType.toUpperCase();
+      const staffLabel = tempStaffName ? tempStaffName : "Staff member";
       toast({
         title: isOnCall ? "On-call assigned" : "Shift added",
-        description: `Staff member has been assigned to ${shiftLabel} shift${isTempStaff ? " (Temp)" : ""}`,
+        description: `${staffLabel} has been assigned to ${shiftLabel} shift${(isTempStaff || tempStaffName) ? " (Temp)" : ""}`,
       });
     }
   };

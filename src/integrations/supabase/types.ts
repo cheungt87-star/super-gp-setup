@@ -491,8 +491,9 @@ export type Database = {
           shift_date: string
           shift_type: Database["public"]["Enums"]["shift_type"]
           temp_confirmed: boolean
+          temp_staff_name: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -508,8 +509,9 @@ export type Database = {
           shift_date: string
           shift_type?: Database["public"]["Enums"]["shift_type"]
           temp_confirmed?: boolean
+          temp_staff_name?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -525,8 +527,9 @@ export type Database = {
           shift_date?: string
           shift_type?: Database["public"]["Enums"]["shift_type"]
           temp_confirmed?: boolean
+          temp_staff_name?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {

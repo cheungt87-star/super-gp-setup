@@ -10,7 +10,7 @@ type RotaStatus = Database["public"]["Enums"]["rota_status"];
 export interface RotaShift {
   id: string;
   rota_week_id: string;
-  user_id: string;
+  user_id: string | null;
   shift_date: string;
   shift_type: ShiftType;
   custom_start_time: string | null;
@@ -20,6 +20,7 @@ export interface RotaShift {
   facility_id: string | null;
   is_temp_staff: boolean;
   temp_confirmed: boolean;
+  temp_staff_name: string | null;
   user_name?: string;
   job_title_name?: string;
   job_title_id?: string;
@@ -106,9 +107,11 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
       setShifts(
         (shiftsData || []).map((shift: any) => ({
           ...shift,
-          user_name: shift.profiles
-            ? `${shift.profiles.first_name || ""} ${shift.profiles.last_name || ""}`.trim()
-            : "Unknown",
+          user_name: shift.is_temp_staff && !shift.user_id && shift.temp_staff_name
+            ? shift.temp_staff_name
+            : shift.profiles
+              ? `${shift.profiles.first_name || ""} ${shift.profiles.last_name || ""}`.trim()
+              : "Unknown",
           job_title_name: shift.profiles?.job_titles?.name || "",
           job_title_id: shift.profiles?.job_title_id || null,
           facility_name: shift.facilities?.name || null,
@@ -135,7 +138,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
   }, [fetchSchedule]);
 
   const addShift = async (
-    userId: string,
+    userId: string | null,
     shiftDate: string,
     shiftType: ShiftType,
     customStartTime?: string,
@@ -143,7 +146,8 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
     isOncall: boolean = false,
     facilityId?: string,
     isTempStaff: boolean = false,
-    tempConfirmed: boolean = false
+    tempConfirmed: boolean = false,
+    tempStaffName?: string
   ) => {
     if (!rotaWeek || !organisationId) return null;
 
@@ -163,6 +167,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
           facility_id: facilityId || null,
           is_temp_staff: isTempStaff,
           temp_confirmed: tempConfirmed,
+          temp_staff_name: tempStaffName || null,
         })
         .select()
         .single();
