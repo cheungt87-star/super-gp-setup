@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { User, Clock, Sun, Moon } from "lucide-react";
@@ -18,6 +19,17 @@ interface StaffMember {
   job_title_name: string | null;
   working_days: Record<string, boolean> | null;
   contracted_hours: number | null;
+  primary_site_id?: string | null;
+}
+
+interface Site {
+  id: string;
+  name: string;
+}
+
+interface JobTitle {
+  id: string;
+  name: string;
 }
 
 interface StaffSelectionDialogProps {
@@ -27,9 +39,14 @@ interface StaffSelectionDialogProps {
   jobTitleName: string;
   shiftType: ShiftType | "oncall";
   dateLabel: string;
-  availableStaff: StaffMember[];
+  dayOfWeek?: string; // "mon", "tue", "wed", etc.
+  availableStaff: StaffMember[]; // Staff from current site
+  allStaff?: StaffMember[]; // All staff from organization (optional for backward compat)
   excludeUserIds: string[];
   scheduledHours: Record<string, number>;
+  currentSiteId?: string;
+  sites?: Site[];
+  jobTitles?: JobTitle[];
   onSelectStaff: (userId: string, makeFullDay?: boolean) => void;
 }
 
@@ -54,28 +71,80 @@ export const StaffSelectionDialog = ({
   jobTitleName,
   shiftType,
   dateLabel,
+  dayOfWeek,
   availableStaff,
+  allStaff,
   excludeUserIds,
   scheduledHours,
+  currentSiteId,
+  sites,
+  jobTitles,
   onSelectStaff,
 }: StaffSelectionDialogProps) => {
   const [makeFullDay, setMakeFullDay] = useState(false);
+  const [selectedSiteId, setSelectedSiteId] = useState(currentSiteId || "");
+  const [selectedJobTitleId, setSelectedJobTitleId] = useState<string>("all");
 
-  const filteredStaff = availableStaff.filter(
-    (s) => !excludeUserIds.includes(s.id)
-  );
+  const hasFilters = sites && sites.length > 0 && currentSiteId;
+
+  // Reset filters when dialog opens/closes or site changes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setMakeFullDay(false);
+    } else {
+      // Reset to current site when opening
+      setSelectedSiteId(currentSiteId || "");
+      setSelectedJobTitleId("all");
+    }
+    onOpenChange(newOpen);
+  };
+
+  // Filter staff based on site, working day, job title, and exclusions
+  const filteredStaff = useMemo(() => {
+    // If no allStaff provided, use availableStaff directly (backward compatibility)
+    if (!allStaff || !hasFilters) {
+      // Simple filtering without site/working day if no enhanced filtering
+      return availableStaff.filter((s) => {
+        // Exclude already assigned users
+        if (excludeUserIds.includes(s.id)) return false;
+        
+        // If we have dayOfWeek, filter by working days
+        if (dayOfWeek) {
+          const worksDayKey = dayOfWeek.toLowerCase();
+          const worksThisDay = s.working_days?.[worksDayKey] === true;
+          if (!worksThisDay) return false;
+        }
+        
+        return true;
+      });
+    }
+    
+    // Enhanced filtering with site selection
+    // Filter allStaff by selected site
+    const staffPool = allStaff.filter((s: any) => s.primary_site_id === selectedSiteId);
+    
+    return staffPool.filter((s) => {
+      // Exclude already assigned users
+      if (excludeUserIds.includes(s.id)) return false;
+      
+      // Filter by working day
+      if (dayOfWeek) {
+        const worksDayKey = dayOfWeek.toLowerCase();
+        const worksThisDay = s.working_days?.[worksDayKey] === true;
+        if (!worksThisDay) return false;
+      }
+      
+      // Filter by job title if selected
+      if (selectedJobTitleId !== "all" && s.job_title_id !== selectedJobTitleId) return false;
+      
+      return true;
+    });
+  }, [availableStaff, allStaff, selectedSiteId, currentSiteId, excludeUserIds, dayOfWeek, selectedJobTitleId, hasFilters]);
 
   const handleSelect = (userId: string) => {
     onSelectStaff(userId, makeFullDay);
     setMakeFullDay(false);
     onOpenChange(false);
-  };
-
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      setMakeFullDay(false);
-    }
-    onOpenChange(newOpen);
   };
 
   const shiftDisplay = getShiftTypeDisplay(shiftType);
@@ -94,16 +163,53 @@ export const StaffSelectionDialog = ({
           <p className="text-sm text-muted-foreground">{dateLabel}</p>
         </DialogHeader>
 
+        {/* Filters - only show if we have sites and currentSiteId */}
+        {hasFilters && (
+          <div className="flex gap-2 pb-2 border-b">
+            <div className="flex-1">
+              <Label className="text-xs text-muted-foreground mb-1 block">Site</Label>
+              <Select value={selectedSiteId} onValueChange={setSelectedSiteId}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select site" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sites?.map((site) => (
+                    <SelectItem key={site.id} value={site.id}>
+                      {site.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {jobTitles && jobTitles.length > 0 && (
+              <div className="flex-1">
+                <Label className="text-xs text-muted-foreground mb-1 block">Job Title</Label>
+                <Select value={selectedJobTitleId} onValueChange={setSelectedJobTitleId}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {jobTitles.map((jt) => (
+                      <SelectItem key={jt.id} value={jt.id}>
+                        {jt.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        )}
+
         {filteredStaff.length === 0 ? (
           <div className="py-8 text-center">
             <User className="mx-auto h-12 w-12 text-muted-foreground/50 mb-2" />
             <p className="text-sm text-muted-foreground">
-              No available {jobTitleName.toLowerCase()} staff
+              No available staff{dayOfWeek ? ` for ${dayOfWeek}` : ""}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {availableStaff.length === 0
-                ? "No staff with this role are assigned to this site"
-                : "All eligible staff are already assigned for this shift"}
+              Check staff working days in Admin → Users
             </p>
           </div>
         ) : (
