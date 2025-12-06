@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertCircle, Send, Eye, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertCircle, Send, Eye, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
@@ -558,13 +558,52 @@ export const RotaScheduleTab = () => {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Weekly Schedule</CardTitle>
-                <CardDescription>
-                  {clinicRooms.length === 0
-                    ? "No clinic rooms configured. Add them in Site Management."
-                    : "Click + to add staff to each clinic room"}
-                </CardDescription>
+              <div className="flex items-center gap-3">
+                <div>
+                  <CardTitle className="text-base">Weekly Schedule</CardTitle>
+                  <CardDescription>
+                    {clinicRooms.length === 0
+                      ? "No clinic rooms configured. Add them in Site Management."
+                      : "Click + to add staff to each clinic room"}
+                  </CardDescription>
+                </div>
+                {/* Week status callout */}
+                {(() => {
+                  const openDayDates = weekDays.filter((day) => {
+                    const dayOfWeek = day.getDay();
+                    const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                    const dayHours = openingHoursByDay[adjustedDay];
+                    return !dayHours?.is_closed;
+                  });
+                  
+                  const confirmedCount = openDayDates.filter((day) => {
+                    const dateKey = formatDateKey(day);
+                    return getConfirmationStatus(dateKey) !== null;
+                  }).length;
+                  
+                  const totalOpenDays = openDayDates.length;
+                  const isCompleted = totalOpenDays > 0 && confirmedCount === totalOpenDays;
+                  
+                  if (totalOpenDays === 0) return null;
+                  
+                  return (
+                    <Badge 
+                      variant="secondary"
+                      className={cn(
+                        "gap-1.5 text-xs font-medium",
+                        isCompleted 
+                          ? "bg-green-100 text-green-700 hover:bg-green-100" 
+                          : "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                      )}
+                    >
+                      {isCompleted ? (
+                        <><CheckCircle2 className="h-3 w-3" /> Completed</>
+                      ) : (
+                        <><Clock className="h-3 w-3" /> In Progress ({confirmedCount}/{totalOpenDays})</>
+                      )}
+                    </Badge>
+                  );
+                })()}
               </div>
               {/* Confirm Day button - dynamically shows for selected day */}
               {(() => {
