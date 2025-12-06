@@ -77,7 +77,7 @@ const WorkflowManagementCard = () => {
           assignee_id,
           sites(name),
           facilities(name),
-          profiles(first_name, last_name)
+          profiles!workflow_tasks_assignee_id_fkey(first_name, last_name)
         `)
         .eq("organisation_id", organisationId)
         .eq("is_active", true)
