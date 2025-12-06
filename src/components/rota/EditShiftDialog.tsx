@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
 
@@ -34,6 +35,8 @@ interface EditShiftDialogProps {
     custom_end_time: string | null;
     is_oncall: boolean;
     notes: string | null;
+    is_temp_staff: boolean;
+    temp_confirmed: boolean;
   }) => void;
 }
 
@@ -49,6 +52,8 @@ export const EditShiftDialog = ({
   const [customEnd, setCustomEnd] = useState("17:00");
   const [isOncall, setIsOncall] = useState(false);
   const [notes, setNotes] = useState("");
+  const [isTempStaff, setIsTempStaff] = useState(false);
+  const [tempConfirmed, setTempConfirmed] = useState(false);
 
   // Determine original period (AM or PM) based on shift data
   const originalPeriod = useMemo(() => {
@@ -89,6 +94,8 @@ export const EditShiftDialog = ({
       setCustomEnd(shift.custom_end_time?.slice(0, 5) || rotaRules?.pm_shift_end.slice(0, 5) || "17:00");
       setIsOncall(shift.is_oncall);
       setNotes(shift.notes || "");
+      setIsTempStaff(shift.is_temp_staff || false);
+      setTempConfirmed(shift.temp_confirmed || false);
     }
   }, [shift, rotaRules]);
 
@@ -99,6 +106,8 @@ export const EditShiftDialog = ({
       custom_end_time: shiftType === "custom" ? customEnd : null,
       is_oncall: isOncall,
       notes: notes || null,
+      is_temp_staff: isTempStaff,
+      temp_confirmed: isTempStaff ? tempConfirmed : false,
     });
   };
 
@@ -195,6 +204,38 @@ export const EditShiftDialog = ({
             </div>
             <Switch checked={isOncall} onCheckedChange={setIsOncall} />
           </div>
+
+          {/* Temp Staff Toggle */}
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <Label className="text-sm font-medium">Temp/Agency Staff</Label>
+              <p className="text-xs text-muted-foreground">
+                Mark if covered by locum or agency worker
+              </p>
+            </div>
+            <Switch 
+              checked={isTempStaff} 
+              onCheckedChange={(checked) => {
+                setIsTempStaff(checked);
+                if (!checked) setTempConfirmed(false);
+              }} 
+            />
+          </div>
+
+          {isTempStaff && (
+            <div className={cn(
+              "flex items-center justify-between rounded-lg border p-3",
+              !tempConfirmed ? "border-destructive bg-destructive/5" : "border-amber-200 bg-amber-50"
+            )}>
+              <div>
+                <Label className="text-sm font-medium">Booking Confirmed</Label>
+                <p className="text-xs text-muted-foreground">
+                  Has the temp booking been confirmed?
+                </p>
+              </div>
+              <Switch checked={tempConfirmed} onCheckedChange={setTempConfirmed} />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Notes</Label>
