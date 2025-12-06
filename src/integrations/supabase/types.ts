@@ -310,9 +310,61 @@ export type Database = {
           },
         ]
       }
+      rota_day_confirmations: {
+        Row: {
+          confirmed_at: string
+          confirmed_by: string
+          created_at: string
+          id: string
+          organisation_id: string
+          rota_week_id: string
+          shift_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          confirmed_at?: string
+          confirmed_by: string
+          created_at?: string
+          id?: string
+          organisation_id: string
+          rota_week_id: string
+          shift_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          confirmed_at?: string
+          confirmed_by?: string
+          created_at?: string
+          id?: string
+          organisation_id?: string
+          rota_week_id?: string
+          shift_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rota_day_confirmations_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rota_day_confirmations_rota_week_id_fkey"
+            columns: ["rota_week_id"]
+            isOneToOne: false
+            referencedRelation: "rota_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rota_rule_overrides: {
         Row: {
           created_at: string
+          facility_id: string | null
           id: string
           organisation_id: string
           overridden_by: string
@@ -320,9 +372,11 @@ export type Database = {
           rota_week_id: string
           rule_description: string
           rule_type: string
+          shift_date: string | null
         }
         Insert: {
           created_at?: string
+          facility_id?: string | null
           id?: string
           organisation_id: string
           overridden_by: string
@@ -330,9 +384,11 @@ export type Database = {
           rota_week_id: string
           rule_description: string
           rule_type: string
+          shift_date?: string | null
         }
         Update: {
           created_at?: string
+          facility_id?: string | null
           id?: string
           organisation_id?: string
           overridden_by?: string
@@ -340,8 +396,16 @@ export type Database = {
           rota_week_id?: string
           rule_description?: string
           rule_type?: string
+          shift_date?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "rota_rule_overrides_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rota_rule_overrides_overridden_by_fkey"
             columns: ["overridden_by"]
