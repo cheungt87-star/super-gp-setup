@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -31,13 +30,13 @@ const defaultWorkingDays: WorkingDays = {
 };
 
 const dayLabels: { key: keyof WorkingDays; label: string; short: string }[] = [
-  { key: "mon", label: "Monday", short: "M" },
-  { key: "tue", label: "Tuesday", short: "T" },
-  { key: "wed", label: "Wednesday", short: "W" },
-  { key: "thu", label: "Thursday", short: "T" },
-  { key: "fri", label: "Friday", short: "F" },
-  { key: "sat", label: "Saturday", short: "S" },
-  { key: "sun", label: "Sunday", short: "S" },
+  { key: "mon", label: "Mon", short: "M" },
+  { key: "tue", label: "Tue", short: "T" },
+  { key: "wed", label: "Wed", short: "W" },
+  { key: "thu", label: "Thu", short: "T" },
+  { key: "fri", label: "Fri", short: "F" },
+  { key: "sat", label: "Sat", short: "S" },
+  { key: "sun", label: "Sun", short: "S" },
 ];
 
 interface InlineWorkingDaysCellProps {
@@ -50,36 +49,22 @@ export const InlineWorkingDaysCell = ({
   onSave,
 }: InlineWorkingDaysCellProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [editValue, setEditValue] = useState<WorkingDays>(value || defaultWorkingDays);
+  const [savingDay, setSavingDay] = useState<keyof WorkingDays | null>(null);
 
-  const handleToggleDay = (day: keyof WorkingDays) => {
-    setEditValue((prev) => ({ ...prev, [day]: !prev[day] }));
-  };
+  const currentValue = value || defaultWorkingDays;
 
-  const handleSave = async () => {
-    setIsSaving(true);
+  const handleToggleDay = async (day: keyof WorkingDays) => {
+    setSavingDay(day);
     try {
-      await onSave(editValue);
-      setIsOpen(false);
+      const newValue = { ...currentValue, [day]: !currentValue[day] };
+      await onSave(newValue);
     } finally {
-      setIsSaving(false);
+      setSavingDay(null);
     }
   };
-
-  const handleOpenChange = (open: boolean) => {
-    if (open) {
-      setEditValue(value || defaultWorkingDays);
-    }
-    setIsOpen(open);
-  };
-
-  if (isSaving) {
-    return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
-  }
 
   return (
-    <Popover open={isOpen} onOpenChange={handleOpenChange}>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <div className="flex gap-1 cursor-pointer hover:bg-muted/50 px-2 py-1 rounded -mx-2 transition-colors">
           {value ? (
@@ -101,26 +86,27 @@ export const InlineWorkingDaysCell = ({
           )}
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-4" align="start">
-        <div className="space-y-3">
-          <p className="text-sm font-medium">Working Days</p>
-          <div className="grid grid-cols-2 gap-2">
-            {dayLabels.map(({ key, label }) => (
-              <div key={key} className="flex items-center space-x-2">
-                <Checkbox
+      <PopoverContent className="w-48 p-3" align="start">
+        <p className="text-sm font-medium mb-3">Working Days</p>
+        <div className="space-y-2">
+          {dayLabels.map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between">
+              <Label htmlFor={`day-${key}`} className="text-sm font-normal cursor-pointer">
+                {label}
+              </Label>
+              {savingDay === key ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : (
+                <Switch
                   id={`day-${key}`}
-                  checked={editValue[key]}
+                  checked={currentValue[key]}
                   onCheckedChange={() => handleToggleDay(key)}
+                  disabled={savingDay !== null}
+                  className="scale-90"
                 />
-                <Label htmlFor={`day-${key}`} className="text-sm font-normal cursor-pointer">
-                  {label.slice(0, 3)}
-                </Label>
-              </div>
-            ))}
-          </div>
-          <Button size="sm" onClick={handleSave} className="w-full">
-            Save
-          </Button>
+              )}
+            </div>
+          ))}
         </div>
       </PopoverContent>
     </Popover>
