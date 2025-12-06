@@ -9,8 +9,10 @@ import { OpeningHoursDisplay } from "./OpeningHoursDisplay";
 
 interface OpeningHour {
   day_of_week: number;
-  open_time: string | null;
-  close_time: string | null;
+  am_open_time: string | null;
+  am_close_time: string | null;
+  pm_open_time: string | null;
+  pm_close_time: string | null;
   is_closed: boolean | null;
 }
 

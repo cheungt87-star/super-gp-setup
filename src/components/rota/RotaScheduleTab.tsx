@@ -43,8 +43,10 @@ interface StaffMember {
 interface OpeningHour {
   day_of_week: number;
   is_closed: boolean;
-  open_time: string | null;
-  close_time: string | null;
+  am_open_time: string | null;
+  am_close_time: string | null;
+  pm_open_time: string | null;
+  pm_close_time: string | null;
 }
 
 export const RotaScheduleTab = () => {
@@ -127,7 +129,7 @@ export const RotaScheduleTab = () => {
             .eq("is_active", true),
           supabase
             .from("site_opening_hours")
-            .select("day_of_week, is_closed, open_time, close_time")
+            .select("day_of_week, is_closed, am_open_time, am_close_time, pm_open_time, pm_close_time")
             .eq("site_id", selectedSiteId),
           supabase
             .from("job_titles")
@@ -166,12 +168,16 @@ export const RotaScheduleTab = () => {
       const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       const dayHours = openingHours.find((h) => h.day_of_week === adjustedDay);
 
+      // Derive open/close from AM start and PM end for full day calculations
+      const openTime = dayHours?.am_open_time || null;
+      const closeTime = dayHours?.pm_close_time || null;
+
       const shiftHours = calculateShiftHours(
         shift.shift_type,
         shift.custom_start_time,
         shift.custom_end_time,
-        dayHours?.open_time || null,
-        dayHours?.close_time || null,
+        openTime,
+        closeTime,
         rotaRule?.am_shift_start || "09:00",
         rotaRule?.am_shift_end || "13:00",
         rotaRule?.pm_shift_start || "13:00",
@@ -460,7 +466,11 @@ export const RotaScheduleTab = () => {
                   const dateKey = formatDateKey(day);
                   const dayOfWeek = day.getDay();
                   const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-                  const dayHours = openingHoursByDay[adjustedDay] || {
+                  const dayHours = openingHoursByDay[adjustedDay] ? {
+                    is_closed: openingHoursByDay[adjustedDay].is_closed,
+                    open_time: openingHoursByDay[adjustedDay].am_open_time,
+                    close_time: openingHoursByDay[adjustedDay].pm_close_time,
+                  } : {
                     is_closed: true,
                     open_time: null,
                     close_time: null,

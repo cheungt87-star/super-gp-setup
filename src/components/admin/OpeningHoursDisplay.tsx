@@ -2,8 +2,10 @@ import { Badge } from "@/components/ui/badge";
 
 interface OpeningHour {
   day_of_week: number;
-  open_time: string | null;
-  close_time: string | null;
+  am_open_time: string | null;
+  am_close_time: string | null;
+  pm_open_time: string | null;
+  pm_close_time: string | null;
   is_closed: boolean | null;
 }
 
@@ -40,9 +42,15 @@ export const OpeningHoursDisplay = ({ hours }: OpeningHoursDisplayProps) => {
                 Closed
               </Badge>
             ) : (
-              <span className="text-foreground">
-                {formatTime(dayHours?.open_time)} - {formatTime(dayHours?.close_time)}
-              </span>
+              <div className="flex items-center gap-2 text-foreground text-xs">
+                <span>
+                  {formatTime(dayHours?.am_open_time)}-{formatTime(dayHours?.am_close_time)}
+                </span>
+                <span className="text-muted-foreground">|</span>
+                <span>
+                  {formatTime(dayHours?.pm_open_time)}-{formatTime(dayHours?.pm_close_time)}
+                </span>
+              </div>
             )}
           </div>
         );

@@ -64,13 +64,13 @@ interface SiteFormProps {
 }
 
 const DEFAULT_HOURS: OpeningHour[] = [
-  { day_of_week: 0, open_time: "09:00", close_time: "17:00", is_closed: false },
-  { day_of_week: 1, open_time: "09:00", close_time: "17:00", is_closed: false },
-  { day_of_week: 2, open_time: "09:00", close_time: "17:00", is_closed: false },
-  { day_of_week: 3, open_time: "09:00", close_time: "17:00", is_closed: false },
-  { day_of_week: 4, open_time: "09:00", close_time: "17:00", is_closed: false },
-  { day_of_week: 5, open_time: "09:00", close_time: "13:00", is_closed: true },
-  { day_of_week: 6, open_time: "09:00", close_time: "13:00", is_closed: true },
+  { day_of_week: 0, am_open_time: "09:00", am_close_time: "13:00", pm_open_time: "14:00", pm_close_time: "17:00", is_closed: false },
+  { day_of_week: 1, am_open_time: "09:00", am_close_time: "13:00", pm_open_time: "14:00", pm_close_time: "17:00", is_closed: false },
+  { day_of_week: 2, am_open_time: "09:00", am_close_time: "13:00", pm_open_time: "14:00", pm_close_time: "17:00", is_closed: false },
+  { day_of_week: 3, am_open_time: "09:00", am_close_time: "13:00", pm_open_time: "14:00", pm_close_time: "17:00", is_closed: false },
+  { day_of_week: 4, am_open_time: "09:00", am_close_time: "13:00", pm_open_time: "14:00", pm_close_time: "17:00", is_closed: false },
+  { day_of_week: 5, am_open_time: "09:00", am_close_time: "13:00", pm_open_time: "14:00", pm_close_time: "17:00", is_closed: true },
+  { day_of_week: 6, am_open_time: "09:00", am_close_time: "13:00", pm_open_time: "14:00", pm_close_time: "17:00", is_closed: true },
 ];
 
 export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave }: SiteFormProps) => {
