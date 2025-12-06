@@ -140,7 +140,14 @@ export const StaffSelectionDialog = ({
                           <User className="h-4 w-4 text-primary" />
                         </div>
                         <div className="flex-1 text-left">
-                          <p className="font-medium">{fullName}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{fullName}</p>
+                            {staff.job_title_name && (
+                              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                {staff.job_title_name}
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
                             <span className={cn(
