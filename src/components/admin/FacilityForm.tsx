@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 const facilitySchema = z.object({
   name: z.string().min(1, "Facility name is required").max(100),
   capacity: z.coerce.number().min(0, "Capacity must be 0 or greater"),
+  facility_type: z.enum(["clinic_room", "general_facility"]),
 });
 
 export type FacilityFormData = z.infer<typeof facilitySchema>;
@@ -33,6 +34,7 @@ export interface Facility {
   site_id: string;
   name: string;
   capacity: number;
+  facility_type: "clinic_room" | "general_facility";
   is_active: boolean;
 }
 
@@ -52,6 +54,7 @@ export const FacilityForm = ({ open, onOpenChange, facility, siteName, onSave }:
     defaultValues: {
       name: "",
       capacity: 0,
+      facility_type: "general_facility",
     },
   });
 
@@ -60,11 +63,13 @@ export const FacilityForm = ({ open, onOpenChange, facility, siteName, onSave }:
       form.reset({
         name: facility.name,
         capacity: facility.capacity,
+        facility_type: facility.facility_type || "general_facility",
       });
     } else {
       form.reset({
         name: "",
         capacity: 0,
+        facility_type: "general_facility",
       });
     }
   }, [facility, form]);
