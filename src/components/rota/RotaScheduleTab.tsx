@@ -1,21 +1,24 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertCircle, Send, Eye } from "lucide-react";
+import { Loader2, AlertCircle, Send, Eye, CheckCircle2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
 import { useRotaSchedule, RotaShift } from "@/hooks/useRotaSchedule";
 import { useRotaRules } from "@/hooks/useRotaRules";
+import { useRotaDayConfirmations, DayOverride } from "@/hooks/useRotaDayConfirmations";
 import { WeekSelector } from "./WeekSelector";
 import { ClinicRoomDayCell } from "./ClinicRoomDayCell";
 import { RotaPreviewDialog } from "./RotaPreviewDialog";
 import { EditShiftDialog } from "./EditShiftDialog";
+import { DayConfirmDialog } from "./DayConfirmDialog";
 import { getWeekDays, getWeekStartDate, formatDateKey, calculateShiftHours } from "@/lib/rotaUtils";
+import { validateDay, RuleViolation } from "@/lib/rotaRulesEngine";
 import { toast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -73,6 +76,10 @@ export const RotaScheduleTab = () => {
   // Edit state
   const [editingShift, setEditingShift] = useState<RotaShift | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  
+  // Day confirmation state
+  const [confirmingDate, setConfirmingDate] = useState<Date | null>(null);
+  const [confirmViolations, setConfirmViolations] = useState<RuleViolation[]>([]);
 
   const weekStartStr = formatDateKey(weekStart);
   const weekDays = getWeekDays(weekStart);
@@ -89,6 +96,18 @@ export const RotaScheduleTab = () => {
       organisationId,
       weekStart: weekStartStr,
     });
+
+  // Day confirmations hook
+  const {
+    confirmations,
+    saving: savingConfirmation,
+    confirmDay,
+    resetDayConfirmation,
+    getConfirmationStatus,
+  } = useRotaDayConfirmations({
+    rotaWeekId: rotaWeek?.id || null,
+    organisationId,
+  });
 
   // Fetch sites, all staff, and job titles
   useEffect(() => {
@@ -402,6 +421,55 @@ export const RotaScheduleTab = () => {
     });
   };
 
+  // Handle confirm day - runs validation and shows dialog
+  const handleConfirmDay = useCallback((day: Date) => {
+    const dayOfWeek = day.getDay();
+    const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const dayHours = openingHoursByDay[adjustedDay];
+
+    const violations = validateDay(
+      day,
+      shifts,
+      clinicRooms,
+      dayHours,
+      allStaff,
+      selectedSiteId || "",
+      rotaRule?.require_oncall ?? true
+    );
+
+    setConfirmViolations(violations);
+    setConfirmingDate(day);
+  }, [shifts, clinicRooms, openingHoursByDay, allStaff, selectedSiteId, rotaRule]);
+
+  const handleDayConfirmed = async (overrides: DayOverride[]) => {
+    if (!confirmingDate) return;
+
+    const dateKey = formatDateKey(confirmingDate);
+    const status = overrides.length > 0 ? "confirmed_with_overrides" : "confirmed";
+    
+    const success = await confirmDay(dateKey, status, overrides.length > 0 ? overrides : undefined);
+    
+    if (success) {
+      toast({
+        title: "Day confirmed",
+        description: overrides.length > 0 
+          ? `${format(confirmingDate, "EEEE")} confirmed with ${overrides.length} override${overrides.length !== 1 ? "s" : ""}`
+          : `${format(confirmingDate, "EEEE")} confirmed successfully`,
+      });
+      setConfirmingDate(null);
+    }
+  };
+
+  const handleResetConfirmation = async (dateKey: string) => {
+    const success = await resetDayConfirmation(dateKey);
+    if (success) {
+      toast({
+        title: "Confirmation reset",
+        description: "Day is now unconfirmed",
+      });
+    }
+  };
+
   if (loadingInitial) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -513,6 +581,8 @@ export const RotaScheduleTab = () => {
                     const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
                     const dayHours = openingHoursByDay[adjustedDay];
                     const isClosed = dayHours?.is_closed ?? true;
+                    const dateKey = formatDateKey(day);
+                    const confirmation = getConfirmationStatus(dateKey);
 
                     // Hide closed days
                     if (isClosed) return null;
@@ -523,8 +593,16 @@ export const RotaScheduleTab = () => {
                         value={String(index)}
                         className="flex-1 py-2 px-3 data-[state=active]:bg-background"
                       >
-                        <div className="flex flex-col items-center">
-                          <span className="text-xs">{format(day, "EEE")}</span>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs">{format(day, "EEE")}</span>
+                            {confirmation?.status === "confirmed" && (
+                              <CheckCircle2 className="h-3 w-3 text-green-500" />
+                            )}
+                            {confirmation?.status === "confirmed_with_overrides" && (
+                              <AlertTriangle className="h-3 w-3 text-amber-500" />
+                            )}
+                          </div>
                           <span className="font-semibold">{format(day, "d")}</span>
                         </div>
                       </TabsTrigger>
@@ -554,9 +632,61 @@ export const RotaScheduleTab = () => {
                     pm_close_time: null,
                   };
                   const previousDateKey = index > 0 ? formatDateKey(weekDays[index - 1]) : null;
+                  const confirmation = getConfirmationStatus(dateKey);
 
                   return (
                     <TabsContent key={dateKey} value={String(index)} className="mt-0">
+                      {/* Confirm Day Header */}
+                      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
+                        <span className="text-sm font-medium">
+                          {format(day, "EEEE, MMMM d")}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {confirmation ? (
+                            <div className="flex items-center gap-2">
+                              <Badge 
+                                variant={confirmation.status === "confirmed" ? "default" : "secondary"}
+                                className={cn(
+                                  "gap-1",
+                                  confirmation.status === "confirmed" 
+                                    ? "bg-green-100 text-green-700 hover:bg-green-100" 
+                                    : "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                                )}
+                              >
+                                {confirmation.status === "confirmed" ? (
+                                  <><CheckCircle2 className="h-3 w-3" /> Confirmed</>
+                                ) : (
+                                  <><AlertTriangle className="h-3 w-3" /> Confirmed with overrides</>
+                                )}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => handleResetConfirmation(dateKey)}
+                                disabled={savingConfirmation}
+                              >
+                                Reset
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7"
+                              onClick={() => handleConfirmDay(day)}
+                              disabled={savingConfirmation}
+                            >
+                              {savingConfirmation ? (
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="mr-1 h-3 w-3" />
+                              )}
+                              Confirm Day
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                       <ClinicRoomDayCell
                         date={day}
                         dateKey={dateKey}
@@ -597,6 +727,17 @@ export const RotaScheduleTab = () => {
         shift={editingShift}
         rotaRules={rotaRule}
         onSave={handleEditShift}
+      />
+
+      {/* Day Confirm Dialog */}
+      <DayConfirmDialog
+        open={!!confirmingDate}
+        onOpenChange={(open) => !open && setConfirmingDate(null)}
+        date={confirmingDate || new Date()}
+        violations={confirmViolations}
+        saving={savingConfirmation}
+        onConfirm={handleDayConfirmed}
+        onFix={() => setConfirmingDate(null)}
       />
 
       {/* Preview Dialog */}
