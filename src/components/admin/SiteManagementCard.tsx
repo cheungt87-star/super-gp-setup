@@ -89,7 +89,7 @@ export const SiteManagementCard = () => {
         .eq('is_active', true),
       supabase
         .from('facilities')
-        .select('id, site_id, name, capacity, is_active')
+        .select('id, site_id, name, capacity, facility_type, is_active')
         .eq('organisation_id', organisationId)
         .eq('is_active', true)
         .order('name'),
