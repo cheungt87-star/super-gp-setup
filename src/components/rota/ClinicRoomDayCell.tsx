@@ -34,6 +34,17 @@ interface StaffMember {
   job_title_name: string | null;
   working_days: Record<string, boolean> | null;
   contracted_hours: number | null;
+  primary_site_id?: string | null;
+}
+
+interface Site {
+  id: string;
+  name: string;
+}
+
+interface JobTitle {
+  id: string;
+  name: string;
 }
 
 interface ClinicRoomDayCellProps {
@@ -43,6 +54,10 @@ interface ClinicRoomDayCellProps {
   openingHours: OpeningHours | null;
   clinicRooms: ClinicRoom[];
   availableStaff: StaffMember[];
+  allStaff: StaffMember[];
+  sites: Site[];
+  jobTitles: JobTitle[];
+  currentSiteId: string;
   scheduledHours: Record<string, number>;
   requireOnCall: boolean;
   loading?: boolean;
@@ -64,6 +79,10 @@ export const ClinicRoomDayCell = ({
   openingHours,
   clinicRooms,
   availableStaff,
+  allStaff,
+  sites,
+  jobTitles,
+  currentSiteId,
   scheduledHours,
   requireOnCall,
   loading = false,
@@ -364,9 +383,14 @@ export const ClinicRoomDayCell = ({
           jobTitleName={selectionDialog.facilityName}
           shiftType={selectionDialog.shiftType}
           dateLabel={dateLabel}
+          dayOfWeek={format(date, "EEE").toLowerCase()}
           availableStaff={availableStaff}
+          allStaff={allStaff}
           excludeUserIds={getConflictingUserIds(selectionDialog.shiftType, selectionDialog.facilityId)}
           scheduledHours={scheduledHours}
+          currentSiteId={currentSiteId}
+          sites={sites}
+          jobTitles={jobTitles}
           onSelectStaff={handleSelectStaff}
         />
       )}

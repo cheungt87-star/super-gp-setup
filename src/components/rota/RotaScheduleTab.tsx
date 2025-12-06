@@ -33,6 +33,7 @@ interface StaffMember {
   job_title_name: string | null;
   working_days: Record<string, boolean> | null;
   contracted_hours: number | null;
+  primary_site_id?: string | null;
 }
 
 interface OpeningHour {
@@ -50,12 +51,19 @@ interface ClinicRoom {
   capacity: number;
 }
 
+interface JobTitle {
+  id: string;
+  name: string;
+}
+
 export const RotaScheduleTab = () => {
   const { organisationId } = useOrganisation();
   const [sites, setSites] = useState<Site[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState(getWeekStartDate(new Date()));
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [allStaff, setAllStaff] = useState<StaffMember[]>([]);
+  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [clinicRooms, setClinicRooms] = useState<ClinicRoom[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
@@ -80,33 +88,55 @@ export const RotaScheduleTab = () => {
       weekStart: weekStartStr,
     });
 
-  // Fetch sites
+  // Fetch sites, all staff, and job titles
   useEffect(() => {
-    const fetchSites = async () => {
+    const fetchInitialData = async () => {
       if (!organisationId) return;
 
       try {
-        const { data, error } = await supabase
-          .from("sites")
-          .select("id, name")
-          .eq("organisation_id", organisationId)
-          .eq("is_active", true)
-          .order("name");
+        const [sitesRes, allStaffRes, jobTitlesRes] = await Promise.all([
+          supabase
+            .from("sites")
+            .select("id, name")
+            .eq("organisation_id", organisationId)
+            .eq("is_active", true)
+            .order("name"),
+          supabase
+            .from("profiles")
+            .select("id, first_name, last_name, working_days, contracted_hours, job_title_id, primary_site_id, job_titles(name)")
+            .eq("organisation_id", organisationId)
+            .eq("is_active", true),
+          supabase
+            .from("job_titles")
+            .select("id, name")
+            .eq("organisation_id", organisationId)
+            .order("name"),
+        ]);
 
-        if (error) throw error;
-        setSites(data || []);
+        if (sitesRes.error) throw sitesRes.error;
+        if (allStaffRes.error) throw allStaffRes.error;
+        if (jobTitlesRes.error) throw jobTitlesRes.error;
 
-        if (data && data.length > 0 && !selectedSiteId) {
-          setSelectedSiteId(data[0].id);
+        setSites(sitesRes.data || []);
+        setAllStaff(
+          (allStaffRes.data || []).map((s: any) => ({
+            ...s,
+            job_title_name: s.job_titles?.name || null,
+          }))
+        );
+        setJobTitles(jobTitlesRes.data || []);
+
+        if (sitesRes.data && sitesRes.data.length > 0 && !selectedSiteId) {
+          setSelectedSiteId(sitesRes.data[0].id);
         }
       } catch (error) {
-        console.error("Error fetching sites:", error);
+        console.error("Error fetching initial data:", error);
       } finally {
         setLoadingInitial(false);
       }
     };
 
-    fetchSites();
+    fetchInitialData();
   }, [organisationId]);
 
   // Clear data when site changes to prevent stale data
@@ -520,6 +550,10 @@ export const RotaScheduleTab = () => {
                         openingHours={dayHours}
                         clinicRooms={clinicRooms}
                         availableStaff={staff}
+                        allStaff={allStaff}
+                        sites={sites}
+                        jobTitles={jobTitles}
+                        currentSiteId={selectedSiteId!}
                         scheduledHours={staffScheduledHours}
                         requireOnCall={rotaRule?.require_oncall ?? true}
                         loading={loadingSiteData}
