@@ -339,7 +339,7 @@ export const ClinicRoomDayCell = ({
         <div className="p-4 space-y-4">
           {/* On-Call Row */}
           {requireOnCall && (
-            <div className="rounded-lg border p-3 min-h-[56px]">
+            <div className="rounded-lg border px-3 py-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
