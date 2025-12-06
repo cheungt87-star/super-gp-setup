@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -11,6 +11,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { WorkingDays, defaultWorkingDays } from "./InlineWorkingDaysCell";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface FilterOption {
   id: string;
@@ -24,6 +35,7 @@ interface BulkEditBarProps {
   sites: FilterOption[];
   jobTitles: FilterOption[];
   onApply: (field: string, value: any) => Promise<void>;
+  onDelete: () => Promise<void>;
   onClearSelection: () => void;
 }
 
@@ -42,12 +54,23 @@ export const BulkEditBar = ({
   sites,
   jobTitles,
   onApply,
+  onDelete,
   onClearSelection,
 }: BulkEditBarProps) => {
   const [attribute, setAttribute] = useState<BulkAttribute | "">("");
   const [value, setValue] = useState<string>("");
   const [workingDays, setWorkingDays] = useState<WorkingDays>(defaultWorkingDays);
   const [isApplying, setIsApplying] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDelete();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleApply = async () => {
     if (!attribute) return;
@@ -193,6 +216,36 @@ export const BulkEditBar = ({
         {isApplying ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
         Apply
       </Button>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-8"
+            disabled={isDeleting}
+          >
+            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Trash2 className="h-4 w-4 mr-1" />}
+            Delete
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedCount} user{selectedCount !== 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. {selectedCount === 1 ? 'This user' : 'These users'} will be permanently removed from your organisation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Button
         size="sm"
         variant="ghost"
