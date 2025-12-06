@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { getJobTitleColors } from "@/lib/jobTitleColors";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen } from "lucide-react";
@@ -187,7 +188,7 @@ export const ClinicRoomDayCell = ({
       <div className="flex items-center gap-2 min-w-0">
         <span className="text-sm truncate">{shift.user_name}</span>
         {shift.job_title_name && (
-          <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">{shift.job_title_name}</Badge>
+          <Badge variant="outline" className={cn("text-[10px] px-1 py-0 shrink-0", getJobTitleColors(shift.job_title_name))}>{shift.job_title_name}</Badge>
         )}
         {showFullBadge && (
           <Badge variant="secondary" className="text-[10px] px-1 py-0 shrink-0">Full</Badge>
@@ -261,7 +262,7 @@ export const ClinicRoomDayCell = ({
                       {onCallShift.user_name}
                     </span>
                     {onCallShift.job_title_name && (
-                      <Badge variant="outline" className="text-[10px]">{onCallShift.job_title_name}</Badge>
+                      <Badge variant="outline" className={cn("text-[10px]", getJobTitleColors(onCallShift.job_title_name))}>{onCallShift.job_title_name}</Badge>
                     )}
                     <Button
                       variant="ghost"

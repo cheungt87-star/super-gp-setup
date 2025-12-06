@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { User, Clock, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getJobTitleColors } from "@/lib/jobTitleColors";
 import type { Database } from "@/integrations/supabase/types";
 
 type ShiftType = Database["public"]["Enums"]["shift_type"];
@@ -249,7 +250,7 @@ export const StaffSelectionDialog = ({
                           <div className="flex items-center gap-2">
                             <p className="font-medium">{fullName}</p>
                             {staff.job_title_name && (
-                              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                              <span className={cn("text-xs px-1.5 py-0.5 rounded border", getJobTitleColors(staff.job_title_name))}>
                                 {staff.job_title_name}
                               </span>
                             )}
