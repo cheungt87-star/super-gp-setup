@@ -8,6 +8,7 @@ import TaskWidget from "@/components/dashboard/TaskWidget";
 import TaskDetailSheet from "@/components/dashboard/TaskDetailSheet";
 import { MyShiftsWidget } from "@/components/dashboard/MyShiftsWidget";
 import { FullRotaWidget } from "@/components/dashboard/FullRotaWidget";
+import { YourDayCard } from "@/components/dashboard/YourDayCard";
 import { WorkflowTaskWithDetails, TaskWithDueDate, enrichTaskWithDueDate } from "@/lib/taskUtils";
 import { format, subDays, addDays } from "date-fns";
 
@@ -248,6 +249,9 @@ const Dashboard = () => {
         <h1 className="text-3xl font-bold mb-2">Welcome, {userName}!</h1>
         <p className="text-muted-foreground">Here's an overview of your clinic setup.</p>
       </div>
+
+      {/* Your Day Headline Card */}
+      <YourDayCard todayTasks={myTasks.filter(t => t.isToday)} />
 
       {/* Invitation Code Card for Admins */}
       {isAdmin && inviteCode && (
