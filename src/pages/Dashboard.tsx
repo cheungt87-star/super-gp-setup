@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import TaskWidget from "@/components/dashboard/TaskWidget";
 import TaskDetailSheet from "@/components/dashboard/TaskDetailSheet";
+import { MyShiftsWidget } from "@/components/dashboard/MyShiftsWidget";
 import { WorkflowTaskWithDetails, TaskWithDueDate, enrichTaskWithDueDate } from "@/lib/taskUtils";
 import { format, subDays, addDays } from "date-fns";
 
@@ -282,6 +283,9 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* My Upcoming Shifts */}
+      <MyShiftsWidget />
 
       {/* Task Widgets */}
       <div className="grid gap-6 md:grid-cols-2 animate-fade-in">
