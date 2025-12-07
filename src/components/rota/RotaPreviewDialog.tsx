@@ -281,7 +281,7 @@ export const RotaPreviewDialog = ({
           )}
 
           {/* Week Summary Table */}
-          <ScrollArea className="flex-1 min-h-0 border rounded-lg">
+          <ScrollArea className="flex-1 min-h-0 max-h-[calc(90vh-300px)] border rounded-lg">
             <div className="min-w-[600px]">
               <table className="w-full text-sm table-fixed">
                 <thead>
