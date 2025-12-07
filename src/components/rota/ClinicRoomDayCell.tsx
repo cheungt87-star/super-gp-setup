@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock } from "lucide-react";
+import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2 } from "lucide-react";
 import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
 import type { Database } from "@/integrations/supabase/types";
@@ -73,6 +73,8 @@ interface ClinicRoomDayCellProps {
   onEditShift: (shift: RotaShift) => void;
   onRepeatPreviousDay?: (dateKey: string, previousDateKey: string) => Promise<void>;
   onCopyToWholeWeek?: (dateKey: string) => Promise<void>;
+  onCopyFromPreviousWeek?: () => Promise<void>;
+  copyingFromPrevWeek?: boolean;
 }
 
 export const ClinicRoomDayCell = ({
@@ -100,6 +102,8 @@ export const ClinicRoomDayCell = ({
   onEditShift,
   onRepeatPreviousDay,
   onCopyToWholeWeek,
+  onCopyFromPreviousWeek,
+  copyingFromPrevWeek = false,
 }: ClinicRoomDayCellProps) => {
   const [selectionDialog, setSelectionDialog] = useState<{
     open: boolean;
@@ -320,11 +324,26 @@ export const ClinicRoomDayCell = ({
             )}
           </div>
           <div className="flex items-center gap-2">
+            {isFirstOpenDay && onCopyFromPreviousWeek && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading || copyingFromPrevWeek}
+                onClick={onCopyFromPreviousWeek}
+              >
+                {copyingFromPrevWeek ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Copy className="h-4 w-4 mr-2" />
+                )}
+                Copy from Previous Week
+              </Button>
+            )}
             {isFirstOpenDay && onCopyToWholeWeek && (
               <Button
                 variant="outline"
                 size="sm"
-                disabled={loading}
+                disabled={loading || copyingFromPrevWeek}
                 onClick={() => onCopyToWholeWeek(dateKey)}
               >
                 <Copy className="h-4 w-4 mr-2" />
@@ -335,7 +354,7 @@ export const ClinicRoomDayCell = ({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={loading}
+                disabled={loading || copyingFromPrevWeek}
                 onClick={() => onRepeatPreviousDay(dateKey, previousDateKey)}
               >
                 <Copy className="h-4 w-4 mr-2" />
