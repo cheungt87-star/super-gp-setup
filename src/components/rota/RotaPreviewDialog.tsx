@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import {
   AlertTriangle,
   XCircle,
@@ -22,6 +23,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RotaShift } from "@/hooks/useRotaSchedule";
@@ -103,7 +105,8 @@ export const RotaPreviewDialog = ({
     }));
   }, [violations]);
 
-  // State for issues expander
+  // State for issues panel and list expansion
+  const [issuesPanelOpen, setIssuesPanelOpen] = useState(true);
   const [issuesExpanded, setIssuesExpanded] = useState(false);
   const INITIAL_ISSUES_SHOWN = 4;
   const visibleViolations = issuesExpanded 
@@ -201,65 +204,75 @@ export const RotaPreviewDialog = ({
         <div className="flex-1 overflow-hidden flex flex-col gap-4">
           {/* Warnings Panel */}
           {violations.length > 0 ? (
-            <div className="border rounded-lg p-4 bg-muted/30">
-              <div className="flex items-center gap-2 mb-3">
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
-                <span className="font-medium">
-                  {errorCount + warningCount} Issue{errorCount + warningCount !== 1 ? "s" : ""} Found
-                </span>
-                {errorCount > 0 && (
-                  <Badge variant="destructive" className="ml-2">
-                    {errorCount} Error{errorCount !== 1 ? "s" : ""}
-                  </Badge>
-                )}
-                {warningCount > 0 && (
-                  <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700 border-amber-200">
-                    {warningCount} Warning{warningCount !== 1 ? "s" : ""}
-                  </Badge>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                {visibleViolations.map((v, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "flex items-center gap-2 text-sm py-1 px-2 rounded",
-                      v.severity === "error"
-                        ? "bg-destructive/10 text-destructive"
-                        : "bg-amber-50 text-amber-700"
+            <Collapsible open={issuesPanelOpen} onOpenChange={setIssuesPanelOpen}>
+              <div className="border rounded-lg bg-muted/30">
+                <CollapsibleTrigger asChild>
+                  <button className="flex items-center gap-2 w-full p-4 hover:bg-muted/50 transition-colors rounded-lg">
+                    <ChevronRight className={cn(
+                      "h-4 w-4 transition-transform",
+                      issuesPanelOpen && "rotate-90"
+                    )} />
+                    <AlertTriangle className="h-5 w-5 text-amber-500" />
+                    <span className="font-medium">
+                      {errorCount + warningCount} Issue{errorCount + warningCount !== 1 ? "s" : ""} Found
+                    </span>
+                    {errorCount > 0 && (
+                      <Badge variant="destructive" className="ml-2">
+                        {errorCount} Error{errorCount !== 1 ? "s" : ""}
+                      </Badge>
                     )}
-                  >
-                    {v.severity === "error" ? (
-                      <XCircle className="h-4 w-4 flex-shrink-0" />
-                    ) : (
-                      getViolationIcon(v.type)
+                    {warningCount > 0 && (
+                      <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700 border-amber-200">
+                        {warningCount} Warning{warningCount !== 1 ? "s" : ""}
+                      </Badge>
                     )}
-                    <span>{v.message}</span>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-4 pb-4 space-y-1.5">
+                    {visibleViolations.map((v, i) => (
+                      <div
+                        key={i}
+                        className={cn(
+                          "flex items-center gap-2 text-sm py-1 px-2 rounded",
+                          v.severity === "error"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-amber-50 text-amber-700"
+                        )}
+                      >
+                        {v.severity === "error" ? (
+                          <XCircle className="h-4 w-4 flex-shrink-0" />
+                        ) : (
+                          getViolationIcon(v.type)
+                        )}
+                        <span>{v.message}</span>
+                      </div>
+                    ))}
+                    {/* Show more/less toggle */}
+                    {hiddenCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 w-full"
+                        onClick={() => setIssuesExpanded(!issuesExpanded)}
+                      >
+                        {issuesExpanded ? (
+                          <>
+                            Show less
+                            <ChevronUp className="ml-1 h-4 w-4" />
+                          </>
+                        ) : (
+                          <>
+                            Show {hiddenCount} more issue{hiddenCount !== 1 ? "s" : ""}
+                            <ChevronDown className="ml-1 h-4 w-4" />
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
-                ))}
+                </CollapsibleContent>
               </div>
-              {/* Show more/less toggle */}
-              {hiddenCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 w-full"
-                  onClick={() => setIssuesExpanded(!issuesExpanded)}
-                >
-                  {issuesExpanded ? (
-                    <>
-                      Show less
-                      <ChevronUp className="ml-1 h-4 w-4" />
-                    </>
-                  ) : (
-                    <>
-                      Show {hiddenCount} more issue{hiddenCount !== 1 ? "s" : ""}
-                      <ChevronDown className="ml-1 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
+            </Collapsible>
           ) : (
             <div className="border rounded-lg p-4 bg-green-50 flex items-center gap-2 text-green-700">
               <CheckCircle2 className="h-5 w-5" />
