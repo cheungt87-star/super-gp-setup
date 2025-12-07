@@ -266,30 +266,18 @@ const TaskAudit = () => {
 
   const hasActiveFilters = searchQuery || siteFilter !== "all" || assigneeFilter !== "all" || statusFilter !== "all";
 
-  const getStatusBadge = (status: "completed" | "pending" | "overdue", completionDate: string | null, dueDate: Date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
+  const getStatusDisplay = (status: "completed" | "pending" | "overdue", completionDate: string | null) => {
     switch (status) {
       case "completed":
         return (
-          <Badge variant="default" className="bg-green-600 hover:bg-green-700">
-            Completed {completionDate ? format(new Date(completionDate), "dd/MM/yy") : ""}
-          </Badge>
+          <span className="text-green-600 font-medium">
+            {completionDate ? format(new Date(completionDate), "dd/MM/yy HH:mm") : "-"}
+          </span>
         );
       case "overdue":
-        const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-        return (
-          <Badge variant="destructive">
-            Overdue by {daysOverdue} day{daysOverdue !== 1 ? "s" : ""}
-          </Badge>
-        );
-      case "pending":
-        return (
-          <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-200">
-            Pending
-          </Badge>
-        );
+        return <span className="text-destructive font-medium">Overdue</span>;
+      default:
+        return <span className="text-muted-foreground">Pending</span>;
     }
   };
 
@@ -408,7 +396,7 @@ const TaskAudit = () => {
                 <SortableHeader field="assignee_name">Assignee</SortableHeader>
                 <TableHead>Assigned Date</TableHead>
                 <SortableHeader field="current_due_date">Due Date</SortableHeader>
-                <SortableHeader field="status">Status</SortableHeader>
+                <SortableHeader field="status">Completion date</SortableHeader>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -439,7 +427,7 @@ const TaskAudit = () => {
                       {format(task.current_due_date, "dd/MM/yy")}
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(task.status, task.completion_date, task.current_due_date)}
+                      {getStatusDisplay(task.status, task.completion_date)}
                     </TableCell>
                   </TableRow>
                 ))
