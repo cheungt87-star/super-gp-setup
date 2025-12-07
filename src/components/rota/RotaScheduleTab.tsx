@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { format } from "date-fns";
+import { format, subWeeks, addDays } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertCircle, Send, Eye, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
+import { Loader2, AlertCircle, Send, Eye, CheckCircle2, AlertTriangle, Clock, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
@@ -83,6 +83,9 @@ export const RotaScheduleTab = () => {
   
   // Selected day tab index
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
+  
+  // Copy from previous week loading state
+  const [copyingFromPrevWeek, setCopyingFromPrevWeek] = useState(false);
 
   const weekStartStr = formatDateKey(weekStart);
   const weekDays = getWeekDays(weekStart);
@@ -491,6 +494,111 @@ export const RotaScheduleTab = () => {
     });
   };
 
+  // Handle copy from previous week
+  const handleCopyFromPreviousWeek = async () => {
+    if (!selectedSiteId || !rotaWeek || !organisationId) return;
+    
+    setCopyingFromPrevWeek(true);
+    try {
+      const prevWeekStart = formatDateKey(subWeeks(weekStart, 1));
+      
+      // Fetch previous week's rota
+      const { data: prevWeekData, error: prevWeekError } = await supabase
+        .from("rota_weeks")
+        .select("id")
+        .eq("site_id", selectedSiteId)
+        .eq("week_start", prevWeekStart)
+        .maybeSingle();
+      
+      if (prevWeekError) throw prevWeekError;
+      
+      if (!prevWeekData) {
+        toast({
+          title: "No previous week",
+          description: "No rota exists for the previous week",
+        });
+        return;
+      }
+      
+      // Fetch previous week's shifts
+      const { data: prevShifts, error: shiftsError } = await supabase
+        .from("rota_shifts")
+        .select("*")
+        .eq("rota_week_id", prevWeekData.id);
+      
+      if (shiftsError) throw shiftsError;
+      
+      if (!prevShifts || prevShifts.length === 0) {
+        toast({
+          title: "No shifts to copy",
+          description: "The previous week has no shifts assigned",
+        });
+        return;
+      }
+      
+      // Copy each shift, adjusting date by +7 days
+      let copiedCount = 0;
+      for (const shift of prevShifts) {
+        const newDate = formatDateKey(addDays(new Date(shift.shift_date), 7));
+        
+        // Check if day is closed
+        const dayOfWeek = new Date(newDate).getDay();
+        const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        if (openingHoursByDay[adjustedDay]?.is_closed) continue;
+        
+        // Check for duplicates in current week
+        const currentShifts = shiftsByDate[newDate] || [];
+        
+        // For on-call, skip if already assigned
+        if (shift.is_oncall) {
+          const existingOnCall = currentShifts.find((s) => s.is_oncall);
+          if (existingOnCall) continue;
+        }
+        
+        // For facility-based shifts, check if same user+facility+type already exists
+        if (shift.facility_id) {
+          const alreadyExists = currentShifts.some(
+            (s) => s.user_id === shift.user_id && 
+                   s.facility_id === shift.facility_id && 
+                   s.shift_type === shift.shift_type
+          );
+          if (alreadyExists) continue;
+        }
+        
+        // Add shift
+        const result = await addShift(
+          shift.user_id,
+          newDate,
+          shift.shift_type,
+          shift.custom_start_time || undefined,
+          shift.custom_end_time || undefined,
+          shift.is_oncall,
+          shift.facility_id || undefined,
+          shift.is_temp_staff,
+          shift.temp_confirmed,
+          shift.temp_staff_name || undefined
+        );
+        if (result) copiedCount++;
+      }
+      
+      toast({
+        title: copiedCount > 0 ? `Copied ${copiedCount} shift${copiedCount > 1 ? "s" : ""}` : "No shifts copied",
+        description: copiedCount === 0 
+          ? "All shifts already exist or days are closed"
+          : "Schedule copied from previous week",
+      });
+    } catch (error) {
+      console.error("Error copying from previous week:", error);
+      toast({
+        title: "Error",
+        description: "Failed to copy from previous week",
+        variant: "destructive",
+      });
+    } finally {
+      setCopyingFromPrevWeek(false);
+    }
+  };
+
   // Handle confirm day - runs validation and shows dialog
   const handleConfirmDay = useCallback((day: Date) => {
     const dayOfWeek = day.getDay();
@@ -580,6 +688,20 @@ export const RotaScheduleTab = () => {
               </Select>
 
               <WeekSelector weekStart={weekStart} onWeekChange={setWeekStart} />
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyFromPreviousWeek}
+                disabled={copyingFromPrevWeek || !rotaWeek || saving}
+              >
+                {copyingFromPrevWeek ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Copy className="mr-2 h-4 w-4" />
+                )}
+                Copy from previous week
+              </Button>
             </div>
 
             <div className="flex items-center gap-2">
