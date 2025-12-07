@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
+import Directory from "./pages/Directory";
 import Rota from "./pages/Rota";
 import Workflows from "./pages/Workflows";
 import PolicyGPT from "./pages/PolicyGPT";
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/onboarding" element={<Onboarding />} />
             <Route element={<AuthenticatedLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/directory" element={<Directory />} />
               <Route path="/rota" element={<Rota />} />
               <Route path="/workflows" element={<Workflows />} />
               <Route path="/policy-gpt" element={<PolicyGPT />} />
