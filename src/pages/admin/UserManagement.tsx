@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Users, ArrowUpDown, Check, X, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,6 +14,7 @@ import { InlineEditCell } from "@/components/admin/InlineEditCell";
 import { InlineSelectCell } from "@/components/admin/InlineSelectCell";
 import { InlineWorkingDaysCell, WorkingDays } from "@/components/admin/InlineWorkingDaysCell";
 import { BulkEditBar } from "@/components/admin/BulkEditBar";
+import { AddUserDialog } from "@/components/admin/AddUserDialog";
 
 interface OrgUser {
   id: string;
@@ -64,48 +65,48 @@ const UserManagement = () => {
   // Bulk selection
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setCurrentUserId(user.id);
-      
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      setCurrentUserRole(roleData?.role || null);
-      
-      if (!organisationId) {
-        setLoading(false);
-        return;
-      }
-      
-      const [usersResult, jobTitlesResult, sitesResult] = await Promise.all([
-        supabase.rpc('get_organisation_users', { p_organisation_id: organisationId }),
-        supabase.from('job_titles').select('id, name').eq('organisation_id', organisationId),
-        supabase.from('sites').select('id, name').eq('organisation_id', organisationId).eq('is_active', true),
-      ]);
-      
-      if (usersResult.data) {
-        const mappedUsers: OrgUser[] = usersResult.data.map((u: any) => ({
-          ...u,
-          working_days: u.working_days as WorkingDays | null,
-        }));
-        setUsers(mappedUsers);
-      }
-      if (jobTitlesResult.data) setJobTitles(jobTitlesResult.data);
-      if (sitesResult.data) setSites(sitesResult.data);
-      
-      setLoading(false);
-    };
+  const fetchData = useCallback(async () => {
+    setLoading(true);
     
-    fetchData();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setCurrentUserId(user.id);
+    
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    setCurrentUserRole(roleData?.role || null);
+    
+    if (!organisationId) {
+      setLoading(false);
+      return;
+    }
+    
+    const [usersResult, jobTitlesResult, sitesResult] = await Promise.all([
+      supabase.rpc('get_organisation_users', { p_organisation_id: organisationId }),
+      supabase.from('job_titles').select('id, name').eq('organisation_id', organisationId),
+      supabase.from('sites').select('id, name').eq('organisation_id', organisationId).eq('is_active', true),
+    ]);
+    
+    if (usersResult.data) {
+      const mappedUsers: OrgUser[] = usersResult.data.map((u: any) => ({
+        ...u,
+        working_days: u.working_days as WorkingDays | null,
+      }));
+      setUsers(mappedUsers);
+    }
+    if (jobTitlesResult.data) setJobTitles(jobTitlesResult.data);
+    if (sitesResult.data) setSites(sitesResult.data);
+    
+    setLoading(false);
   }, [organisationId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const updateUserField = async (userId: string, field: string, value: any) => {
     const { error } = await supabase
@@ -375,14 +376,24 @@ const UserManagement = () => {
   return (
     <Card className="animate-fade-in">
       <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Users className="h-5 w-5 text-primary" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>User Management</CardTitle>
+              <CardDescription>{users.length} users in your organisation</CardDescription>
+            </div>
           </div>
-          <div>
-            <CardTitle>User Management</CardTitle>
-            <CardDescription>{users.length} users in your organisation</CardDescription>
-          </div>
+          {organisationId && (
+            <AddUserDialog
+              organisationId={organisationId}
+              sites={sites}
+              jobTitles={jobTitles}
+              onSuccess={fetchData}
+            />
+          )}
         </div>
       </CardHeader>
       <CardContent>
