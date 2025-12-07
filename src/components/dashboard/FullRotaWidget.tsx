@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Loader2, ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
 import { format, addDays, startOfWeek } from "date-fns";
+import { getJobTitleColors } from "@/lib/jobTitleColors";
+import { cn } from "@/lib/utils";
 
 interface Site {
   id: string;
@@ -33,6 +35,7 @@ interface ShiftData {
   facility_id: string | null;
   user_id: string | null;
   staff_name: string | null;
+  job_title_name: string | null;
 }
 
 interface DaySchedule {
@@ -150,7 +153,7 @@ export function FullRotaWidget() {
 
       setRotaExists(true);
 
-      // Get shifts with user details
+      // Get shifts with user details and job titles
       const { data: shiftsData } = await supabase
         .from("rota_shifts")
         .select(`
@@ -165,7 +168,7 @@ export function FullRotaWidget() {
           custom_end_time,
           facility_id,
           user_id,
-          profiles(first_name, last_name)
+          profiles(first_name, last_name, job_titles(name))
         `)
         .eq("rota_week_id", rotaWeek.id);
 
@@ -187,6 +190,7 @@ export function FullRotaWidget() {
         });
 
         dayShifts.forEach(shift => {
+          const profileData = shift.profiles as { first_name: string | null; last_name: string | null; job_titles: { name: string } | null } | null;
           const shiftData: ShiftData = {
             id: shift.id,
             shift_date: shift.shift_date,
@@ -201,9 +205,10 @@ export function FullRotaWidget() {
             user_id: shift.user_id,
             staff_name: shift.is_temp_staff && !shift.user_id
               ? shift.temp_staff_name
-              : shift.profiles
-                ? `${shift.profiles.first_name || ""} ${shift.profiles.last_name || ""}`.trim()
-                : null
+              : profileData
+                ? `${profileData.first_name || ""} ${profileData.last_name || ""}`.trim()
+                : null,
+            job_title_name: profileData?.job_titles?.name || null
           };
 
           if (shift.is_oncall && !shift.facility_id) {
@@ -272,15 +277,26 @@ export function FullRotaWidget() {
   // Get only open days for columns
   const openDays = schedule.filter(day => !day.isClosed);
 
-  // Format staff name for display (handle temp staff styling)
+  // Format staff name for display (handle temp staff styling + job title badge)
   const formatStaffName = (shift: ShiftData) => {
     const name = shift.staff_name || "-";
     const isUnconfirmedTemp = shift.is_temp_staff && !shift.temp_confirmed;
     
-    if (isUnconfirmedTemp) {
-      return <span className="text-destructive">⚠️ {name}</span>;
-    }
-    return name;
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className={isUnconfirmedTemp ? "text-destructive" : ""}>
+          {isUnconfirmedTemp && "⚠️ "}{name}
+        </span>
+        {shift.job_title_name && (
+          <span className={cn(
+            "text-xs px-1.5 py-0.5 rounded-full border whitespace-nowrap",
+            getJobTitleColors(shift.job_title_name)
+          )}>
+            {shift.job_title_name}
+          </span>
+        )}
+      </div>
+    );
   };
 
   // Get all staff for a room slot (AM, PM, or Full Day that covers that slot)
