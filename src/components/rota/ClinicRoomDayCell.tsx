@@ -63,6 +63,7 @@ interface ClinicRoomDayCellProps {
   requireOnCall: boolean;
   loading?: boolean;
   previousDateKey: string | null;
+  isFirstOpenDay?: boolean;
   amShiftStart?: string;
   amShiftEnd?: string;
   pmShiftStart?: string;
@@ -71,6 +72,7 @@ interface ClinicRoomDayCellProps {
   onDeleteShift: (shiftId: string) => void;
   onEditShift: (shift: RotaShift) => void;
   onRepeatPreviousDay?: (dateKey: string, previousDateKey: string) => Promise<void>;
+  onCopyToWholeWeek?: (dateKey: string) => Promise<void>;
 }
 
 export const ClinicRoomDayCell = ({
@@ -88,6 +90,7 @@ export const ClinicRoomDayCell = ({
   requireOnCall,
   loading = false,
   previousDateKey,
+  isFirstOpenDay = false,
   amShiftStart = "09:00",
   amShiftEnd = "13:00",
   pmShiftStart = "13:00",
@@ -96,6 +99,7 @@ export const ClinicRoomDayCell = ({
   onDeleteShift,
   onEditShift,
   onRepeatPreviousDay,
+  onCopyToWholeWeek,
 }: ClinicRoomDayCellProps) => {
   const [selectionDialog, setSelectionDialog] = useState<{
     open: boolean;
@@ -315,17 +319,30 @@ export const ClinicRoomDayCell = ({
               </span>
             )}
           </div>
-          {previousDateKey && onRepeatPreviousDay && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={loading}
-              onClick={() => onRepeatPreviousDay(dateKey, previousDateKey)}
-            >
-              <Copy className="h-4 w-4 mr-2" />
-              Copy Previous Day
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {isFirstOpenDay && onCopyToWholeWeek && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading}
+                onClick={() => onCopyToWholeWeek(dateKey)}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copy to Whole Week
+              </Button>
+            )}
+            {previousDateKey && onRepeatPreviousDay && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading}
+                onClick={() => onRepeatPreviousDay(dateKey, previousDateKey)}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Previous Day
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
