@@ -34,6 +34,7 @@ const siteSchema = z.object({
   address: z.string().max(255).optional().or(z.literal("")),
   email: z.string().email("Invalid email").max(255).optional().or(z.literal("")),
   phone: z.string().max(20).optional().or(z.literal("")),
+  phone_ext: z.string().max(10).optional().or(z.literal("")),
   site_manager_id: z.string().uuid().optional().nullable(),
 });
 
@@ -51,6 +52,7 @@ interface Site {
   address: string | null;
   email: string | null;
   phone: string | null;
+  phone_ext: string | null;
   site_manager_id: string | null;
 }
 
@@ -84,6 +86,7 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
       address: "",
       email: "",
       phone: "",
+      phone_ext: "",
       site_manager_id: null,
     },
   });
@@ -95,6 +98,7 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
         address: site.address || "",
         email: site.email || "",
         phone: site.phone || "",
+        phone_ext: site.phone_ext || "",
         site_manager_id: site.site_manager_id,
       });
       setHours(openingHours.length > 0 ? openingHours : DEFAULT_HOURS);
@@ -104,6 +108,7 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
         address: "",
         email: "",
         phone: "",
+        phone_ext: "",
         site_manager_id: null,
       });
       setHours(DEFAULT_HOURS);
@@ -189,7 +194,20 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
                     <FormControl>
-                      <Input placeholder="01onal number" {...field} />
+                      <Input placeholder="020 1234 5678" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone_ext"
+                render={({ field }) => (
+                  <FormItem className="w-24">
+                    <FormLabel>Ext.</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

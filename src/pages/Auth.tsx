@@ -52,6 +52,7 @@ const Auth = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneExt, setPhoneExt] = useState("");
   
   // Invitation and organisation state
   const [invitationCode, setInvitationCode] = useState<string | null>(null);
@@ -334,6 +335,7 @@ const Auth = () => {
     setFirstName("");
     setLastName("");
     setPhone("");
+    setPhoneExt("");
     setMode("invite");
   };
 
@@ -583,17 +585,28 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="07700 900000"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    readOnly={isCsvUser && !!phone}
-                    className={isCsvUser && !!phone ? "bg-muted" : ""}
-                  />
+                <div className="grid grid-cols-[1fr_auto] gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="07700 900000"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      readOnly={isCsvUser && !!phone}
+                      className={isCsvUser && !!phone ? "bg-muted" : ""}
+                    />
+                  </div>
+                  <div className="space-y-2 w-20">
+                    <Label htmlFor="phoneExt">Ext.</Label>
+                    <Input
+                      id="phoneExt"
+                      placeholder="123"
+                      value={phoneExt}
+                      onChange={(e) => setPhoneExt(e.target.value)}
+                    />
+                  </div>
                 </div>
                 {(!isFirstUser || isCsvUser) && (
                   <>

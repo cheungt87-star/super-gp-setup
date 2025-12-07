@@ -26,6 +26,7 @@ interface Site {
   address: string | null;
   email: string | null;
   phone: string | null;
+  phone_ext: string | null;
   site_manager_id: string | null;
   is_active: boolean;
   manager?: {
@@ -76,7 +77,7 @@ export const SiteManagementCard = () => {
       supabase
         .from('sites')
         .select(`
-          id, name, address, email, phone, site_manager_id, is_active,
+          id, name, address, email, phone, phone_ext, site_manager_id, is_active,
           manager:profiles!site_manager_id(id, first_name, last_name)
         `)
         .eq('organisation_id', organisationId)
