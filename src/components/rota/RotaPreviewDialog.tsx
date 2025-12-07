@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import {
   AlertTriangle,
@@ -27,7 +28,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RotaShift } from "@/hooks/useRotaSchedule";
-import { formatDateKey } from "@/lib/rotaUtils";
+import { formatDateKey, calculateShiftHours } from "@/lib/rotaUtils";
 import { validateWeek, RuleViolation } from "@/lib/rotaRulesEngine";
 
 interface ClinicRoom {
@@ -40,6 +41,8 @@ interface StaffMember {
   first_name: string | null;
   last_name: string | null;
   primary_site_id?: string | null;
+  contracted_hours?: number | null;
+  job_title_name?: string | null;
 }
 
 interface OpeningHour {
@@ -91,23 +94,11 @@ export const RotaPreviewDialog = ({
     );
   }, [shifts, clinicRooms, weekDays, openingHoursByDay, currentSiteId, allStaff, requireOnCall]);
 
-  // Calculate incomplete days (days with any empty slots)
-  const incompleteDays = useMemo(() => {
-    const dayIssues: Record<string, number> = {};
-    violations.forEach((v) => {
-      if (v.type === "empty_room" || v.type === "no_oncall") {
-        dayIssues[v.day] = (dayIssues[v.day] || 0) + 1;
-      }
-    });
-    return Object.entries(dayIssues).map(([day, count]) => ({
-      day,
-      count,
-    }));
-  }, [violations]);
-
-  // State for issues panel and list expansion
+  // State for panels
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(true);
   const [issuesExpanded, setIssuesExpanded] = useState(false);
+  const [staffPanelOpen, setStaffPanelOpen] = useState(true);
+  
   const INITIAL_ISSUES_SHOWN = 4;
   const visibleViolations = issuesExpanded 
     ? violations 
@@ -117,6 +108,60 @@ export const RotaPreviewDialog = ({
   // Group violations by type for display
   const errorCount = violations.filter((v) => v.severity === "error").length;
   const warningCount = violations.filter((v) => v.severity === "warning").length;
+
+  // Calculate staff hours summary
+  const staffHoursSummary = useMemo(() => {
+    const staffMap = new Map<string, { scheduledHours: number }>();
+
+    shifts.forEach((shift) => {
+      if (!shift.user_id) return;
+
+      // Get day hours for this shift
+      const shiftDate = new Date(shift.shift_date);
+      const dayOfWeek = shiftDate.getDay();
+      const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const dayHours = openingHoursByDay[adjustedDay];
+
+      const openTime = dayHours?.am_open_time || null;
+      const closeTime = dayHours?.pm_close_time || null;
+      const amStart = dayHours?.am_open_time || "09:00";
+      const amEnd = dayHours?.am_close_time || "13:00";
+      const pmStart = dayHours?.pm_open_time || "13:00";
+      const pmEnd = dayHours?.pm_close_time || "18:00";
+
+      const hours = calculateShiftHours(
+        shift.shift_type,
+        shift.custom_start_time,
+        shift.custom_end_time,
+        openTime,
+        closeTime,
+        amStart,
+        amEnd,
+        pmStart,
+        pmEnd
+      );
+
+      const existing = staffMap.get(shift.user_id) || { scheduledHours: 0 };
+      staffMap.set(shift.user_id, {
+        scheduledHours: existing.scheduledHours + hours,
+      });
+    });
+
+    return Array.from(staffMap.entries())
+      .map(([id, data]) => {
+        const staff = allStaff.find((s) => s.id === id);
+        const contractedHours = staff?.contracted_hours || 0;
+        return {
+          id,
+          name: `${staff?.first_name || ""} ${staff?.last_name || ""}`.trim() || "Unknown",
+          jobTitle: staff?.job_title_name || "",
+          scheduledHours: Math.round(data.scheduledHours * 10) / 10,
+          contractedHours,
+          utilization: contractedHours > 0 ? (data.scheduledHours / contractedHours) * 100 : 0,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [shifts, allStaff, openingHoursByDay]);
 
   // Build week summary data
   const weekSummary = useMemo(() => {
@@ -191,9 +236,16 @@ export const RotaPreviewDialog = ({
     }
   };
 
+  const getUtilizationColor = (utilization: number) => {
+    if (utilization > 100) return "bg-amber-500";
+    if (utilization >= 80) return "bg-green-500";
+    if (utilization >= 50) return "bg-blue-500";
+    return "bg-muted-foreground/30";
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="w-[90vw] h-[90vh] max-w-[90vw] max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Week Preview</DialogTitle>
           <DialogDescription>
@@ -201,243 +253,322 @@ export const RotaPreviewDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-4">
-          {/* Warnings Panel */}
-          {violations.length > 0 ? (
+        {/* Two-column layout */}
+        <div className="flex-1 min-h-0 flex gap-4 overflow-hidden">
+          {/* Left: Rota Table */}
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            <ScrollArea className="flex-1 border rounded-lg">
+              <div className="min-w-[600px]">
+                <table className="w-full text-sm table-fixed">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-2 font-medium sticky left-0 bg-muted/50 w-[100px]">
+                        Room
+                      </th>
+                      {weekSummary.map((day) => (
+                        <th
+                          key={day.dateKey}
+                          className="text-center p-2 font-medium w-[120px]"
+                        >
+                          {day.dayLabel}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* On-Call Row */}
+                    {requireOnCall && (
+                      <tr className="border-b bg-primary/5">
+                        <td className="p-2 font-medium sticky left-0 bg-primary/5">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5" />
+                            On-Call
+                          </div>
+                        </td>
+                        {weekSummary.map((day) => (
+                          <td key={day.dateKey} className="p-2 text-center">
+                            {day.onCall ? (
+                              <span className="text-xs">{day.onCall}</span>
+                            ) : (
+                              <Badge variant="destructive" className="text-xs">
+                                Missing
+                              </Badge>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    )}
+
+                    {/* Clinic Room Rows */}
+                    {clinicRooms.map((room) => (
+                      <tr key={room.id} className="border-b">
+                        <td className="p-2 font-medium sticky left-0 bg-background">
+                          {room.name}
+                        </td>
+                        {weekSummary.map((day) => {
+                          const roomData = day.rooms.find((r) => r.roomId === room.id);
+                          const amStaff = roomData?.am || [];
+                          const pmStaff = roomData?.pm || [];
+
+                          return (
+                            <td key={day.dateKey} className="p-1">
+                              <div className="space-y-1">
+                                {/* AM */}
+                                <div
+                                  className={cn(
+                                    "text-xs p-1 rounded",
+                                    amStaff.length === 0
+                                      ? "bg-amber-50 text-amber-600"
+                                      : "bg-green-50 text-green-700"
+                                  )}
+                                >
+                                  <span className="font-medium">AM:</span>
+                                  {amStaff.length === 0 ? (
+                                    <span className="ml-1">Empty</span>
+                                  ) : (
+                                    <div className="flex flex-col gap-0.5 mt-0.5">
+                                      {amStaff.map((s, i) => (
+                                        <div key={i} className="flex items-center gap-0.5">
+                                          <span className="truncate">{s.name}</span>
+                                          {s.isTemp && (
+                                            <Badge
+                                              variant={s.tempConfirmed ? "secondary" : "destructive"}
+                                              className="text-[10px] px-1 py-0 flex-shrink-0"
+                                            >
+                                              {s.tempConfirmed ? "T" : "T?"}
+                                            </Badge>
+                                          )}
+                                          {s.isCrossSite && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-[10px] px-1 py-0 flex-shrink-0"
+                                            >
+                                              ✱
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                {/* PM */}
+                                <div
+                                  className={cn(
+                                    "text-xs p-1 rounded",
+                                    pmStaff.length === 0
+                                      ? "bg-amber-50 text-amber-600"
+                                      : "bg-green-50 text-green-700"
+                                  )}
+                                >
+                                  <span className="font-medium">PM:</span>
+                                  {pmStaff.length === 0 ? (
+                                    <span className="ml-1">Empty</span>
+                                  ) : (
+                                    <div className="flex flex-col gap-0.5 mt-0.5">
+                                      {pmStaff.map((s, i) => (
+                                        <div key={i} className="flex items-center gap-0.5">
+                                          <span className="truncate">{s.name}</span>
+                                          {s.isTemp && (
+                                            <Badge
+                                              variant={s.tempConfirmed ? "secondary" : "destructive"}
+                                              className="text-[10px] px-1 py-0 flex-shrink-0"
+                                            >
+                                              {s.tempConfirmed ? "T" : "T?"}
+                                            </Badge>
+                                          )}
+                                          {s.isCrossSite && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-[10px] px-1 py-0 flex-shrink-0"
+                                            >
+                                              ✱
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </ScrollArea>
+
+            {/* Legend - below table */}
+            <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-3">
+              <span className="flex items-center gap-1">
+                <Badge variant="destructive" className="text-[10px] px-1 py-0">T?</Badge>
+                Temp not confirmed
+              </span>
+              <span className="flex items-center gap-1">
+                <Badge variant="secondary" className="text-[10px] px-1 py-0">T</Badge>
+                Temp confirmed
+              </span>
+              <span className="flex items-center gap-1">
+                <Badge variant="outline" className="text-[10px] px-1 py-0">✱</Badge>
+                Cross-site staff
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Sidebar with warnings + staff hours */}
+          <div className="w-80 flex flex-col gap-3 overflow-hidden">
+            {/* Warnings Panel */}
             <Collapsible open={issuesPanelOpen} onOpenChange={setIssuesPanelOpen}>
               <div className="border rounded-lg bg-muted/30">
                 <CollapsibleTrigger asChild>
-                  <button className="flex items-center gap-2 w-full p-4 hover:bg-muted/50 transition-colors rounded-lg">
+                  <button className="flex items-center gap-2 w-full p-3 hover:bg-muted/50 transition-colors rounded-lg">
                     <ChevronRight className={cn(
-                      "h-4 w-4 transition-transform",
+                      "h-4 w-4 transition-transform flex-shrink-0",
                       issuesPanelOpen && "rotate-90"
                     )} />
-                    <AlertTriangle className="h-5 w-5 text-amber-500" />
-                    <span className="font-medium">
-                      {errorCount + warningCount} Issue{errorCount + warningCount !== 1 ? "s" : ""} Found
-                    </span>
+                    {violations.length > 0 ? (
+                      <>
+                        <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                        <span className="font-medium text-sm">
+                          {errorCount + warningCount} Issue{errorCount + warningCount !== 1 ? "s" : ""}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <span className="font-medium text-sm text-green-700">All checks passed</span>
+                      </>
+                    )}
                     {errorCount > 0 && (
-                      <Badge variant="destructive" className="ml-2">
-                        {errorCount} Error{errorCount !== 1 ? "s" : ""}
+                      <Badge variant="destructive" className="ml-auto text-xs">
+                        {errorCount}
                       </Badge>
                     )}
                     {warningCount > 0 && (
-                      <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700 border-amber-200">
-                        {warningCount} Warning{warningCount !== 1 ? "s" : ""}
+                      <Badge variant="secondary" className={cn(
+                        "text-xs bg-amber-100 text-amber-700 border-amber-200",
+                        errorCount === 0 && "ml-auto"
+                      )}>
+                        {warningCount}
                       </Badge>
                     )}
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="px-4 pb-4 space-y-1.5">
-                    {visibleViolations.map((v, i) => (
-                      <div
-                        key={i}
-                        className={cn(
-                          "flex items-center gap-2 text-sm py-1 px-2 rounded",
-                          v.severity === "error"
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-amber-50 text-amber-700"
+                  {violations.length > 0 && (
+                    <ScrollArea className="max-h-[200px]">
+                      <div className="px-3 pb-3 space-y-1.5">
+                        {visibleViolations.map((v, i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              "flex items-start gap-2 text-xs py-1 px-2 rounded",
+                              v.severity === "error"
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-amber-50 text-amber-700"
+                            )}
+                          >
+                            {v.severity === "error" ? (
+                              <XCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                            ) : (
+                              <span className="flex-shrink-0 mt-0.5">{getViolationIcon(v.type)}</span>
+                            )}
+                            <span className="leading-tight">{v.message}</span>
+                          </div>
+                        ))}
+                        {hiddenCount > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mt-1 w-full text-xs h-7"
+                            onClick={() => setIssuesExpanded(!issuesExpanded)}
+                          >
+                            {issuesExpanded ? (
+                              <>
+                                Show less
+                                <ChevronUp className="ml-1 h-3 w-3" />
+                              </>
+                            ) : (
+                              <>
+                                Show {hiddenCount} more
+                                <ChevronDown className="ml-1 h-3 w-3" />
+                              </>
+                            )}
+                          </Button>
                         )}
-                      >
-                        {v.severity === "error" ? (
-                          <XCircle className="h-4 w-4 flex-shrink-0" />
-                        ) : (
-                          getViolationIcon(v.type)
-                        )}
-                        <span>{v.message}</span>
                       </div>
-                    ))}
-                    {/* Show more/less toggle */}
-                    {hiddenCount > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mt-2 w-full"
-                        onClick={() => setIssuesExpanded(!issuesExpanded)}
-                      >
-                        {issuesExpanded ? (
-                          <>
-                            Show less
-                            <ChevronUp className="ml-1 h-4 w-4" />
-                          </>
-                        ) : (
-                          <>
-                            Show {hiddenCount} more issue{hiddenCount !== 1 ? "s" : ""}
-                            <ChevronDown className="ml-1 h-4 w-4" />
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </div>
+                    </ScrollArea>
+                  )}
                 </CollapsibleContent>
               </div>
             </Collapsible>
-          ) : (
-            <div className="border rounded-lg p-4 bg-green-50 flex items-center gap-2 text-green-700">
-              <CheckCircle2 className="h-5 w-5" />
-              <span className="font-medium">All checks passed - schedule is complete</span>
-            </div>
-          )}
 
-          {/* Week Summary Table */}
-          <ScrollArea className="h-[calc(90vh-300px)] border rounded-lg">
-            <div className="min-w-[600px]">
-              <table className="w-full text-sm table-fixed">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="text-left p-2 font-medium sticky left-0 bg-muted/50 w-[100px]">
-                      Room
-                    </th>
-                    {weekSummary.map((day) => (
-                      <th
-                        key={day.dateKey}
-                        className="text-center p-2 font-medium w-[140px]"
-                      >
-                        {day.dayLabel}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* On-Call Row */}
-                  {requireOnCall && (
-                    <tr className="border-b bg-primary/5">
-                      <td className="p-2 font-medium sticky left-0 bg-primary/5">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5" />
-                          On-Call
-                        </div>
-                      </td>
-                      {weekSummary.map((day) => (
-                        <td key={day.dateKey} className="p-2 text-center">
-                          {day.onCall ? (
-                            <span className="text-xs">{day.onCall}</span>
-                          ) : (
-                            <Badge variant="destructive" className="text-xs">
-                              Missing
-                            </Badge>
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  )}
-
-                  {/* Clinic Room Rows */}
-                  {clinicRooms.map((room) => (
-                    <tr key={room.id} className="border-b">
-                      <td className="p-2 font-medium sticky left-0 bg-background">
-                        {room.name}
-                      </td>
-                      {weekSummary.map((day) => {
-                        const roomData = day.rooms.find((r) => r.roomId === room.id);
-                        const amStaff = roomData?.am || [];
-                        const pmStaff = roomData?.pm || [];
-
-                        return (
-                          <td key={day.dateKey} className="p-1">
-                            <div className="space-y-1">
-                              {/* AM */}
-                              <div
-                                className={cn(
-                                  "text-xs p-1 rounded",
-                                  amStaff.length === 0
-                                    ? "bg-amber-50 text-amber-600"
-                                    : "bg-green-50 text-green-700"
-                                )}
-                              >
-                                <span className="font-medium">AM:</span>
-                                {amStaff.length === 0 ? (
-                                  <span className="ml-1">Empty</span>
-                                ) : (
-                                  <div className="flex flex-col gap-0.5 mt-0.5">
-                                    {amStaff.map((s, i) => (
-                                      <div key={i} className="flex items-center gap-0.5">
-                                        <span className="truncate">{s.name}</span>
-                                        {s.isTemp && (
-                                          <Badge
-                                            variant={s.tempConfirmed ? "secondary" : "destructive"}
-                                            className="text-[10px] px-1 py-0 flex-shrink-0"
-                                          >
-                                            {s.tempConfirmed ? "T" : "T?"}
-                                          </Badge>
-                                        )}
-                                        {s.isCrossSite && (
-                                          <Badge
-                                            variant="outline"
-                                            className="text-[10px] px-1 py-0 flex-shrink-0"
-                                          >
-                                            ✱
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
+            {/* Staff Hours Panel */}
+            <Collapsible open={staffPanelOpen} onOpenChange={setStaffPanelOpen} className="flex-1 flex flex-col min-h-0">
+              <div className="border rounded-lg flex-1 flex flex-col overflow-hidden">
+                <CollapsibleTrigger asChild>
+                  <button className="flex items-center gap-2 w-full p-3 hover:bg-muted/50 transition-colors rounded-t-lg">
+                    <ChevronRight className={cn(
+                      "h-4 w-4 transition-transform flex-shrink-0",
+                      staffPanelOpen && "rotate-90"
+                    )} />
+                    <Users className="h-4 w-4 flex-shrink-0" />
+                    <span className="font-medium text-sm">Staff Hours</span>
+                    <Badge variant="secondary" className="ml-auto text-xs">
+                      {staffHoursSummary.length}
+                    </Badge>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="flex-1 overflow-hidden">
+                  <ScrollArea className="h-full max-h-[calc(90vh-350px)]">
+                    <div className="px-3 pb-3 space-y-2">
+                      {staffHoursSummary.length === 0 ? (
+                        <p className="text-xs text-muted-foreground py-2">No staff scheduled</p>
+                      ) : (
+                        staffHoursSummary.map((staff) => (
+                          <div key={staff.id} className="p-2 border rounded-md bg-background">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-sm truncate">{staff.name}</div>
+                                {staff.jobTitle && (
+                                  <div className="text-xs text-muted-foreground truncate">{staff.jobTitle}</div>
                                 )}
                               </div>
-                              {/* PM */}
-                              <div
-                                className={cn(
-                                  "text-xs p-1 rounded",
-                                  pmStaff.length === 0
-                                    ? "bg-amber-50 text-amber-600"
-                                    : "bg-green-50 text-green-700"
-                                )}
-                              >
-                                <span className="font-medium">PM:</span>
-                                {pmStaff.length === 0 ? (
-                                  <span className="ml-1">Empty</span>
-                                ) : (
-                                  <div className="flex flex-col gap-0.5 mt-0.5">
-                                    {pmStaff.map((s, i) => (
-                                      <div key={i} className="flex items-center gap-0.5">
-                                        <span className="truncate">{s.name}</span>
-                                        {s.isTemp && (
-                                          <Badge
-                                            variant={s.tempConfirmed ? "secondary" : "destructive"}
-                                            className="text-[10px] px-1 py-0 flex-shrink-0"
-                                          >
-                                            {s.tempConfirmed ? "T" : "T?"}
-                                          </Badge>
-                                        )}
-                                        {s.isCrossSite && (
-                                          <Badge
-                                            variant="outline"
-                                            className="text-[10px] px-1 py-0 flex-shrink-0"
-                                          >
-                                            ✱
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    ))}
+                              <div className="text-right flex-shrink-0">
+                                <div className="text-sm font-medium">
+                                  {staff.scheduledHours}h
+                                  {staff.contractedHours > 0 && (
+                                    <span className="text-muted-foreground font-normal">
+                                      /{staff.contractedHours}h
+                                    </span>
+                                  )}
+                                </div>
+                                {staff.contractedHours > 0 && (
+                                  <div className={cn(
+                                    "text-xs",
+                                    staff.utilization > 100 ? "text-amber-600" : "text-muted-foreground"
+                                  )}>
+                                    {Math.round(staff.utilization)}%
                                   </div>
                                 )}
                               </div>
                             </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </ScrollArea>
-
-          {/* Legend */}
-          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Badge variant="destructive" className="text-[10px] px-1 py-0">T?</Badge>
-              Temp not confirmed
-            </span>
-            <span className="flex items-center gap-1">
-              <Badge variant="secondary" className="text-[10px] px-1 py-0">T</Badge>
-              Temp confirmed
-            </span>
-            <span className="flex items-center gap-1">
-              <Badge variant="outline" className="text-[10px] px-1 py-0">✱</Badge>
-              Cross-site staff
-            </span>
+                            {staff.contractedHours > 0 && (
+                              <Progress 
+                                value={Math.min(staff.utilization, 100)} 
+                                className="h-1.5 mt-2"
+                              />
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
           </div>
         </div>
 
