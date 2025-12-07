@@ -12,6 +12,7 @@ interface Site {
   address: string;
   email: string;
   phone: string;
+  phone_ext: string;
 }
 
 interface SitesStepProps {
@@ -22,12 +23,12 @@ interface SitesStepProps {
 
 export const SitesStep = ({ onNext, userId, organisationId }: SitesStepProps) => {
   const [sites, setSites] = useState<Site[]>([
-    { name: "", address: "", email: "", phone: "" },
+    { name: "", address: "", email: "", phone: "", phone_ext: "" },
   ]);
   const [saving, setSaving] = useState(false);
 
   const addSite = () => {
-    setSites([...sites, { name: "", address: "", email: "", phone: "" }]);
+    setSites([...sites, { name: "", address: "", email: "", phone: "", phone_ext: "" }]);
   };
 
   const removeSite = (index: number) => {
@@ -63,6 +64,7 @@ export const SitesStep = ({ onNext, userId, organisationId }: SitesStepProps) =>
         address: site.address || null,
         email: site.email || null,
         phone: site.phone || null,
+        phone_ext: site.phone_ext || null,
         organisation_id: organisationId,
       }))
     );
@@ -131,14 +133,25 @@ export const SitesStep = ({ onNext, userId, organisationId }: SitesStepProps) =>
                   onChange={(e) => updateSite(index, "email", e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor={`site-phone-${index}`}>Phone</Label>
-                <Input
-                  id={`site-phone-${index}`}
-                  placeholder="020 1234 5678"
-                  value={site.phone}
-                  onChange={(e) => updateSite(index, "phone", e.target.value)}
-                />
+              <div className="grid grid-cols-[1fr_auto] gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor={`site-phone-${index}`}>Phone</Label>
+                  <Input
+                    id={`site-phone-${index}`}
+                    placeholder="020 1234 5678"
+                    value={site.phone}
+                    onChange={(e) => updateSite(index, "phone", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 w-20">
+                  <Label htmlFor={`site-ext-${index}`}>Ext.</Label>
+                  <Input
+                    id={`site-ext-${index}`}
+                    placeholder="123"
+                    value={site.phone_ext}
+                    onChange={(e) => updateSite(index, "phone_ext", e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </div>

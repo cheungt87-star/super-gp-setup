@@ -24,6 +24,7 @@ const profileSchema = z.object({
   first_name: z.string().min(1, "First name is required").max(100),
   last_name: z.string().min(1, "Last name is required").max(100),
   phone: z.string().max(20).optional().or(z.literal("")),
+  phone_ext: z.string().max(10).optional().or(z.literal("")),
   job_title_id: z.string().optional().nullable(),
   primary_site_id: z.string().optional().nullable(),
 });
@@ -127,19 +128,34 @@ const ProfileForm = ({
           </p>
         </FormItem>
 
-        <FormField
-          control={form.control}
-          name="phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Phone Number</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g. 07700 900123" {...field} value={field.value || ""} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. 07700 900123" {...field} value={field.value || ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="phone_ext"
+            render={({ field }) => (
+              <FormItem className="w-20">
+                <FormLabel>Ext.</FormLabel>
+                <FormControl>
+                  <Input placeholder="123" {...field} value={field.value || ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="grid gap-6 sm:grid-cols-2">
           <FormField

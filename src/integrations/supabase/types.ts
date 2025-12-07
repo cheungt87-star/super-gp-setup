@@ -204,6 +204,7 @@ export type Database = {
           last_name: string | null
           organisation_id: string | null
           phone: string | null
+          phone_ext: string | null
           primary_site_id: string | null
           updated_at: string
           working_days: Json | null
@@ -219,6 +220,7 @@ export type Database = {
           last_name?: string | null
           organisation_id?: string | null
           phone?: string | null
+          phone_ext?: string | null
           primary_site_id?: string | null
           updated_at?: string
           working_days?: Json | null
@@ -234,6 +236,7 @@ export type Database = {
           last_name?: string | null
           organisation_id?: string | null
           phone?: string | null
+          phone_ext?: string | null
           primary_site_id?: string | null
           updated_at?: string
           working_days?: Json | null
@@ -722,6 +725,7 @@ export type Database = {
           name: string
           organisation_id: string | null
           phone: string | null
+          phone_ext: string | null
           site_manager_id: string | null
           updated_at: string
         }
@@ -734,6 +738,7 @@ export type Database = {
           name: string
           organisation_id?: string | null
           phone?: string | null
+          phone_ext?: string | null
           site_manager_id?: string | null
           updated_at?: string
         }
@@ -746,6 +751,7 @@ export type Database = {
           name?: string
           organisation_id?: string | null
           phone?: string | null
+          phone_ext?: string | null
           site_manager_id?: string | null
           updated_at?: string
         }

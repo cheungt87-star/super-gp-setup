@@ -81,6 +81,7 @@ export function AddUserDialog({ organisationId, sites, jobTitles, onSuccess }: A
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneExt, setPhoneExt] = useState("");
   const [jobTitleId, setJobTitleId] = useState("");
   const [siteId, setSiteId] = useState("");
   const [contractedHours, setContractedHours] = useState("");
@@ -96,6 +97,7 @@ export function AddUserDialog({ organisationId, sites, jobTitles, onSuccess }: A
     setLastName("");
     setEmail("");
     setPhone("");
+    setPhoneExt("");
     setJobTitleId("");
     setSiteId("");
     setContractedHours("");
@@ -128,6 +130,7 @@ export function AddUserDialog({ organisationId, sites, jobTitles, onSuccess }: A
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       phone: phone.trim() || null,
+      phone_ext: phoneExt.trim() || null,
       job_title_id: jobTitleId || null,
       primary_site_id: siteId || null,
       contracted_hours: contractedHours ? parseFloat(contractedHours) : null,
@@ -358,14 +361,25 @@ export function AddUserDialog({ organisationId, sites, jobTitles, onSuccess }: A
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="07700 900000"
-              />
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="07700 900000"
+                />
+              </div>
+              <div className="space-y-2 w-20">
+                <Label htmlFor="phoneExt">Ext.</Label>
+                <Input
+                  id="phoneExt"
+                  value={phoneExt}
+                  onChange={(e) => setPhoneExt(e.target.value)}
+                  placeholder="123"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

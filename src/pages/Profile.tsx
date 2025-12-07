@@ -14,6 +14,7 @@ interface Profile {
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
+  phone_ext: string | null;
   job_title_id: string | null;
   primary_site_id: string | null;
 }
@@ -45,7 +46,7 @@ const Profile = () => {
       // Fetch profile
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("id, email, first_name, last_name, phone, job_title_id, primary_site_id")
+        .select("id, email, first_name, last_name, phone, phone_ext, job_title_id, primary_site_id")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -96,6 +97,7 @@ const Profile = () => {
         first_name: values.first_name,
         last_name: values.last_name,
         phone: values.phone || null,
+        phone_ext: values.phone_ext || null,
         job_title_id: values.job_title_id || null,
         primary_site_id: values.primary_site_id || null,
       })
@@ -120,6 +122,7 @@ const Profile = () => {
         first_name: values.first_name,
         last_name: values.last_name,
         phone: values.phone || null,
+        phone_ext: values.phone_ext || null,
         job_title_id: values.job_title_id || null,
         primary_site_id: values.primary_site_id || null,
       });
@@ -186,6 +189,7 @@ const Profile = () => {
               first_name: profile.first_name || "",
               last_name: profile.last_name || "",
               phone: profile.phone || "",
+              phone_ext: profile.phone_ext || "",
               job_title_id: profile.job_title_id,
               primary_site_id: profile.primary_site_id,
             }}
