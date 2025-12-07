@@ -384,7 +384,6 @@ export const RotaScheduleTab = () => {
   const handleRepeatPreviousDay = async (dateKey: string, previousDateKey: string) => {
     const previousShifts = shiftsByDate[previousDateKey] || [];
     const currentShifts = shiftsByDate[dateKey] || [];
-    const currentUserIds = new Set(currentShifts.map((s) => s.user_id));
 
     if (previousShifts.length === 0) {
       toast({
@@ -394,22 +393,14 @@ export const RotaScheduleTab = () => {
       return;
     }
 
+    // Delete all existing shifts for the target day first
+    for (const shift of currentShifts) {
+      await deleteShift(shift.id);
+    }
+
+    // Copy all shifts from previous day
     let copiedCount = 0;
     for (const shift of previousShifts) {
-      // If on-call, check if there's already one assigned
-      if (shift.is_oncall) {
-        const existingOnCall = currentShifts.find((s) => s.is_oncall);
-        if (existingOnCall) continue;
-      }
-
-      // For facility-based shifts, check if same user+facility+type already exists
-      if (shift.facility_id) {
-        const alreadyExists = currentShifts.some(
-          (s) => s.user_id === shift.user_id && s.facility_id === shift.facility_id && s.shift_type === shift.shift_type
-        );
-        if (alreadyExists) continue;
-      }
-
       const result = await addShift(
         shift.user_id,
         dateKey,
@@ -417,17 +408,17 @@ export const RotaScheduleTab = () => {
         shift.custom_start_time || undefined,
         shift.custom_end_time || undefined,
         shift.is_oncall,
-        shift.facility_id || undefined
+        shift.facility_id || undefined,
+        shift.is_temp_staff,
+        shift.temp_confirmed,
+        shift.temp_staff_name || undefined
       );
       if (result) copiedCount++;
     }
 
     toast({
-      title: copiedCount > 0 ? `Copied ${copiedCount} shift${copiedCount > 1 ? "s" : ""}` : "No shifts copied",
-      description:
-        copiedCount === 0
-          ? "All staff from the previous day are already assigned"
-          : "Shifts copied from the previous day",
+      title: `Copied ${copiedCount} shift${copiedCount !== 1 ? "s" : ""}`,
+      description: "Previous day's schedule copied (replaced existing shifts)",
     });
   };
 
@@ -455,23 +446,14 @@ export const RotaScheduleTab = () => {
       // Skip closed days
       if (dayHours?.is_closed) continue;
 
+      // Delete all existing shifts for this target day first
       const currentShifts = shiftsByDate[targetDateKey] || [];
+      for (const shift of currentShifts) {
+        await deleteShift(shift.id);
+      }
 
+      // Copy all shifts from source day
       for (const shift of sourceShifts) {
-        // If on-call, check if there's already one assigned
-        if (shift.is_oncall) {
-          const existingOnCall = currentShifts.find((s) => s.is_oncall);
-          if (existingOnCall) continue;
-        }
-
-        // For facility-based shifts, check if same user+facility+type already exists
-        if (shift.facility_id) {
-          const alreadyExists = currentShifts.some(
-            (s) => s.user_id === shift.user_id && s.facility_id === shift.facility_id && s.shift_type === shift.shift_type
-          );
-          if (alreadyExists) continue;
-        }
-
         const result = await addShift(
           shift.user_id,
           targetDateKey,
@@ -479,18 +461,18 @@ export const RotaScheduleTab = () => {
           shift.custom_start_time || undefined,
           shift.custom_end_time || undefined,
           shift.is_oncall,
-          shift.facility_id || undefined
+          shift.facility_id || undefined,
+          shift.is_temp_staff,
+          shift.temp_confirmed,
+          shift.temp_staff_name || undefined
         );
         if (result) totalCopied++;
       }
     }
 
     toast({
-      title: totalCopied > 0 ? `Copied ${totalCopied} shift${totalCopied > 1 ? "s" : ""}` : "No shifts copied",
-      description:
-        totalCopied === 0
-          ? "All staff are already assigned to the target days"
-          : "Schedule copied to all open days this week",
+      title: `Copied ${totalCopied} shift${totalCopied !== 1 ? "s" : ""}`,
+      description: "Schedule copied to all open days this week (replaced existing shifts)",
     });
   };
 
@@ -536,6 +518,11 @@ export const RotaScheduleTab = () => {
         return;
       }
       
+      // Delete all existing shifts for the current week first
+      for (const shift of shifts) {
+        await deleteShift(shift.id);
+      }
+
       // Copy each shift, adjusting date by +7 days
       let copiedCount = 0;
       for (const shift of prevShifts) {
@@ -545,25 +532,6 @@ export const RotaScheduleTab = () => {
         const dayOfWeek = new Date(newDate).getDay();
         const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         if (openingHoursByDay[adjustedDay]?.is_closed) continue;
-        
-        // Check for duplicates in current week
-        const currentShifts = shiftsByDate[newDate] || [];
-        
-        // For on-call, skip if already assigned
-        if (shift.is_oncall) {
-          const existingOnCall = currentShifts.find((s) => s.is_oncall);
-          if (existingOnCall) continue;
-        }
-        
-        // For facility-based shifts, check if same user+facility+type already exists
-        if (shift.facility_id) {
-          const alreadyExists = currentShifts.some(
-            (s) => s.user_id === shift.user_id && 
-                   s.facility_id === shift.facility_id && 
-                   s.shift_type === shift.shift_type
-          );
-          if (alreadyExists) continue;
-        }
         
         // Add shift
         const result = await addShift(
@@ -582,10 +550,8 @@ export const RotaScheduleTab = () => {
       }
       
       toast({
-        title: copiedCount > 0 ? `Copied ${copiedCount} shift${copiedCount > 1 ? "s" : ""}` : "No shifts copied",
-        description: copiedCount === 0 
-          ? "All shifts already exist or days are closed"
-          : "Schedule copied from previous week",
+        title: `Copied ${copiedCount} shift${copiedCount !== 1 ? "s" : ""}`,
+        description: "Schedule copied from previous week (replaced existing shifts)",
       });
     } catch (error) {
       console.error("Error copying from previous week:", error);
