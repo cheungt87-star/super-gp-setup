@@ -2,11 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, ChevronRight, Calendar, Phone, DoorOpen, Clock } from "lucide-react";
-import { format, addDays, startOfWeek, isSameDay } from "date-fns";
-import { getJobTitleColors } from "@/lib/jobTitleColors";
+import { Loader2, ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
+import { format, addDays, startOfWeek } from "date-fns";
 
 interface Site {
   id: string;
@@ -34,9 +32,7 @@ interface ShiftData {
   custom_end_time: string | null;
   facility_id: string | null;
   user_id: string | null;
-  facility_name: string | null;
   staff_name: string | null;
-  job_title_name: string | null;
 }
 
 interface DaySchedule {
@@ -46,7 +42,7 @@ interface DaySchedule {
   isClosed: boolean;
   openingHours: OpeningHours | null;
   onCallShifts: ShiftData[];
-  roomShifts: Map<string, { am: ShiftData[]; pm: ShiftData[]; fullDay: ShiftData[]; custom: ShiftData[] }>;
+  roomShifts: Map<string, { am: ShiftData[]; pm: ShiftData[]; fullDay: ShiftData[] }>;
 }
 
 export function FullRotaWidget() {
@@ -81,7 +77,6 @@ export function FullRotaWidget() {
 
       if (sitesData && sitesData.length > 0) {
         setSites(sitesData);
-        // Default to user's primary site if available, otherwise first site
         const defaultSite = profile.primary_site_id && sitesData.find(s => s.id === profile.primary_site_id)
           ? profile.primary_site_id
           : sitesData[0].id;
@@ -133,7 +128,6 @@ export function FullRotaWidget() {
 
       if (!rotaWeek) {
         setRotaExists(false);
-        // Still build empty schedule structure
         const emptySchedule: DaySchedule[] = [];
         for (let i = 0; i < 7; i++) {
           const date = addDays(weekStart, i);
@@ -171,7 +165,7 @@ export function FullRotaWidget() {
           custom_end_time,
           facility_id,
           user_id,
-          profiles(first_name, last_name, job_title_id, job_titles(name))
+          profiles(first_name, last_name)
         `)
         .eq("rota_week_id", rotaWeek.id);
 
@@ -185,11 +179,11 @@ export function FullRotaWidget() {
 
         const dayShifts = (shiftsData || []).filter(s => s.shift_date === dateKey);
         const onCallShifts: ShiftData[] = [];
-        const roomShifts = new Map<string, { am: ShiftData[]; pm: ShiftData[]; fullDay: ShiftData[]; custom: ShiftData[] }>();
+        const roomShifts = new Map<string, { am: ShiftData[]; pm: ShiftData[]; fullDay: ShiftData[] }>();
 
         // Initialize room slots
         facilityMap.forEach((name, id) => {
-          roomShifts.set(id, { am: [], pm: [], fullDay: [], custom: [] });
+          roomShifts.set(id, { am: [], pm: [], fullDay: [] });
         });
 
         dayShifts.forEach(shift => {
@@ -205,22 +199,18 @@ export function FullRotaWidget() {
             custom_end_time: shift.custom_end_time,
             facility_id: shift.facility_id,
             user_id: shift.user_id,
-            facility_name: shift.facility_id ? facilityMap.get(shift.facility_id) || null : null,
             staff_name: shift.is_temp_staff && !shift.user_id
               ? shift.temp_staff_name
               : shift.profiles
                 ? `${shift.profiles.first_name || ""} ${shift.profiles.last_name || ""}`.trim()
-                : null,
-            job_title_name: shift.profiles?.job_titles?.name || null
+                : null
           };
 
           if (shift.is_oncall && !shift.facility_id) {
             onCallShifts.push(shiftData);
           } else if (shift.facility_id && roomShifts.has(shift.facility_id)) {
             const room = roomShifts.get(shift.facility_id)!;
-            if (shift.custom_start_time || shift.custom_end_time) {
-              room.custom.push(shiftData);
-            } else if (shift.shift_type === "am") {
+            if (shift.shift_type === "am") {
               room.am.push(shiftData);
             } else if (shift.shift_type === "pm") {
               room.pm.push(shiftData);
@@ -279,50 +269,29 @@ export function FullRotaWidget() {
     return `${format(start, "d MMM")} - ${format(end, "d MMM")} ${year}`;
   };
 
-  const getOrdinalSuffix = (day: number): string => {
-    if (day > 3 && day < 21) return "th";
-    switch (day % 10) {
-      case 1: return "st";
-      case 2: return "nd";
-      case 3: return "rd";
-      default: return "th";
-    }
-  };
+  // Get only open days for columns
+  const openDays = schedule.filter(day => !day.isClosed);
 
-  const formatDayHeader = (date: Date): string => {
-    const day = date.getDate();
-    return `${format(date, "EEE")} ${day}${getOrdinalSuffix(day)} ${format(date, "MMM")}`;
-  };
-
-  const renderShiftBadge = (shift: ShiftData) => {
+  // Format staff name for display (handle temp staff styling)
+  const formatStaffName = (shift: ShiftData) => {
+    const name = shift.staff_name || "-";
     const isUnconfirmedTemp = shift.is_temp_staff && !shift.temp_confirmed;
-    const isConfirmedTemp = shift.is_temp_staff && shift.temp_confirmed;
+    
+    if (isUnconfirmedTemp) {
+      return <span className="text-destructive">⚠️ {name}</span>;
+    }
+    return name;
+  };
 
-    return (
-      <div 
-        key={shift.id}
-        className={`flex items-center gap-1.5 text-sm px-2 py-1 rounded ${
-          isUnconfirmedTemp 
-            ? "bg-red-100 text-red-800 border border-red-300" 
-            : isConfirmedTemp
-              ? "bg-amber-50 text-amber-800 border border-amber-200"
-              : "bg-muted"
-        }`}
-      >
-        {isUnconfirmedTemp && <span className="text-xs">⚠️</span>}
-        <span className="font-medium">{shift.staff_name || "Unassigned"}</span>
-        {shift.job_title_name && (
-          <Badge variant="outline" className={`text-xs ${getJobTitleColors(shift.job_title_name)}`}>
-            {shift.job_title_name}
-          </Badge>
-        )}
-        {shift.custom_start_time && shift.custom_end_time && (
-          <span className="text-xs text-muted-foreground">
-            ({shift.custom_start_time.slice(0, 5)}-{shift.custom_end_time.slice(0, 5)})
-          </span>
-        )}
-      </div>
-    );
+  // Get all staff for a room slot (AM, PM, or Full Day that covers that slot)
+  const getRoomSlotStaff = (day: DaySchedule, roomId: string, slot: "am" | "pm") => {
+    const roomData = day.roomShifts.get(roomId);
+    if (!roomData) return [];
+    
+    const slotShifts = slot === "am" ? roomData.am : roomData.pm;
+    const fullDayShifts = roomData.fullDay;
+    
+    return [...slotShifts, ...fullDayShifts];
   };
 
   if (sites.length === 0 && !loading) {
@@ -379,114 +348,106 @@ export function FullRotaWidget() {
             <Calendar className="h-10 w-10 mb-3 opacity-50" />
             <p className="text-sm">Rota not set up for this week yet</p>
           </div>
+        ) : openDays.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Calendar className="h-10 w-10 mb-3 opacity-50" />
+            <p className="text-sm">No open days this week</p>
+          </div>
         ) : (
-          <div className="space-y-4">
-            {schedule.filter(day => !day.isClosed).map(day => (
-              <div key={day.dateKey} className="border rounded-lg overflow-hidden">
-                {/* Day Header */}
-                <div className="bg-muted/50 px-4 py-2 border-b">
-                  <h4 className="font-medium">{formatDayHeader(day.date)}</h4>
-                </div>
-
-                <div className="p-4 space-y-4">
-                  {/* On-Call Section */}
-                  {day.onCallShifts.length > 0 && (
-                    <div className="flex items-start gap-3">
-                      <div className="flex items-center gap-1.5 text-sm text-orange-700 font-medium min-w-[80px]">
-                        <Phone className="h-4 w-4" />
-                        On-Call
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {day.onCallShifts.map(shift => renderShiftBadge(shift))}
-                      </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th className="text-left p-3 border border-border bg-muted/30 font-medium min-w-[120px]">
+                    Room
+                  </th>
+                  {openDays.map(day => (
+                    <th 
+                      key={day.dateKey} 
+                      className="text-center p-3 border border-border bg-muted/30 font-medium min-w-[100px]"
+                    >
+                      {format(day.date, "EEE d")}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {/* On-Call Row */}
+                <tr className="bg-muted/10">
+                  <td className="p-3 border border-border">
+                    <div className="flex items-center gap-2 font-medium">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span>On-Call</span>
                     </div>
-                  )}
+                  </td>
+                  {openDays.map(day => (
+                    <td key={day.dateKey} className="p-3 border border-border text-center">
+                      <span className="text-green-700">
+                        {day.onCallShifts.length > 0 
+                          ? day.onCallShifts.map(s => formatStaffName(s)).reduce((prev, curr, i) => (
+                              <>{prev}{i > 0 && ", "}{curr}</>
+                            ), <></>) 
+                          : "-"}
+                      </span>
+                    </td>
+                  ))}
+                </tr>
 
-                  {/* Rooms Section */}
-                  {facilities.size > 0 ? (
-                    <div className="space-y-3">
-                      {Array.from(facilities.entries()).map(([roomId, roomName]) => {
-                        const roomData = day.roomShifts.get(roomId);
-                        if (!roomData) return null;
-                        
-                        const hasShifts = roomData.am.length > 0 || roomData.pm.length > 0 || 
-                                         roomData.fullDay.length > 0 || roomData.custom.length > 0;
-
-                        return (
-                          <div key={roomId} className="flex items-start gap-3">
-                            <div className="flex items-center gap-1.5 text-sm font-medium min-w-[80px] text-muted-foreground">
-                              <DoorOpen className="h-4 w-4" />
-                              {roomName}
+                {/* Room Rows */}
+                {Array.from(facilities.entries()).map(([roomId, roomName]) => (
+                  <tr key={roomId}>
+                    <td className="p-3 border border-border font-medium align-top">
+                      {roomName}
+                    </td>
+                    {openDays.map(day => {
+                      const amStaff = getRoomSlotStaff(day, roomId, "am");
+                      const pmStaff = getRoomSlotStaff(day, roomId, "pm");
+                      
+                      return (
+                        <td key={day.dateKey} className="p-3 border border-border align-top">
+                          <div className="space-y-2">
+                            {/* AM Section */}
+                            <div>
+                              <span className="text-green-700 font-medium">AM:</span>
+                              <div className="text-green-700">
+                                {amStaff.length > 0 
+                                  ? amStaff.map((s, i) => (
+                                      <div key={s.id}>{formatStaffName(s)}</div>
+                                    ))
+                                  : "-"}
+                              </div>
                             </div>
-                            <div className="flex-1">
-                              {hasShifts ? (
-                                <div className="space-y-2">
-                                  {/* Full Day */}
-                                  {roomData.fullDay.length > 0 && (
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="secondary" className="text-xs">Full Day</Badge>
-                                      <div className="flex flex-wrap gap-2">
-                                        {roomData.fullDay.map(shift => renderShiftBadge(shift))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {/* AM */}
-                                  {roomData.am.length > 0 && (
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-xs bg-sky-50 text-sky-700 border-sky-200">AM</Badge>
-                                      <div className="flex flex-wrap gap-2">
-                                        {roomData.am.map(shift => renderShiftBadge(shift))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {/* PM */}
-                                  {roomData.pm.length > 0 && (
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-xs bg-violet-50 text-violet-700 border-violet-200">PM</Badge>
-                                      <div className="flex flex-wrap gap-2">
-                                        {roomData.pm.map(shift => renderShiftBadge(shift))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {/* Custom */}
-                                  {roomData.custom.length > 0 && (
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-xs">
-                                        <Clock className="h-3 w-3 mr-1" />
-                                        Custom
-                                      </Badge>
-                                      <div className="flex flex-wrap gap-2">
-                                        {roomData.custom.map(shift => renderShiftBadge(shift))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-sm text-muted-foreground italic">No staff scheduled</span>
-                              )}
+                            {/* PM Section */}
+                            <div>
+                              <span className="text-green-700 font-medium">PM:</span>
+                              <div className="text-green-700">
+                                {pmStaff.length > 0 
+                                  ? pmStaff.map((s, i) => (
+                                      <div key={s.id}>{formatStaffName(s)}</div>
+                                    ))
+                                  : "-"}
+                              </div>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">No clinic rooms configured</p>
-                  )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
 
-                  {/* Empty state when no on-call and no rooms have shifts */}
-                  {day.onCallShifts.length === 0 && facilities.size === 0 && (
-                    <p className="text-sm text-muted-foreground italic">No staff scheduled</p>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {/* Show closed days summary */}
-            {schedule.filter(day => day.isClosed).length > 0 && (
-              <div className="text-sm text-muted-foreground text-center pt-2">
-                Closed: {schedule.filter(day => day.isClosed).map(day => format(day.date, "EEE")).join(", ")}
-              </div>
-            )}
+                {/* Empty state for no rooms */}
+                {facilities.size === 0 && (
+                  <tr>
+                    <td 
+                      colSpan={openDays.length + 1} 
+                      className="p-6 border border-border text-center text-muted-foreground"
+                    >
+                      No clinic rooms configured for this site
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>
