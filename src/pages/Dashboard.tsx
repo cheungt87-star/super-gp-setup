@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Briefcase, Loader2, Copy, Check, UserPlus } from "lucide-react";
+import { Loader2, Copy, Check, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import TaskWidget from "@/components/dashboard/TaskWidget";
@@ -17,7 +17,6 @@ interface InviteCodeInfo {
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ sites: 0, jobTitles: 0, users: 0 });
   const [userName, setUserName] = useState("");
   const [inviteCode, setInviteCode] = useState<InviteCodeInfo | null>(null);
   const [copied, setCopied] = useState(false);
@@ -202,18 +201,6 @@ const Dashboard = () => {
       }
 
       setUserName(session.user.user_metadata?.first_name || "there");
-
-      const [sitesRes, jobTitlesRes, usersRes] = await Promise.all([
-        supabase.from("sites").select("id", { count: "exact" }),
-        supabase.from("job_titles").select("id", { count: "exact" }),
-        supabase.from("profiles").select("id", { count: "exact" }),
-      ]);
-
-      setStats({
-        sites: sitesRes.count || 0,
-        jobTitles: jobTitlesRes.count || 0,
-        users: usersRes.count || 0,
-      });
       setLoading(false);
     };
     init();
@@ -296,28 +283,6 @@ const Dashboard = () => {
         </Card>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-3 mb-8 animate-fade-in">
-        <StatCard
-          icon={Building2}
-          title="Sites"
-          value={stats.sites}
-          description="Clinic locations"
-        />
-        <StatCard
-          icon={Briefcase}
-          title="Job Titles"
-          value={stats.jobTitles}
-          description="Defined roles"
-        />
-        <StatCard
-          icon={Users}
-          title="Team Members"
-          value={stats.users}
-          description="Staff profiles"
-        />
-      </div>
-
       {/* Task Widgets */}
       <div className="grid gap-6 md:grid-cols-2 animate-fade-in">
         <TaskWidget
@@ -344,25 +309,5 @@ const Dashboard = () => {
     </div>
   );
 };
-
-interface StatCardProps {
-  icon: React.ElementType;
-  title: string;
-  value: number;
-  description: string;
-}
-
-const StatCard = ({ icon: Icon, title, value, description }: StatCardProps) => (
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between pb-2">
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
-      <Icon className="h-4 w-4 text-muted-foreground" />
-    </CardHeader>
-    <CardContent>
-      <div className="text-3xl font-bold">{value}</div>
-      <CardDescription>{description}</CardDescription>
-    </CardContent>
-  </Card>
-);
 
 export default Dashboard;
