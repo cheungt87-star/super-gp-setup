@@ -193,7 +193,7 @@ export const RotaPreviewDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Week Preview</DialogTitle>
           <DialogDescription>
@@ -201,7 +201,7 @@ export const RotaPreviewDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col gap-4">
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-4">
           {/* Warnings Panel */}
           {violations.length > 0 ? (
             <Collapsible open={issuesPanelOpen} onOpenChange={setIssuesPanelOpen}>
@@ -281,7 +281,7 @@ export const RotaPreviewDialog = ({
           )}
 
           {/* Week Summary Table */}
-          <ScrollArea className="flex-1 border rounded-lg">
+          <ScrollArea className="flex-1 min-h-0 border rounded-lg">
             <div className="min-w-[600px]">
               <table className="w-full text-sm table-fixed">
                 <thead>
