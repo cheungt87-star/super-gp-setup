@@ -15,6 +15,7 @@ import Workflows from "./pages/Workflows";
 import PolicyGPT from "./pages/PolicyGPT";
 import UserManagement from "./pages/admin/UserManagement";
 import SiteManagement from "./pages/admin/SiteManagement";
+import JobTitleManagement from "./pages/admin/JobTitleManagement";
 import TaskAudit from "./pages/admin/TaskAudit";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -41,6 +42,7 @@ const App = () => (
                 <Route index element={<Navigate to="/admin/users" replace />} />
                 <Route path="users" element={<UserManagement />} />
                 <Route path="sites" element={<SiteManagement />} />
+                <Route path="job-titles" element={<JobTitleManagement />} />
                 <Route path="tasks" element={<TaskAudit />} />
               </Route>
               <Route path="/profile" element={<Profile />} />
