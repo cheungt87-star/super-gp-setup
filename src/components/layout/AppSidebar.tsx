@@ -1,4 +1,4 @@
-import { Home, Calendar, GitBranch, MessageSquare, Settings, User, LogOut } from "lucide-react";
+import { Home, Calendar, GitBranch, MessageSquare, Settings, User, LogOut, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,7 @@ interface AppSidebarProps {
 
 const mainNavItems = [
   { title: "Home", url: "/dashboard", icon: Home },
+  { title: "Directory", url: "/directory", icon: Users },
   { title: "Rota", url: "/rota", icon: Calendar },
   { title: "Workflows", url: "/workflows", icon: GitBranch },
   { title: "Policy GPT", url: "/policy-gpt", icon: MessageSquare },
