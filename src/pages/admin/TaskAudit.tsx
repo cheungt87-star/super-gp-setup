@@ -274,7 +274,7 @@ const TaskAudit = () => {
       case "completed":
         return (
           <Badge variant="default" className="bg-green-600 hover:bg-green-700">
-            Completed {completionDate ? format(new Date(completionDate), "dd MMM") : ""}
+            Completed {completionDate ? format(new Date(completionDate), "dd/MM/yy") : ""}
           </Badge>
         );
       case "overdue":
@@ -433,10 +433,10 @@ const TaskAudit = () => {
                       {task.assignee_name || "Unassigned"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {format(new Date(task.created_at), "dd MMM yyyy")}
+                      {format(new Date(task.created_at), "dd/MM/yy")}
                     </TableCell>
                     <TableCell>
-                      {format(task.current_due_date, "dd MMM yyyy")}
+                      {format(task.current_due_date, "dd/MM/yy")}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(task.status, task.completion_date, task.current_due_date)}
