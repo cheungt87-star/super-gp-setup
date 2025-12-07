@@ -352,22 +352,29 @@ export const MyShiftsWidget = () => {
                     <div className="space-y-2">
                       {day.shifts.map((shift) => (
                         <div key={shift.id} className="flex flex-wrap items-center gap-2">
+                          {/* On-Call badge - show prominently first */}
                           {shift.isOnCall && (
                             <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
                               <Phone className="h-3 w-3 mr-1" />
                               On-Call
                             </Badge>
                           )}
+                          {/* Facility/Room name if assigned */}
                           {shift.facilityName && (
                             <div className="flex items-center gap-1 text-sm">
                               <DoorOpen className="h-4 w-4 text-muted-foreground" />
                               <span className="font-medium">{shift.facilityName}</span>
                             </div>
                           )}
-                          {getShiftTypeBadge(shift.shiftType)}
-                          <span className="text-xs text-muted-foreground">
-                            {shift.timeDisplay}
-                          </span>
+                          {/* Shift type badge - only show if has facility or not on-call-only */}
+                          {(shift.facilityName || !shift.isOnCall) && getShiftTypeBadge(shift.shiftType)}
+                          {/* Time display - only show if has facility or not on-call-only */}
+                          {(shift.facilityName || !shift.isOnCall) && (
+                            <span className="text-xs text-muted-foreground">
+                              {shift.timeDisplay}
+                            </span>
+                          )}
+                          {/* Colleagues in same room */}
                           {shift.colleagues.length > 0 && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground ml-2">
                               <Users className="h-3 w-3" />
