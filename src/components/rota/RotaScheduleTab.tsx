@@ -428,6 +428,69 @@ export const RotaScheduleTab = () => {
     });
   };
 
+  const handleCopyToWholeWeek = async (sourceDateKey: string) => {
+    const sourceShifts = shiftsByDate[sourceDateKey] || [];
+
+    if (sourceShifts.length === 0) {
+      toast({
+        title: "No shifts to copy",
+        description: "This day has no shifts assigned",
+      });
+      return;
+    }
+
+    let totalCopied = 0;
+
+    // Copy to all remaining open days in the week
+    for (let i = 1; i < weekDays.length; i++) {
+      const targetDay = weekDays[i];
+      const targetDateKey = formatDateKey(targetDay);
+      const dayOfWeek = targetDay.getDay();
+      const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const dayHours = openingHoursByDay[adjustedDay];
+
+      // Skip closed days
+      if (dayHours?.is_closed) continue;
+
+      const currentShifts = shiftsByDate[targetDateKey] || [];
+
+      for (const shift of sourceShifts) {
+        // If on-call, check if there's already one assigned
+        if (shift.is_oncall) {
+          const existingOnCall = currentShifts.find((s) => s.is_oncall);
+          if (existingOnCall) continue;
+        }
+
+        // For facility-based shifts, check if same user+facility+type already exists
+        if (shift.facility_id) {
+          const alreadyExists = currentShifts.some(
+            (s) => s.user_id === shift.user_id && s.facility_id === shift.facility_id && s.shift_type === shift.shift_type
+          );
+          if (alreadyExists) continue;
+        }
+
+        const result = await addShift(
+          shift.user_id,
+          targetDateKey,
+          shift.shift_type,
+          shift.custom_start_time || undefined,
+          shift.custom_end_time || undefined,
+          shift.is_oncall,
+          shift.facility_id || undefined
+        );
+        if (result) totalCopied++;
+      }
+    }
+
+    toast({
+      title: totalCopied > 0 ? `Copied ${totalCopied} shift${totalCopied > 1 ? "s" : ""}` : "No shifts copied",
+      description:
+        totalCopied === 0
+          ? "All staff are already assigned to the target days"
+          : "Schedule copied to all open days this week",
+    });
+  };
+
   // Handle confirm day - runs validation and shows dialog
   const handleConfirmDay = useCallback((day: Date) => {
     const dayOfWeek = day.getDay();
@@ -768,6 +831,11 @@ export const RotaScheduleTab = () => {
                         requireOnCall={rotaRule?.require_oncall ?? true}
                         loading={loadingSiteData}
                         previousDateKey={previousDateKey}
+                        isFirstOpenDay={index === weekDays.findIndex((d) => {
+                          const dw = d.getDay();
+                          const adj = dw === 0 ? 6 : dw - 1;
+                          return !openingHoursByDay[adj]?.is_closed;
+                        })}
                         amShiftStart={openingHoursByDay[adjustedDay]?.am_open_time || "09:00"}
                         amShiftEnd={openingHoursByDay[adjustedDay]?.am_close_time || "13:00"}
                         pmShiftStart={openingHoursByDay[adjustedDay]?.pm_open_time || "13:00"}
@@ -776,6 +844,7 @@ export const RotaScheduleTab = () => {
                         onDeleteShift={handleDeleteShift}
                         onEditShift={setEditingShift}
                         onRepeatPreviousDay={handleRepeatPreviousDay}
+                        onCopyToWholeWeek={handleCopyToWholeWeek}
                       />
                     </TabsContent>
                   );
