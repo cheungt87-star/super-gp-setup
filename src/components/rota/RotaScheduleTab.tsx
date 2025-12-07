@@ -654,20 +654,6 @@ export const RotaScheduleTab = () => {
               </Select>
 
               <WeekSelector weekStart={weekStart} onWeekChange={setWeekStart} />
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopyFromPreviousWeek}
-                disabled={copyingFromPrevWeek || !rotaWeek || saving}
-              >
-                {copyingFromPrevWeek ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Copy className="mr-2 h-4 w-4" />
-                )}
-                Copy from previous week
-              </Button>
             </div>
 
             <div className="flex items-center gap-2">
@@ -933,6 +919,8 @@ export const RotaScheduleTab = () => {
                         onEditShift={setEditingShift}
                         onRepeatPreviousDay={handleRepeatPreviousDay}
                         onCopyToWholeWeek={handleCopyToWholeWeek}
+                        onCopyFromPreviousWeek={handleCopyFromPreviousWeek}
+                        copyingFromPrevWeek={copyingFromPrevWeek}
                       />
                     </TabsContent>
                   );
