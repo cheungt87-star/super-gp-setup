@@ -1,17 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { Briefcase, Plus, Pencil, Trash2, Loader2, X } from "lucide-react";
+import { FolderTree, Plus, Pencil, Trash2, Loader2, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
@@ -29,21 +22,14 @@ import {
 interface JobFamily {
   id: string;
   name: string;
-}
-
-interface JobTitle {
-  id: string;
-  name: string;
   description: string | null;
-  job_family_id: string | null;
-  job_family_name: string | null;
+  job_title_count: number;
 }
 
-const JobTitleManagement = () => {
+const JobFamilyManagement = () => {
   const { toast } = useToast();
   const { organisationId } = useOrganisation();
 
-  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [jobFamilies, setJobFamilies] = useState<JobFamily[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,64 +38,68 @@ const JobTitleManagement = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
-  const [newFamilyId, setNewFamilyId] = useState<string>("");
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [editFamilyId, setEditFamilyId] = useState<string>("");
 
   // Delete dialog
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchJobFamilies = useCallback(async () => {
     if (!organisationId) return;
 
-    // Fetch job titles with job family info
-    const { data: titlesData, error: titlesError } = await supabase
-      .from("job_titles")
-      .select("id, name, description, job_family_id, job_families(name)")
+    // Fetch job families with count of job titles
+    const { data: familiesData, error: familiesError } = await supabase
+      .from("job_families")
+      .select("id, name, description")
       .eq("organisation_id", organisationId)
       .order("name");
 
-    if (titlesError) {
+    if (familiesError) {
       toast({
-        title: "Error loading job titles",
-        description: titlesError.message,
+        title: "Error loading job families",
+        description: familiesError.message,
         variant: "destructive",
       });
-    } else {
-      const mappedTitles: JobTitle[] = (titlesData || []).map((t: any) => ({
-        id: t.id,
-        name: t.name,
-        description: t.description,
-        job_family_id: t.job_family_id,
-        job_family_name: t.job_families?.name || null,
-      }));
-      setJobTitles(mappedTitles);
+      setLoading(false);
+      return;
     }
 
-    // Fetch job families for dropdown
-    const { data: familiesData } = await supabase
-      .from("job_families")
-      .select("id, name")
+    // Fetch job title counts per family
+    const { data: titlesData } = await supabase
+      .from("job_titles")
+      .select("job_family_id")
       .eq("organisation_id", organisationId)
-      .order("name");
+      .not("job_family_id", "is", null);
 
-    setJobFamilies(familiesData || []);
+    // Count titles per family
+    const countMap: Record<string, number> = {};
+    titlesData?.forEach((title) => {
+      if (title.job_family_id) {
+        countMap[title.job_family_id] = (countMap[title.job_family_id] || 0) + 1;
+      }
+    });
+
+    const familiesWithCounts: JobFamily[] = (familiesData || []).map((f) => ({
+      ...f,
+      job_title_count: countMap[f.id] || 0,
+    }));
+
+    setJobFamilies(familiesWithCounts);
     setLoading(false);
   }, [organisationId, toast]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchJobFamilies();
+  }, [fetchJobFamilies]);
 
   const handleAdd = async () => {
     if (!newName.trim()) {
       toast({
         title: "Name required",
-        description: "Please enter a job title name",
+        description: "Please enter a job family name",
         variant: "destructive",
       });
       return;
@@ -119,10 +109,9 @@ const JobTitleManagement = () => {
 
     setSaving(true);
 
-    const { error } = await supabase.from("job_titles").insert({
+    const { error } = await supabase.from("job_families").insert({
       name: newName.trim(),
       description: newDescription.trim() || null,
-      job_family_id: newFamilyId || null,
       organisation_id: organisationId,
     });
 
@@ -131,13 +120,13 @@ const JobTitleManagement = () => {
     if (error) {
       if (error.code === "23505") {
         toast({
-          title: "Duplicate job title",
-          description: "A job title with this name already exists",
+          title: "Duplicate job family",
+          description: "A job family with this name already exists",
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Error adding job title",
+          title: "Error adding job family",
           description: error.message,
           variant: "destructive",
         });
@@ -145,26 +134,23 @@ const JobTitleManagement = () => {
       return;
     }
 
-    toast({ title: "Job title added" });
+    toast({ title: "Job family added" });
     setNewName("");
     setNewDescription("");
-    setNewFamilyId("");
     setShowAddForm(false);
-    fetchData();
+    fetchJobFamilies();
   };
 
-  const startEdit = (jobTitle: JobTitle) => {
-    setEditingId(jobTitle.id);
-    setEditName(jobTitle.name);
-    setEditDescription(jobTitle.description || "");
-    setEditFamilyId(jobTitle.job_family_id || "");
+  const startEdit = (jobFamily: JobFamily) => {
+    setEditingId(jobFamily.id);
+    setEditName(jobFamily.name);
+    setEditDescription(jobFamily.description || "");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditName("");
     setEditDescription("");
-    setEditFamilyId("");
   };
 
   const handleSaveEdit = async () => {
@@ -173,11 +159,10 @@ const JobTitleManagement = () => {
     setSaving(true);
 
     const { error } = await supabase
-      .from("job_titles")
+      .from("job_families")
       .update({
         name: editName.trim(),
         description: editDescription.trim() || null,
-        job_family_id: editFamilyId || null,
       })
       .eq("id", editingId);
 
@@ -186,13 +171,13 @@ const JobTitleManagement = () => {
     if (error) {
       if (error.code === "23505") {
         toast({
-          title: "Duplicate job title",
-          description: "A job title with this name already exists",
+          title: "Duplicate job family",
+          description: "A job family with this name already exists",
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Error updating job title",
+          title: "Error updating job family",
           description: error.message,
           variant: "destructive",
         });
@@ -200,25 +185,25 @@ const JobTitleManagement = () => {
       return;
     }
 
-    toast({ title: "Job title updated" });
+    toast({ title: "Job family updated" });
     cancelEdit();
-    fetchData();
+    fetchJobFamilies();
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
 
-    const { error } = await supabase.from("job_titles").delete().eq("id", deleteId);
+    const { error } = await supabase.from("job_families").delete().eq("id", deleteId);
 
     if (error) {
       toast({
-        title: "Error deleting job title",
+        title: "Error deleting job family",
         description: error.message,
         variant: "destructive",
       });
     } else {
-      toast({ title: "Job title deleted" });
-      fetchData();
+      toast({ title: "Job family deleted" });
+      fetchJobFamilies();
     }
 
     setDeleteId(null);
@@ -239,19 +224,19 @@ const JobTitleManagement = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Briefcase className="h-5 w-5 text-primary" />
+                <FolderTree className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle>Job Titles</CardTitle>
+                <CardTitle>Job Families</CardTitle>
                 <CardDescription>
-                  {jobTitles.length} job title{jobTitles.length !== 1 ? "s" : ""} in your organisation
+                  {jobFamilies.length} job famil{jobFamilies.length !== 1 ? "ies" : "y"} in your organisation
                 </CardDescription>
               </div>
             </div>
             {!showAddForm && (
               <Button onClick={() => setShowAddForm(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Add Job Title
+                Add Job Family
               </Button>
             )}
           </div>
@@ -261,14 +246,14 @@ const JobTitleManagement = () => {
           {showAddForm && (
             <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium">New Job Title</h3>
+                <h3 className="font-medium">New Job Family</h3>
                 <Button variant="ghost" size="icon" onClick={() => setShowAddForm(false)}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
               <div className="space-y-3">
                 <Input
-                  placeholder="Job title name"
+                  placeholder="Job family name (e.g., Clinical Staff, Administrative)"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                 />
@@ -278,21 +263,8 @@ const JobTitleManagement = () => {
                   onChange={(e) => setNewDescription(e.target.value)}
                   rows={2}
                 />
-                <Select value={newFamilyId} onValueChange={setNewFamilyId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select job family (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No family</SelectItem>
-                    {jobFamilies.map((family) => (
-                      <SelectItem key={family.id} value={family.id}>
-                        {family.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
                 <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => { setShowAddForm(false); setNewFamilyId(""); }}>
+                  <Button variant="outline" onClick={() => setShowAddForm(false)}>
                     Cancel
                   </Button>
                   <Button onClick={handleAdd} disabled={saving || !newName.trim()}>
@@ -304,26 +276,26 @@ const JobTitleManagement = () => {
             </div>
           )}
 
-          {/* Job Titles List */}
-          {jobTitles.length === 0 && !showAddForm ? (
+          {/* Job Families List */}
+          {jobFamilies.length === 0 && !showAddForm ? (
             <div className="text-center py-8 text-muted-foreground">
-              <Briefcase className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p>No job titles yet</p>
-              <p className="text-sm">Add your first job title to get started</p>
+              <FolderTree className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>No job families yet</p>
+              <p className="text-sm">Create job families to group related job titles together</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {jobTitles.map((jobTitle) => (
+              {jobFamilies.map((jobFamily) => (
                 <div
-                  key={jobTitle.id}
+                  key={jobFamily.id}
                   className="border rounded-lg p-4 bg-background"
                 >
-                  {editingId === jobTitle.id ? (
+                  {editingId === jobFamily.id ? (
                     <div className="space-y-3">
                       <Input
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        placeholder="Job title name"
+                        placeholder="Job family name"
                       />
                       <Textarea
                         value={editDescription}
@@ -331,19 +303,6 @@ const JobTitleManagement = () => {
                         placeholder="Description (optional)"
                         rows={2}
                       />
-                      <Select value={editFamilyId} onValueChange={setEditFamilyId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select job family (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">No family</SelectItem>
-                          {jobFamilies.map((family) => (
-                            <SelectItem key={family.id} value={family.id}>
-                              {family.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                       <div className="flex gap-2 justify-end">
                         <Button variant="ghost" size="sm" onClick={cancelEdit}>
                           Cancel
@@ -361,17 +320,15 @@ const JobTitleManagement = () => {
                   ) : (
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium">{jobTitle.name}</p>
-                          {jobTitle.job_family_name && (
-                            <Badge variant="outline" className="text-xs">
-                              {jobTitle.job_family_name}
-                            </Badge>
-                          )}
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{jobFamily.name}</p>
+                          <Badge variant="secondary" className="text-xs">
+                            {jobFamily.job_title_count} title{jobFamily.job_title_count !== 1 ? "s" : ""}
+                          </Badge>
                         </div>
-                        {jobTitle.description && (
+                        {jobFamily.description && (
                           <p className="text-sm text-muted-foreground mt-1">
-                            {jobTitle.description}
+                            {jobFamily.description}
                           </p>
                         )}
                       </div>
@@ -379,14 +336,14 @@ const JobTitleManagement = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => startEdit(jobTitle)}
+                          onClick={() => startEdit(jobFamily)}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setDeleteId(jobTitle.id)}
+                          onClick={() => setDeleteId(jobFamily.id)}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -404,9 +361,9 @@ const JobTitleManagement = () => {
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Job Title</AlertDialogTitle>
+            <AlertDialogTitle>Delete Job Family</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this job title? Users with this job title will no longer have it assigned.
+              Are you sure you want to delete this job family? Job titles in this family will become unassigned.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -424,4 +381,4 @@ const JobTitleManagement = () => {
   );
 };
 
-export default JobTitleManagement;
+export default JobFamilyManagement;

@@ -122,7 +122,7 @@ export type Database = {
           },
         ]
       }
-      job_titles: {
+      job_families: {
         Row: {
           created_at: string
           description: string | null
@@ -148,6 +148,51 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "job_families_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_titles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          job_family_id: string | null
+          name: string
+          organisation_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          job_family_id?: string | null
+          name: string
+          organisation_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          job_family_id?: string | null
+          name?: string
+          organisation_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_titles_job_family_id_fkey"
+            columns: ["job_family_id"]
+            isOneToOne: false
+            referencedRelation: "job_families"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "job_titles_organisation_id_fkey"
             columns: ["organisation_id"]
