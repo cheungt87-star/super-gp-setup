@@ -4,8 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ClipboardList, Search, X, ArrowUpDown, Loader2 } from "lucide-react";
+import { ClipboardList, Search, X, ArrowUpDown, Loader2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
 import { calculateCurrentDueDate } from "@/lib/taskUtils";
@@ -17,6 +16,7 @@ interface TaskAuditRow {
   site_name: string;
   facility_name: string | null;
   assignee_name: string | null;
+  job_family_name: string | null;
   creator_name: string | null;
   created_at: string;
   initial_due_date: string;
@@ -27,6 +27,7 @@ interface TaskAuditRow {
   completion_date: string | null;
   site_id: string;
   assignee_id: string | null;
+  job_family_id: string | null;
 }
 
 interface Site {
@@ -75,6 +76,7 @@ const TaskAudit = () => {
           site_id,
           facility_id,
           assignee_id,
+          job_family_id,
           created_by,
           created_at,
           initial_due_date,
@@ -83,7 +85,8 @@ const TaskAudit = () => {
           sites(name),
           facilities(name),
           assignee:profiles!workflow_tasks_assignee_id_fkey(first_name, last_name),
-          creator:profiles!workflow_tasks_created_by_fkey(first_name, last_name)
+          creator:profiles!workflow_tasks_created_by_fkey(first_name, last_name),
+          job_families(name)
         `)
         .eq("organisation_id", organisationId)
         .eq("is_active", true);
@@ -156,6 +159,7 @@ const TaskAudit = () => {
             assignee_name: assignee
               ? [assignee.first_name, assignee.last_name].filter(Boolean).join(" ")
               : null,
+            job_family_name: task.job_families?.name || null,
             creator_name: creator
               ? [creator.first_name, creator.last_name].filter(Boolean).join(" ")
               : null,
@@ -168,6 +172,7 @@ const TaskAudit = () => {
             completion_date: completionDate,
             site_id: task.site_id,
             assignee_id: task.assignee_id,
+            job_family_id: task.job_family_id,
           };
         });
 
@@ -209,7 +214,9 @@ const TaskAudit = () => {
 
     if (assigneeFilter !== "all") {
       if (assigneeFilter === "unassigned") {
-        result = result.filter((t) => !t.assignee_id);
+        result = result.filter((t) => !t.assignee_id && !t.job_family_id);
+      } else if (assigneeFilter === "job_family") {
+        result = result.filter((t) => t.job_family_id);
       } else {
         result = result.filter((t) => t.assignee_id === assigneeFilter);
       }
@@ -231,7 +238,9 @@ const TaskAudit = () => {
           comparison = a.site_name.localeCompare(b.site_name);
           break;
         case "assignee_name":
-          comparison = (a.assignee_name || "").localeCompare(b.assignee_name || "");
+          const aAssignee = a.job_family_name || a.assignee_name || "";
+          const bAssignee = b.job_family_name || b.assignee_name || "";
+          comparison = aAssignee.localeCompare(bAssignee);
           break;
         case "current_due_date":
           comparison = a.current_due_date.getTime() - b.current_due_date.getTime();
@@ -279,6 +288,18 @@ const TaskAudit = () => {
       default:
         return <span className="text-muted-foreground">Pending</span>;
     }
+  };
+
+  const getAssigneeDisplay = (task: TaskAuditRow) => {
+    if (task.job_family_name) {
+      return (
+        <span className="flex items-center gap-1 text-primary">
+          <Users className="h-3 w-3" />
+          {task.job_family_name}
+        </span>
+      );
+    }
+    return task.assignee_name || "Unassigned";
   };
 
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
@@ -356,6 +377,7 @@ const TaskAudit = () => {
             <SelectContent>
               <SelectItem value="all">All Assignees</SelectItem>
               <SelectItem value="unassigned">Unassigned</SelectItem>
+              <SelectItem value="job_family">Job Family</SelectItem>
               {assignees.map((assignee) => (
                 <SelectItem key={assignee.id} value={assignee.id}>
                   {assignee.name}
@@ -393,7 +415,7 @@ const TaskAudit = () => {
                 <SortableHeader field="site_name">Site</SortableHeader>
                 <TableHead>Facility</TableHead>
                 <TableHead>Assigned By</TableHead>
-                <SortableHeader field="assignee_name">Assignee</SortableHeader>
+                <SortableHeader field="assignee_name">Assigned To</SortableHeader>
                 <TableHead>Assigned Date</TableHead>
                 <SortableHeader field="current_due_date">Due Date</SortableHeader>
                 <SortableHeader field="status">Completion date</SortableHeader>
@@ -418,7 +440,7 @@ const TaskAudit = () => {
                       {task.creator_name || "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {task.assignee_name || "Unassigned"}
+                      {getAssigneeDisplay(task)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {format(new Date(task.created_at), "dd/MM/yy")}

@@ -1,10 +1,15 @@
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, ArrowUpDown, Plus } from "lucide-react";
+import { Pencil, Trash2, ArrowUpDown, Plus, Users } from "lucide-react";
 import { format } from "date-fns";
 import RecurrenceDisplay from "./RecurrenceDisplay";
 import WorkflowInlineTaskForm, { WorkflowFormValues, CreateWorkflowFormValues } from "./WorkflowInlineTaskForm";
 
 interface Site {
+  id: string;
+  name: string;
+}
+
+interface JobFamily {
   id: string;
   name: string;
 }
@@ -19,9 +24,11 @@ interface WorkflowTask {
   recurrence_pattern: "daily" | "weekly" | "monthly" | "custom";
   recurrence_interval_days: number | null;
   assignee_id: string | null;
+  job_family_id: string | null;
   site_name?: string;
   facility_name?: string;
   assignee_name?: string;
+  job_family_name?: string;
 }
 
 type SortField = "name" | "site_name" | "initial_due_date" | "recurrence_pattern" | "assignee_name";
@@ -30,6 +37,7 @@ type SortDirection = "asc" | "desc";
 interface WorkflowTaskListProps {
   tasks: WorkflowTask[];
   sites: Site[];
+  jobFamilies: JobFamily[];
   sortField: SortField;
   sortDirection: SortDirection;
   onSort: (field: SortField) => void;
@@ -49,6 +57,7 @@ interface WorkflowTaskListProps {
 const WorkflowTaskList = ({
   tasks,
   sites,
+  jobFamilies,
   sortField,
   sortDirection,
   onSort,
@@ -79,16 +88,31 @@ const WorkflowTaskList = ({
     await onSave(data, task);
   };
 
+  const getAssigneeDisplay = (task: WorkflowTask) => {
+    if (task.job_family_name) {
+      return (
+        <span className="flex items-center gap-1 text-primary">
+          <Users className="h-3 w-3" />
+          {task.job_family_name}
+        </span>
+      );
+    }
+    if (task.assignee_name) {
+      return task.assignee_name;
+    }
+    return "-";
+  };
+
   return (
     <div className="space-y-2">
       {/* Header row */}
-      <div className="hidden md:grid md:grid-cols-[1fr_120px_120px_100px_100px_120px_80px] gap-2 px-3 py-2 text-xs text-muted-foreground border-b">
+      <div className="hidden md:grid md:grid-cols-[1fr_120px_120px_100px_100px_140px_80px] gap-2 px-3 py-2 text-xs text-muted-foreground border-b">
         <SortButton field="name">Task Name</SortButton>
         <SortButton field="site_name">Site</SortButton>
         <span className="px-2">Facility</span>
         <SortButton field="initial_due_date">Due Date</SortButton>
         <SortButton field="recurrence_pattern">Recurrence</SortButton>
-        <SortButton field="assignee_name">Assignee</SortButton>
+        <SortButton field="assignee_name">Assigned To</SortButton>
         <span className="px-2">Actions</span>
       </div>
 
@@ -104,13 +128,14 @@ const WorkflowTaskList = ({
           {editingId === task.id ? (
             <WorkflowInlineTaskForm
               sites={sites}
+              jobFamilies={jobFamilies}
               task={task}
               onSave={(data) => handleSaveEdit(data, task)}
               onCancel={onCancelEdit}
               saving={saving}
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_120px_120px_100px_100px_120px_80px] gap-2 px-3 py-3 border rounded-lg items-center hover:bg-muted/50 transition-colors">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_120px_120px_100px_100px_140px_80px] gap-2 px-3 py-3 border rounded-lg items-center hover:bg-muted/50 transition-colors">
               <div className="font-medium truncate">{task.name}</div>
               <div className="text-sm text-muted-foreground truncate">
                 <span className="md:hidden text-xs font-medium mr-1">Site:</span>
@@ -132,8 +157,8 @@ const WorkflowTaskList = ({
                 />
               </div>
               <div className="text-sm text-muted-foreground truncate">
-                <span className="md:hidden text-xs font-medium mr-1">Assignee:</span>
-                {task.assignee_name || "-"}
+                <span className="md:hidden text-xs font-medium mr-1">Assigned To:</span>
+                {getAssigneeDisplay(task)}
               </div>
               <div className="flex gap-1 justify-end md:justify-start">
                 <Button 
@@ -164,6 +189,7 @@ const WorkflowTaskList = ({
       {isAdding && (
         <WorkflowInlineTaskForm
           sites={sites}
+          jobFamilies={jobFamilies}
           task={null}
           onSave={async () => {}}
           onSaveMultiple={onSaveMultiple}
