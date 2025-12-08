@@ -10,6 +10,8 @@ export interface WorkflowTaskWithDetails {
   facility_name?: string;
   assignee_id: string | null;
   assignee_name?: string;
+  job_family_id: string | null;
+  job_family_name?: string;
   initial_due_date: string;
   recurrence_pattern: "daily" | "weekly" | "monthly" | "custom";
   recurrence_interval_days: number | null;
