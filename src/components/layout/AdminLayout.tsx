@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { Users, Building2, Loader2, ShieldAlert, ClipboardList, Briefcase } from "lucide-react";
+import { Users, Building2, Loader2, ShieldAlert, ClipboardList, Briefcase, FolderTree } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { canManageRoles } from "@/lib/roles";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 const adminNavItems = [
   { title: "Users", path: "/admin/users", icon: Users },
   { title: "Sites", path: "/admin/sites", icon: Building2 },
+  { title: "Job Families", path: "/admin/job-families", icon: FolderTree },
   { title: "Job Titles", path: "/admin/job-titles", icon: Briefcase },
   { title: "Task Audit", path: "/admin/tasks", icon: ClipboardList },
 ];
