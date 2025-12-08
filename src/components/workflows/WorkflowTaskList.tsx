@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, ArrowUpDown, Plus } from "lucide-react";
 import { format } from "date-fns";
 import RecurrenceDisplay from "./RecurrenceDisplay";
-import WorkflowInlineTaskForm, { WorkflowFormValues } from "./WorkflowInlineTaskForm";
+import WorkflowInlineTaskForm, { WorkflowFormValues, CreateWorkflowFormValues } from "./WorkflowInlineTaskForm";
 
 interface Site {
   id: string;
@@ -36,6 +36,7 @@ interface WorkflowTaskListProps {
   onEdit: (task: WorkflowTask) => void;
   onDelete: (task: WorkflowTask) => void;
   onSave: (data: WorkflowFormValues, task?: WorkflowTask | null) => Promise<void>;
+  onSaveMultiple: (data: CreateWorkflowFormValues) => Promise<void>;
   editingId: string | null;
   isAdding: boolean;
   onStartEdit: (task: WorkflowTask) => void;
@@ -53,6 +54,7 @@ const WorkflowTaskList = ({
   onSort,
   onDelete,
   onSave,
+  onSaveMultiple,
   editingId,
   isAdding,
   onStartEdit,
@@ -72,10 +74,6 @@ const WorkflowTaskList = ({
       <ArrowUpDown className="ml-1 h-3 w-3" />
     </Button>
   );
-
-  const handleSaveNew = async (data: WorkflowFormValues) => {
-    await onSave(data, null);
-  };
 
   const handleSaveEdit = async (data: WorkflowFormValues, task: WorkflowTask) => {
     await onSave(data, task);
@@ -167,7 +165,8 @@ const WorkflowTaskList = ({
         <WorkflowInlineTaskForm
           sites={sites}
           task={null}
-          onSave={handleSaveNew}
+          onSave={async () => {}}
+          onSaveMultiple={onSaveMultiple}
           onCancel={onCancelAdd}
           saving={saving}
         />

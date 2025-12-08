@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,7 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 export const WHOLE_SITE_VALUE = "__whole_site__";
 export const UNASSIGNED_VALUE = "__unassigned__";
 
-const formSchema = z.object({
+// Schema for editing existing tasks (single site)
+const editFormSchema = z.object({
   name: z.string().min(1, "Task name is required").max(200),
   description: z.string().max(1000).optional(),
   site_id: z.string().min(1, "Site is required"),
@@ -29,7 +31,20 @@ const formSchema = z.object({
   assignee_id: z.string().optional(),
 });
 
-export type WorkflowFormValues = z.infer<typeof formSchema>;
+// Schema for creating new tasks (multi-site)
+const createFormSchema = z.object({
+  name: z.string().min(1, "Task name is required").max(200),
+  description: z.string().max(1000).optional(),
+  site_ids: z.array(z.string()).min(1, "At least one site is required"),
+  facility_id: z.string().optional(),
+  initial_due_date: z.date({ required_error: "Due date is required" }),
+  recurrence_pattern: z.enum(["daily", "weekly", "monthly", "custom"]),
+  recurrence_interval_days: z.number().min(1).optional(),
+  assignee_id: z.string().optional(),
+});
+
+export type WorkflowFormValues = z.infer<typeof editFormSchema>;
+export type CreateWorkflowFormValues = z.infer<typeof createFormSchema>;
 
 interface Site {
   id: string;
@@ -63,6 +78,7 @@ interface WorkflowInlineTaskFormProps {
   sites: Site[];
   task?: WorkflowTask | null;
   onSave: (data: WorkflowFormValues) => Promise<void>;
+  onSaveMultiple?: (data: CreateWorkflowFormValues) => Promise<void>;
   onCancel: () => void;
   saving: boolean;
 }
@@ -71,6 +87,7 @@ const WorkflowInlineTaskForm = ({
   sites,
   task,
   onSave,
+  onSaveMultiple,
   onCancel,
   saving,
 }: WorkflowInlineTaskFormProps) => {
@@ -79,8 +96,11 @@ const WorkflowInlineTaskForm = ({
   const [loadingOptions, setLoadingOptions] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  const form = useForm<WorkflowFormValues>({
-    resolver: zodResolver(formSchema),
+  const isEditMode = !!task;
+
+  // Form for editing existing tasks (single site)
+  const editForm = useForm<WorkflowFormValues>({
+    resolver: zodResolver(editFormSchema),
     defaultValues: {
       name: task?.name || "",
       description: task?.description || "",
@@ -93,18 +113,36 @@ const WorkflowInlineTaskForm = ({
     },
   });
 
-  const selectedSiteId = form.watch("site_id");
-  const recurrencePattern = form.watch("recurrence_pattern");
+  // Form for creating new tasks (multi-site)
+  const createForm = useForm<CreateWorkflowFormValues>({
+    resolver: zodResolver(createFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      site_ids: [],
+      facility_id: WHOLE_SITE_VALUE,
+      initial_due_date: undefined,
+      recurrence_pattern: "daily",
+      recurrence_interval_days: 1,
+      assignee_id: UNASSIGNED_VALUE,
+    },
+  });
+
+  const selectedSiteId = editForm.watch("site_id");
+  const selectedSiteIds = createForm.watch("site_ids");
+  const editRecurrencePattern = editForm.watch("recurrence_pattern");
+  const createRecurrencePattern = createForm.watch("recurrence_pattern");
+  const isMultipleSitesSelected = !isEditMode && selectedSiteIds.length > 1;
 
   // Focus name input on mount
   useEffect(() => {
     setTimeout(() => nameInputRef.current?.focus(), 0);
   }, []);
 
-  // Fetch facilities and users when site changes
+  // Fetch facilities and users when site changes (edit mode only)
   useEffect(() => {
     const fetchSiteOptions = async () => {
-      if (!selectedSiteId) {
+      if (!selectedSiteId || !isEditMode) {
         setFacilities([]);
         setUsers([]);
         return;
@@ -139,19 +177,47 @@ const WorkflowInlineTaskForm = ({
     };
 
     fetchSiteOptions();
-  }, [selectedSiteId]);
+  }, [selectedSiteId, isEditMode]);
 
-  // Clear dependent fields when site changes (but not on initial load)
   const handleSiteChange = (value: string) => {
-    form.setValue("site_id", value);
+    editForm.setValue("site_id", value);
     if (!task || task.site_id !== value) {
-      form.setValue("facility_id", WHOLE_SITE_VALUE);
-      form.setValue("assignee_id", UNASSIGNED_VALUE);
+      editForm.setValue("facility_id", WHOLE_SITE_VALUE);
+      editForm.setValue("assignee_id", UNASSIGNED_VALUE);
     }
   };
 
-  const handleSubmit = async (data: WorkflowFormValues) => {
+  const handleSiteToggle = (siteId: string, checked: boolean) => {
+    const current = createForm.getValues("site_ids");
+    if (checked) {
+      createForm.setValue("site_ids", [...current, siteId], { shouldValidate: true });
+    } else {
+      createForm.setValue("site_ids", current.filter(id => id !== siteId), { shouldValidate: true });
+    }
+    createForm.setValue("facility_id", WHOLE_SITE_VALUE);
+    createForm.setValue("assignee_id", UNASSIGNED_VALUE);
+  };
+
+  const handleAllSitesToggle = (checked: boolean) => {
+    if (checked) {
+      createForm.setValue("site_ids", sites.map(s => s.id), { shouldValidate: true });
+    } else {
+      createForm.setValue("site_ids", [], { shouldValidate: true });
+    }
+    createForm.setValue("facility_id", WHOLE_SITE_VALUE);
+    createForm.setValue("assignee_id", UNASSIGNED_VALUE);
+  };
+
+  const allSitesSelected = sites.length > 0 && selectedSiteIds.length === sites.length;
+
+  const handleEditSubmit = async (data: WorkflowFormValues) => {
     await onSave(data);
+  };
+
+  const handleCreateSubmit = async (data: CreateWorkflowFormValues) => {
+    if (onSaveMultiple) {
+      await onSaveMultiple(data);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -161,16 +227,263 @@ const WorkflowInlineTaskForm = ({
     }
   };
 
+  // Shared form fields JSX
+  const renderFormFields = (
+    formControl: any,
+    recurrencePattern: string,
+    isCreate: boolean
+  ) => (
+    <>
+      <FormField
+        control={formControl}
+        name="description"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea 
+                placeholder="e.g. Temperature must be between 2-8°C" 
+                className="resize-none h-20"
+                {...field} 
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <FormField
+          control={formControl}
+          name="facility_id"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Facility</FormLabel>
+              <Select 
+                value={isMultipleSitesSelected ? WHOLE_SITE_VALUE : field.value} 
+                onValueChange={field.onChange}
+                disabled={isMultipleSitesSelected || (isCreate ? selectedSiteIds.length === 0 : !selectedSiteId) || loadingOptions}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Whole site" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value={WHOLE_SITE_VALUE}>Whole site</SelectItem>
+                  {facilities.map((facility) => (
+                    <SelectItem key={facility.id} value={facility.id}>
+                      {facility.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isMultipleSitesSelected && (
+                <p className="text-xs text-muted-foreground">Locked when multiple sites selected</p>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={formControl}
+          name="initial_due_date"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Due Date *</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? format(field.value, "PPP") : "Pick a date"}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={formControl}
+          name="recurrence_pattern"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Recurrence *</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={formControl}
+          name="assignee_id"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Assignee</FormLabel>
+              <Select 
+                value={isMultipleSitesSelected ? UNASSIGNED_VALUE : field.value} 
+                onValueChange={field.onChange}
+                disabled={isMultipleSitesSelected || (isCreate ? selectedSiteIds.length === 0 : !selectedSiteId) || loadingOptions}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {[user.first_name, user.last_name].filter(Boolean).join(" ") || "Unnamed User"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isMultipleSitesSelected && (
+                <p className="text-xs text-muted-foreground">Locked when multiple sites selected</p>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      {recurrencePattern === "custom" && (
+        <FormField
+          control={formControl}
+          name="recurrence_interval_days"
+          render={({ field }) => (
+            <FormItem className="max-w-[200px]">
+              <FormLabel>Custom Interval (days)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  min={1}
+                  {...field}
+                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+    </>
+  );
+
+  if (isEditMode) {
+    return (
+      <div 
+        className="border rounded-lg p-4 bg-muted/30 space-y-4"
+        onKeyDown={handleKeyDown}
+      >
+        <Form {...editForm}>
+          <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={editForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Task Name *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g. Check vaccine fridge temperature" 
+                        {...field} 
+                        ref={nameInputRef}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editForm.control}
+                name="site_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Site *</FormLabel>
+                    <Select value={field.value} onValueChange={handleSiteChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select site" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {sites.map((site) => (
+                          <SelectItem key={site.id} value={site.id}>
+                            {site.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {renderFormFields(editForm.control, editRecurrencePattern, false)}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={saving}>
+                <X className="h-4 w-4 mr-1" />
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={saving}>
+                <Check className="h-4 w-4 mr-1" />
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </div>
+    );
+  }
+
   return (
     <div 
       className="border rounded-lg p-4 bg-muted/30 space-y-4"
       onKeyDown={handleKeyDown}
     >
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <Form {...createForm}>
+        <form onSubmit={createForm.handleSubmit(handleCreateSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
-              control={form.control}
+              control={createForm.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
@@ -188,191 +501,42 @@ const WorkflowInlineTaskForm = ({
             />
 
             <FormField
-              control={form.control}
-              name="site_id"
-              render={({ field }) => (
+              control={createForm.control}
+              name="site_ids"
+              render={() => (
                 <FormItem>
-                  <FormLabel>Site *</FormLabel>
-                  <Select value={field.value} onValueChange={handleSiteChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select site" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {sites.map((site) => (
-                        <SelectItem key={site.id} value={site.id}>
-                          {site.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="e.g. Temperature must be between 2-8°C" 
-                    className="resize-none h-20"
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <FormField
-              control={form.control}
-              name="facility_id"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Facility</FormLabel>
-                  <Select 
-                    value={field.value} 
-                    onValueChange={field.onChange}
-                    disabled={!selectedSiteId || loadingOptions}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Whole site" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={WHOLE_SITE_VALUE}>Whole site</SelectItem>
-                      {facilities.map((facility) => (
-                        <SelectItem key={facility.id} value={facility.id}>
-                          {facility.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="initial_due_date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Due Date *</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? format(field.value, "PPP") : "Pick a date"}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
+                  <FormLabel>Sites *</FormLabel>
+                  <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto bg-background">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                      <Checkbox 
+                        id="all-sites"
+                        checked={allSitesSelected}
+                        onCheckedChange={handleAllSitesToggle}
                       />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="recurrence_pattern"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Recurrence *</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="assignee_id"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Assignee</FormLabel>
-                  <Select 
-                    value={field.value} 
-                    onValueChange={field.onChange}
-                    disabled={!selectedSiteId || loadingOptions}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Unassigned" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-                      {users.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {[user.first_name, user.last_name].filter(Boolean).join(" ") || "Unnamed User"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <label htmlFor="all-sites" className="font-medium text-sm cursor-pointer">
+                        All Sites ({sites.length})
+                      </label>
+                    </div>
+                    {sites.map((site) => (
+                      <div key={site.id} className="flex items-center gap-2">
+                        <Checkbox 
+                          id={`site-${site.id}`}
+                          checked={selectedSiteIds.includes(site.id)}
+                          onCheckedChange={(checked) => handleSiteToggle(site.id, !!checked)}
+                        />
+                        <label htmlFor={`site-${site.id}`} className="text-sm cursor-pointer">
+                          {site.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
 
-          {recurrencePattern === "custom" && (
-            <FormField
-              control={form.control}
-              name="recurrence_interval_days"
-              render={({ field }) => (
-                <FormItem className="max-w-[200px]">
-                  <FormLabel>Custom Interval (days)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min={1}
-                      {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
+          {renderFormFields(createForm.control, createRecurrencePattern, true)}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={saving}>
@@ -381,7 +545,7 @@ const WorkflowInlineTaskForm = ({
             </Button>
             <Button type="submit" size="sm" disabled={saving}>
               <Check className="h-4 w-4 mr-1" />
-              {saving ? "Saving..." : task ? "Save" : "Add Task"}
+              {saving ? "Saving..." : selectedSiteIds.length > 1 ? `Add ${selectedSiteIds.length} Tasks` : "Add Task"}
             </Button>
           </div>
         </form>

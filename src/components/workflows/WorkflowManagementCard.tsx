@@ -7,7 +7,7 @@ import { useOrganisation } from "@/contexts/OrganisationContext";
 import { toast } from "@/hooks/use-toast";
 import WorkflowTaskFilters from "./WorkflowTaskFilters";
 import WorkflowTaskList from "./WorkflowTaskList";
-import { WHOLE_SITE_VALUE, UNASSIGNED_VALUE, WorkflowFormValues } from "./WorkflowInlineTaskForm";
+import { WHOLE_SITE_VALUE, UNASSIGNED_VALUE, WorkflowFormValues, CreateWorkflowFormValues } from "./WorkflowInlineTaskForm";
 
 interface Site {
   id: string;
@@ -200,7 +200,6 @@ const WorkflowManagementCard = () => {
     setSaving(true);
 
     try {
-      // Get current user for created_by
       const { data: { user } } = await supabase.auth.getUser();
 
       const taskData = {
@@ -249,6 +248,52 @@ const WorkflowManagementCard = () => {
     } catch (error: any) {
       toast({
         title: "Error saving task",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveMultiple = async (data: CreateWorkflowFormValues) => {
+    if (!organisationId) return;
+    
+    setSaving(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Create one task per selected site
+      const tasksToInsert = data.site_ids.map(siteId => ({
+        organisation_id: organisationId,
+        name: data.name,
+        description: data.description || null,
+        site_id: siteId,
+        facility_id: null, // Always null for multi-site
+        initial_due_date: data.initial_due_date.toISOString().split("T")[0],
+        recurrence_pattern: data.recurrence_pattern,
+        recurrence_interval_days: data.recurrence_pattern === "custom" ? data.recurrence_interval_days : null,
+        assignee_id: null, // Always null for multi-site
+        created_by: user?.id || null,
+      }));
+
+      const { error } = await supabase
+        .from("workflow_tasks")
+        .insert(tasksToInsert);
+
+      if (error) throw error;
+
+      toast({
+        title: "Tasks created",
+        description: `${tasksToInsert.length} task${tasksToInsert.length > 1 ? 's' : ''} created across ${data.site_ids.length} site${data.site_ids.length > 1 ? 's' : ''}.`,
+      });
+      setIsAdding(false);
+
+      fetchData(true);
+    } catch (error: any) {
+      toast({
+        title: "Error saving tasks",
         description: error.message,
         variant: "destructive",
       });
@@ -334,6 +379,7 @@ const WorkflowManagementCard = () => {
             onEdit={handleStartEdit}
             onDelete={handleDelete}
             onSave={handleSave}
+            onSaveMultiple={handleSaveMultiple}
             editingId={editingId}
             isAdding={isAdding}
             onStartEdit={handleStartEdit}
