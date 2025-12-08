@@ -165,10 +165,16 @@ const WorkflowInlineTaskForm = ({
     setTimeout(() => nameInputRef.current?.focus(), 0);
   }, []);
 
-  // Fetch facilities and users when site changes (edit mode only)
+  // Fetch facilities and users when site changes
   useEffect(() => {
     const fetchSiteOptions = async () => {
-      if (!selectedSiteId || !isEditMode) {
+      // In edit mode: use selectedSiteId
+      // In create mode: use selectedSiteIds[0] if exactly one site is selected
+      const effectiveSiteId = isEditMode 
+        ? selectedSiteId 
+        : (selectedSiteIds.length === 1 ? selectedSiteIds[0] : null);
+      
+      if (!effectiveSiteId) {
         setFacilities([]);
         setUsers([]);
         return;
@@ -180,13 +186,13 @@ const WorkflowInlineTaskForm = ({
         supabase
           .from("facilities")
           .select("id, name")
-          .eq("site_id", selectedSiteId)
+          .eq("site_id", effectiveSiteId)
           .eq("is_active", true)
           .order("name"),
         supabase
           .from("profiles")
           .select("id, first_name, last_name")
-          .eq("primary_site_id", selectedSiteId)
+          .eq("primary_site_id", effectiveSiteId)
           .eq("is_active", true)
           .order("first_name"),
       ]);
@@ -203,7 +209,7 @@ const WorkflowInlineTaskForm = ({
     };
 
     fetchSiteOptions();
-  }, [selectedSiteId, isEditMode]);
+  }, [selectedSiteId, selectedSiteIds, isEditMode]);
 
   const handleSiteChange = (value: string) => {
     editForm.setValue("site_id", value);
