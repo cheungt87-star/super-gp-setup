@@ -236,6 +236,14 @@ const WorkflowInlineTaskForm = ({
 
   const allSitesSelected = sites.length > 0 && selectedSiteIds.length === sites.length;
 
+  // Auto-switch to job_family when multiple sites selected (individual assignment not allowed)
+  useEffect(() => {
+    if (isMultipleSitesSelected && createForm.getValues("assignment_type") === "individual") {
+      createForm.setValue("assignment_type", "job_family");
+      createForm.setValue("assignee_id", UNASSIGNED_VALUE);
+    }
+  }, [isMultipleSitesSelected, createForm]);
+
   const handleEditSubmit = async (data: WorkflowFormValues) => {
     await onSave(data);
   };
@@ -408,11 +416,10 @@ const WorkflowInlineTaskForm = ({
                   value={field.value}
                   onValueChange={field.onChange}
                   className="flex gap-4"
-                  disabled={isMultipleSitesSelected}
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="individual" id="individual" />
-                    <Label htmlFor="individual" className="cursor-pointer">Individual</Label>
+                    <RadioGroupItem value="individual" id="individual" disabled={isMultipleSitesSelected} />
+                    <Label htmlFor="individual" className={`cursor-pointer ${isMultipleSitesSelected ? 'text-muted-foreground' : ''}`}>Individual</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="job_family" id="job_family" />
@@ -466,9 +473,8 @@ const WorkflowInlineTaskForm = ({
               <FormItem className="flex flex-col max-w-[300px]">
                 <FormLabel>Job Family</FormLabel>
                 <Select 
-                  value={isMultipleSitesSelected ? UNASSIGNED_VALUE : field.value} 
+                  value={field.value} 
                   onValueChange={field.onChange}
-                  disabled={isMultipleSitesSelected}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -484,9 +490,6 @@ const WorkflowInlineTaskForm = ({
                     ))}
                   </SelectContent>
                 </Select>
-                {isMultipleSitesSelected && (
-                  <p className="text-xs text-muted-foreground">Locked when multiple sites selected</p>
-                )}
                 <FormMessage />
               </FormItem>
             )}
