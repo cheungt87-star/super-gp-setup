@@ -903,6 +903,7 @@ export type Database = {
           id: string
           initial_due_date: string
           is_active: boolean
+          job_family_id: string | null
           name: string
           organisation_id: string
           recurrence_interval_days: number | null
@@ -919,6 +920,7 @@ export type Database = {
           id?: string
           initial_due_date: string
           is_active?: boolean
+          job_family_id?: string | null
           name: string
           organisation_id: string
           recurrence_interval_days?: number | null
@@ -935,6 +937,7 @@ export type Database = {
           id?: string
           initial_due_date?: string
           is_active?: boolean
+          job_family_id?: string | null
           name?: string
           organisation_id?: string
           recurrence_interval_days?: number | null
@@ -962,6 +965,13 @@ export type Database = {
             columns: ["facility_id"]
             isOneToOne: false
             referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_tasks_job_family_id_fkey"
+            columns: ["job_family_id"]
+            isOneToOne: false
+            referencedRelation: "job_families"
             referencedColumns: ["id"]
           },
           {

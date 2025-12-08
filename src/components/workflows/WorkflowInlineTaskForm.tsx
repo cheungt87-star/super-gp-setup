@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,7 +30,9 @@ const editFormSchema = z.object({
   initial_due_date: z.date({ required_error: "Due date is required" }),
   recurrence_pattern: z.enum(["daily", "weekly", "monthly", "custom"]),
   recurrence_interval_days: z.number().min(1).optional(),
+  assignment_type: z.enum(["individual", "job_family"]),
   assignee_id: z.string().optional(),
+  job_family_id: z.string().optional(),
 });
 
 // Schema for creating new tasks (multi-site)
@@ -40,7 +44,9 @@ const createFormSchema = z.object({
   initial_due_date: z.date({ required_error: "Due date is required" }),
   recurrence_pattern: z.enum(["daily", "weekly", "monthly", "custom"]),
   recurrence_interval_days: z.number().min(1).optional(),
+  assignment_type: z.enum(["individual", "job_family"]),
   assignee_id: z.string().optional(),
+  job_family_id: z.string().optional(),
 });
 
 export type WorkflowFormValues = z.infer<typeof editFormSchema>;
@@ -62,6 +68,11 @@ interface User {
   last_name: string | null;
 }
 
+interface JobFamily {
+  id: string;
+  name: string;
+}
+
 interface WorkflowTask {
   id: string;
   name: string;
@@ -72,10 +83,12 @@ interface WorkflowTask {
   recurrence_pattern: "daily" | "weekly" | "monthly" | "custom";
   recurrence_interval_days: number | null;
   assignee_id: string | null;
+  job_family_id: string | null;
 }
 
 interface WorkflowInlineTaskFormProps {
   sites: Site[];
+  jobFamilies: JobFamily[];
   task?: WorkflowTask | null;
   onSave: (data: WorkflowFormValues) => Promise<void>;
   onSaveMultiple?: (data: CreateWorkflowFormValues) => Promise<void>;
@@ -85,6 +98,7 @@ interface WorkflowInlineTaskFormProps {
 
 const WorkflowInlineTaskForm = ({
   sites,
+  jobFamilies,
   task,
   onSave,
   onSaveMultiple,
@@ -98,6 +112,12 @@ const WorkflowInlineTaskForm = ({
 
   const isEditMode = !!task;
 
+  // Determine initial assignment type based on existing task
+  const getInitialAssignmentType = () => {
+    if (task?.job_family_id) return "job_family";
+    return "individual";
+  };
+
   // Form for editing existing tasks (single site)
   const editForm = useForm<WorkflowFormValues>({
     resolver: zodResolver(editFormSchema),
@@ -109,7 +129,9 @@ const WorkflowInlineTaskForm = ({
       initial_due_date: task ? new Date(task.initial_due_date) : undefined,
       recurrence_pattern: task?.recurrence_pattern || "daily",
       recurrence_interval_days: task?.recurrence_interval_days || 1,
+      assignment_type: getInitialAssignmentType(),
       assignee_id: task?.assignee_id || UNASSIGNED_VALUE,
+      job_family_id: task?.job_family_id || UNASSIGNED_VALUE,
     },
   });
 
@@ -124,7 +146,9 @@ const WorkflowInlineTaskForm = ({
       initial_due_date: undefined,
       recurrence_pattern: "daily",
       recurrence_interval_days: 1,
+      assignment_type: "individual",
       assignee_id: UNASSIGNED_VALUE,
+      job_family_id: UNASSIGNED_VALUE,
     },
   });
 
@@ -132,6 +156,8 @@ const WorkflowInlineTaskForm = ({
   const selectedSiteIds = createForm.watch("site_ids");
   const editRecurrencePattern = editForm.watch("recurrence_pattern");
   const createRecurrencePattern = createForm.watch("recurrence_pattern");
+  const editAssignmentType = editForm.watch("assignment_type");
+  const createAssignmentType = createForm.watch("assignment_type");
   const isMultipleSitesSelected = !isEditMode && selectedSiteIds.length > 1;
 
   // Focus name input on mount
@@ -231,6 +257,7 @@ const WorkflowInlineTaskForm = ({
   const renderFormFields = (
     formControl: any,
     recurrencePattern: string,
+    assignmentType: string,
     isCreate: boolean
   ) => (
     <>
@@ -252,7 +279,7 @@ const WorkflowInlineTaskForm = ({
         )}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <FormField
           control={formControl}
           name="facility_id"
@@ -345,39 +372,6 @@ const WorkflowInlineTaskForm = ({
             </FormItem>
           )}
         />
-
-        <FormField
-          control={formControl}
-          name="assignee_id"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Assignee</FormLabel>
-              <Select 
-                value={isMultipleSitesSelected ? UNASSIGNED_VALUE : field.value} 
-                onValueChange={field.onChange}
-                disabled={isMultipleSitesSelected || (isCreate ? selectedSiteIds.length === 0 : !selectedSiteId) || loadingOptions}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Unassigned" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {[user.first_name, user.last_name].filter(Boolean).join(" ") || "Unnamed User"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {isMultipleSitesSelected && (
-                <p className="text-xs text-muted-foreground">Locked when multiple sites selected</p>
-              )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
       </div>
 
       {recurrencePattern === "custom" && (
@@ -400,6 +394,105 @@ const WorkflowInlineTaskForm = ({
           )}
         />
       )}
+
+      {/* Assignment Type Toggle */}
+      <div className="space-y-3">
+        <FormField
+          control={formControl}
+          name="assignment_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Assign To</FormLabel>
+              <FormControl>
+                <RadioGroup
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  className="flex gap-4"
+                  disabled={isMultipleSitesSelected}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="individual" id="individual" />
+                    <Label htmlFor="individual" className="cursor-pointer">Individual</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="job_family" id="job_family" />
+                    <Label htmlFor="job_family" className="cursor-pointer">Job Family</Label>
+                  </div>
+                </RadioGroup>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {assignmentType === "individual" ? (
+          <FormField
+            control={formControl}
+            name="assignee_id"
+            render={({ field }) => (
+              <FormItem className="flex flex-col max-w-[300px]">
+                <FormLabel>Assignee</FormLabel>
+                <Select 
+                  value={isMultipleSitesSelected ? UNASSIGNED_VALUE : field.value} 
+                  onValueChange={field.onChange}
+                  disabled={isMultipleSitesSelected || (isCreate ? selectedSiteIds.length === 0 : !selectedSiteId) || loadingOptions}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Unassigned" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {[user.first_name, user.last_name].filter(Boolean).join(" ") || "Unnamed User"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isMultipleSitesSelected && (
+                  <p className="text-xs text-muted-foreground">Locked when multiple sites selected</p>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : (
+          <FormField
+            control={formControl}
+            name="job_family_id"
+            render={({ field }) => (
+              <FormItem className="flex flex-col max-w-[300px]">
+                <FormLabel>Job Family</FormLabel>
+                <Select 
+                  value={isMultipleSitesSelected ? UNASSIGNED_VALUE : field.value} 
+                  onValueChange={field.onChange}
+                  disabled={isMultipleSitesSelected}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select job family" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
+                    {jobFamilies.map((family) => (
+                      <SelectItem key={family.id} value={family.id}>
+                        {family.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isMultipleSitesSelected && (
+                  <p className="text-xs text-muted-foreground">Locked when multiple sites selected</p>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </div>
     </>
   );
 
@@ -456,7 +549,7 @@ const WorkflowInlineTaskForm = ({
               />
             </div>
 
-            {renderFormFields(editForm.control, editRecurrencePattern, false)}
+            {renderFormFields(editForm.control, editRecurrencePattern, editAssignmentType, false)}
 
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={saving}>
@@ -536,7 +629,7 @@ const WorkflowInlineTaskForm = ({
             />
           </div>
 
-          {renderFormFields(createForm.control, createRecurrencePattern, true)}
+          {renderFormFields(createForm.control, createRecurrencePattern, createAssignmentType, true)}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={saving}>

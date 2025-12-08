@@ -31,10 +31,10 @@ const Dashboard = () => {
   const [selectedTask, setSelectedTask] = useState<TaskWithDueDate | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
 
-  const fetchTasks = useCallback(async (userId: string, primarySiteId: string | null) => {
+  const fetchTasks = useCallback(async (userId: string, primarySiteId: string | null, userJobFamilyId: string | null) => {
     try {
-      // Fetch tasks assigned to me
-      const { data: myTasksData, error: myError } = await supabase
+      // Fetch tasks assigned to me directly OR assigned to my job family
+      let myTasksQuery = supabase
         .from("workflow_tasks")
         .select(`
           id,
@@ -43,6 +43,7 @@ const Dashboard = () => {
           site_id,
           facility_id,
           assignee_id,
+          job_family_id,
           initial_due_date,
           recurrence_pattern,
           recurrence_interval_days,
@@ -50,17 +51,26 @@ const Dashboard = () => {
           organisation_id,
           sites!inner(name),
           facilities(name),
-          profiles!workflow_tasks_assignee_id_fkey(first_name, last_name)
+          profiles!workflow_tasks_assignee_id_fkey(first_name, last_name),
+          job_families(name)
         `)
-        .eq("assignee_id", userId)
         .eq("is_active", true);
+
+      // Build OR filter for tasks assigned to user or their job family
+      if (userJobFamilyId) {
+        myTasksQuery = myTasksQuery.or(`assignee_id.eq.${userId},job_family_id.eq.${userJobFamilyId}`);
+      } else {
+        myTasksQuery = myTasksQuery.eq("assignee_id", userId);
+      }
+
+      const { data: myTasksData, error: myError } = await myTasksQuery;
 
       if (myError) throw myError;
 
-      // Fetch tasks for my site (excluding ones already assigned to me)
+      // Fetch tasks for my site (excluding ones already assigned to me or my job family)
       let siteTasksData: any[] = [];
       if (primarySiteId) {
-        const { data, error: siteError } = await supabase
+        let siteQuery = supabase
           .from("workflow_tasks")
           .select(`
             id,
@@ -69,6 +79,7 @@ const Dashboard = () => {
             site_id,
             facility_id,
             assignee_id,
+            job_family_id,
             initial_due_date,
             recurrence_pattern,
             recurrence_interval_days,
@@ -76,19 +87,24 @@ const Dashboard = () => {
             organisation_id,
             sites!inner(name),
             facilities(name),
-            profiles!workflow_tasks_assignee_id_fkey(first_name, last_name)
+            profiles!workflow_tasks_assignee_id_fkey(first_name, last_name),
+            job_families(name)
           `)
           .eq("site_id", primarySiteId)
           .eq("is_active", true)
           .neq("assignee_id", userId);
 
+        // Exclude tasks assigned to user's job family
+        if (userJobFamilyId) {
+          siteQuery = siteQuery.neq("job_family_id", userJobFamilyId);
+        }
+
+        const { data, error: siteError } = await siteQuery;
+
         if (siteError) throw siteError;
         siteTasksData = data || [];
       }
 
-      // Get today's date range for filtering completions
-      const today = new Date();
-      
       // Get all task IDs to check for recent completions
       const allTaskIds = [
         ...(myTasksData || []).map(t => t.id),
@@ -118,6 +134,8 @@ const Dashboard = () => {
         assignee_name: task.profiles 
           ? `${task.profiles.first_name || ""} ${task.profiles.last_name || ""}`.trim()
           : null,
+        job_family_id: task.job_family_id,
+        job_family_name: task.job_families?.name,
         initial_due_date: task.initial_due_date,
         recurrence_pattern: task.recurrence_pattern,
         recurrence_interval_days: task.recurrence_interval_days,
@@ -165,9 +183,21 @@ const Dashboard = () => {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("organisation_id, primary_site_id")
+        .select("organisation_id, primary_site_id, job_title_id")
         .eq("id", session.user.id)
         .maybeSingle();
+
+      // Get user's job family through their job title
+      let userJobFamilyId: string | null = null;
+      if (profile?.job_title_id) {
+        const { data: jobTitle } = await supabase
+          .from("job_titles")
+          .select("job_family_id")
+          .eq("id", profile.job_title_id)
+          .maybeSingle();
+        
+        userJobFamilyId = jobTitle?.job_family_id || null;
+      }
 
       if (profile?.organisation_id) {
         // Check if user is admin
@@ -200,7 +230,7 @@ const Dashboard = () => {
         }
 
         // Fetch tasks
-        await fetchTasks(session.user.id, profile.primary_site_id);
+        await fetchTasks(session.user.id, profile.primary_site_id, userJobFamilyId);
       }
 
       setUserName(session.user.user_metadata?.first_name || "there");
@@ -228,11 +258,23 @@ const Dashboard = () => {
     
     const { data: profile } = await supabase
       .from("profiles")
-      .select("primary_site_id")
+      .select("primary_site_id, job_title_id")
       .eq("id", session.user.id)
       .maybeSingle();
     
-    await fetchTasks(session.user.id, profile?.primary_site_id || null);
+    // Get user's job family through their job title
+    let userJobFamilyId: string | null = null;
+    if (profile?.job_title_id) {
+      const { data: jobTitle } = await supabase
+        .from("job_titles")
+        .select("job_family_id")
+        .eq("id", profile.job_title_id)
+        .maybeSingle();
+      
+      userJobFamilyId = jobTitle?.job_family_id || null;
+    }
+    
+    await fetchTasks(session.user.id, profile?.primary_site_id || null, userJobFamilyId);
   };
 
   if (loading) {

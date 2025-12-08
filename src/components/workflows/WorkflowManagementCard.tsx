@@ -14,6 +14,11 @@ interface Site {
   name: string;
 }
 
+interface JobFamily {
+  id: string;
+  name: string;
+}
+
 interface WorkflowTask {
   id: string;
   name: string;
@@ -24,9 +29,11 @@ interface WorkflowTask {
   recurrence_pattern: "daily" | "weekly" | "monthly" | "custom";
   recurrence_interval_days: number | null;
   assignee_id: string | null;
+  job_family_id: string | null;
   site_name?: string;
   facility_name?: string;
   assignee_name?: string;
+  job_family_name?: string;
 }
 
 type SortField = "name" | "site_name" | "initial_due_date" | "recurrence_pattern" | "assignee_name";
@@ -38,6 +45,7 @@ const WorkflowManagementCard = () => {
   // Data state
   const [tasks, setTasks] = useState<WorkflowTask[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
+  const [jobFamilies, setJobFamilies] = useState<JobFamily[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   
   // Filter state
@@ -62,7 +70,7 @@ const WorkflowManagementCard = () => {
     
     if (!isRefetch) setInitialLoading(true);
 
-    const [tasksResult, sitesResult] = await Promise.all([
+    const [tasksResult, sitesResult, jobFamiliesResult] = await Promise.all([
       supabase
         .from("workflow_tasks")
         .select(`
@@ -75,9 +83,11 @@ const WorkflowManagementCard = () => {
           recurrence_pattern,
           recurrence_interval_days,
           assignee_id,
+          job_family_id,
           sites(name),
           facilities(name),
-          profiles!workflow_tasks_assignee_id_fkey(first_name, last_name)
+          profiles!workflow_tasks_assignee_id_fkey(first_name, last_name),
+          job_families(name)
         `)
         .eq("organisation_id", organisationId)
         .eq("is_active", true)
@@ -87,6 +97,11 @@ const WorkflowManagementCard = () => {
         .select("id, name")
         .eq("organisation_id", organisationId)
         .eq("is_active", true)
+        .order("name"),
+      supabase
+        .from("job_families")
+        .select("id, name")
+        .eq("organisation_id", organisationId)
         .order("name"),
     ]);
 
@@ -101,17 +116,23 @@ const WorkflowManagementCard = () => {
         recurrence_pattern: task.recurrence_pattern,
         recurrence_interval_days: task.recurrence_interval_days,
         assignee_id: task.assignee_id,
+        job_family_id: task.job_family_id,
         site_name: task.sites?.name,
         facility_name: task.facilities?.name,
         assignee_name: task.profiles
           ? [task.profiles.first_name, task.profiles.last_name].filter(Boolean).join(" ")
           : undefined,
+        job_family_name: task.job_families?.name,
       }));
       setTasks(formattedTasks);
     }
 
     if (sitesResult.data) {
       setSites(sitesResult.data);
+    }
+
+    if (jobFamiliesResult.data) {
+      setJobFamilies(jobFamiliesResult.data);
     }
 
     setInitialLoading(false);
@@ -202,6 +223,14 @@ const WorkflowManagementCard = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Determine assignee_id and job_family_id based on assignment type
+      const assignee_id = data.assignment_type === "individual" && data.assignee_id !== UNASSIGNED_VALUE 
+        ? data.assignee_id 
+        : null;
+      const job_family_id = data.assignment_type === "job_family" && data.job_family_id !== UNASSIGNED_VALUE 
+        ? data.job_family_id 
+        : null;
+
       const taskData = {
         organisation_id: organisationId,
         name: data.name,
@@ -211,7 +240,8 @@ const WorkflowManagementCard = () => {
         initial_due_date: data.initial_due_date.toISOString().split("T")[0],
         recurrence_pattern: data.recurrence_pattern,
         recurrence_interval_days: data.recurrence_pattern === "custom" ? data.recurrence_interval_days : null,
-        assignee_id: data.assignee_id === UNASSIGNED_VALUE ? null : (data.assignee_id || null),
+        assignee_id,
+        job_family_id,
       };
 
       if (task) {
@@ -264,6 +294,14 @@ const WorkflowManagementCard = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Determine assignee_id and job_family_id based on assignment type
+      const assignee_id = data.assignment_type === "individual" && data.assignee_id !== UNASSIGNED_VALUE 
+        ? data.assignee_id 
+        : null;
+      const job_family_id = data.assignment_type === "job_family" && data.job_family_id !== UNASSIGNED_VALUE 
+        ? data.job_family_id 
+        : null;
+
       // Create one task per selected site
       const tasksToInsert = data.site_ids.map(siteId => ({
         organisation_id: organisationId,
@@ -275,6 +313,7 @@ const WorkflowManagementCard = () => {
         recurrence_pattern: data.recurrence_pattern,
         recurrence_interval_days: data.recurrence_pattern === "custom" ? data.recurrence_interval_days : null,
         assignee_id: null, // Always null for multi-site
+        job_family_id, // Can be set for multi-site
         created_by: user?.id || null,
       }));
 
@@ -373,6 +412,7 @@ const WorkflowManagementCard = () => {
           <WorkflowTaskList
             tasks={filteredAndSortedTasks}
             sites={sites}
+            jobFamilies={jobFamilies}
             sortField={sortField}
             sortDirection={sortDirection}
             onSort={handleSort}
