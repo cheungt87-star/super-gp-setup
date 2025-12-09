@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input"; // Still used for external temp name
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { User, Clock, Sun, Moon, AlertTriangle, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -116,6 +116,25 @@ export const StaffSelectionDialog = ({
 
   const hasFilters = sites && sites.length > 0 && currentSiteId;
 
+  // Generate time slots at 30-minute intervals within a given range
+  const generateTimeSlots = (startTime: string, endTime: string, intervalMinutes: number = 30): string[] => {
+    const slots: string[] = [];
+    const [startHour, startMin] = startTime.split(":").map(Number);
+    const [endHour, endMin] = endTime.split(":").map(Number);
+    
+    let currentMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    
+    while (currentMinutes <= endMinutes) {
+      const hours = Math.floor(currentMinutes / 60);
+      const mins = currentMinutes % 60;
+      slots.push(`${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`);
+      currentMinutes += intervalMinutes;
+    }
+    
+    return slots;
+  };
+
   // Determine the period constraints based on shift type
   const periodConstraints = useMemo(() => {
     if (shiftType === "am") {
@@ -125,6 +144,18 @@ export const StaffSelectionDialog = ({
     }
     return null;
   }, [shiftType, amShiftStart, amShiftEnd, pmShiftStart, pmShiftEnd]);
+
+  // Generate valid time slots based on period constraints
+  const validTimeSlots = useMemo(() => {
+    if (!periodConstraints) return [];
+    return generateTimeSlots(periodConstraints.min, periodConstraints.max, 30);
+  }, [periodConstraints]);
+
+  // Filter end time options to be after start time
+  const validEndTimeSlots = useMemo(() => {
+    if (!customStart || !validTimeSlots.length) return validTimeSlots;
+    return validTimeSlots.filter(time => time > customStart);
+  }, [customStart, validTimeSlots]);
 
   // Reset filters when dialog opens/closes or site changes
   const handleOpenChange = (newOpen: boolean) => {
@@ -542,29 +573,44 @@ export const StaffSelectionDialog = ({
                     </Label>
                   </div>
                   
-                  {useCustomTime && periodConstraints && (
+                  {useCustomTime && periodConstraints && validTimeSlots.length > 0 && (
                     <div className="grid grid-cols-2 gap-3 pl-6">
                       <div>
                         <Label className="text-xs text-muted-foreground">Start Time</Label>
-                        <Input
-                          type="time"
-                          value={customStart}
-                          min={periodConstraints.min}
-                          max={periodConstraints.max}
-                          onChange={(e) => setCustomStart(e.target.value)}
-                          className="h-10"
-                        />
+                        <Select value={customStart} onValueChange={(v) => {
+                          setCustomStart(v);
+                          // Reset end time if it's now invalid
+                          if (customEnd && customEnd <= v) {
+                            const nextSlots = validTimeSlots.filter(t => t > v);
+                            setCustomEnd(nextSlots.length > 0 ? nextSlots[0] : "");
+                          }
+                        }}>
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Select time" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {validTimeSlots.slice(0, -1).map((time) => (
+                              <SelectItem key={time} value={time}>
+                                {time}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label className="text-xs text-muted-foreground">End Time</Label>
-                        <Input
-                          type="time"
-                          value={customEnd}
-                          min={periodConstraints.min}
-                          max={periodConstraints.max}
-                          onChange={(e) => setCustomEnd(e.target.value)}
-                          className="h-10"
-                        />
+                        <Select value={customEnd} onValueChange={setCustomEnd}>
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Select time" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {validEndTimeSlots.map((time) => (
+                              <SelectItem key={time} value={time}>
+                                {time}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <p className="col-span-2 text-xs text-muted-foreground">
                         {periodConstraints.label} period: {periodConstraints.min} - {periodConstraints.max}
