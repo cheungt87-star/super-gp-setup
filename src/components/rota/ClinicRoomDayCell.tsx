@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2 } from "lucide-react";
+import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2, Trash2 } from "lucide-react";
 import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
 import type { Database } from "@/integrations/supabase/types";
@@ -81,6 +81,7 @@ interface ClinicRoomDayCellProps {
   onRepeatPreviousDay?: (dateKey: string, previousDateKey: string) => Promise<void>;
   onCopyToWholeWeek?: (dateKey: string) => Promise<void>;
   onCopyFromPreviousWeek?: () => Promise<void>;
+  onClearAll?: (dateKey: string) => Promise<void>;
   copyingFromPrevWeek?: boolean;
 }
 
@@ -111,6 +112,7 @@ export const ClinicRoomDayCell = ({
   onRepeatPreviousDay,
   onCopyToWholeWeek,
   onCopyFromPreviousWeek,
+  onClearAll,
   copyingFromPrevWeek = false,
 }: ClinicRoomDayCellProps) => {
   const [selectionDialog, setSelectionDialog] = useState<{
@@ -367,6 +369,18 @@ export const ClinicRoomDayCell = ({
               >
                 <Copy className="h-4 w-4 mr-2" />
                 Copy Previous Day
+              </Button>
+            )}
+            {shifts.length > 0 && onClearAll && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading || copyingFromPrevWeek}
+                onClick={() => onClearAll(dateKey)}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear All
               </Button>
             )}
           </div>
