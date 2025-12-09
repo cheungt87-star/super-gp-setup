@@ -58,6 +58,12 @@ interface ClinicRoom {
 interface JobTitle {
   id: string;
   name: string;
+  job_family_id?: string | null;
+}
+
+interface JobFamily {
+  id: string;
+  name: string;
 }
 
 export const RotaScheduleTab = () => {
@@ -68,6 +74,7 @@ export const RotaScheduleTab = () => {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [allStaff, setAllStaff] = useState<StaffMember[]>([]);
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
+  const [jobFamilies, setJobFamilies] = useState<JobFamily[]>([]);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [clinicRooms, setClinicRooms] = useState<ClinicRoom[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
@@ -121,7 +128,7 @@ export const RotaScheduleTab = () => {
       if (!organisationId) return;
 
       try {
-        const [sitesRes, allStaffRes, jobTitlesRes] = await Promise.all([
+        const [sitesRes, allStaffRes, jobTitlesRes, jobFamiliesRes] = await Promise.all([
           supabase
             .from("sites")
             .select("id, name")
@@ -135,6 +142,11 @@ export const RotaScheduleTab = () => {
             .eq("is_active", true),
           supabase
             .from("job_titles")
+            .select("id, name, job_family_id")
+            .eq("organisation_id", organisationId)
+            .order("name"),
+          supabase
+            .from("job_families")
             .select("id, name")
             .eq("organisation_id", organisationId)
             .order("name"),
@@ -143,6 +155,7 @@ export const RotaScheduleTab = () => {
         if (sitesRes.error) throw sitesRes.error;
         if (allStaffRes.error) throw allStaffRes.error;
         if (jobTitlesRes.error) throw jobTitlesRes.error;
+        if (jobFamiliesRes.error) throw jobFamiliesRes.error;
 
         setSites(sitesRes.data || []);
         setAllStaff(
@@ -152,6 +165,7 @@ export const RotaScheduleTab = () => {
           }))
         );
         setJobTitles(jobTitlesRes.data || []);
+        setJobFamilies(jobFamiliesRes.data || []);
 
         if (sitesRes.data && sitesRes.data.length > 0 && !selectedSiteId) {
           setSelectedSiteId(sitesRes.data[0].id);
@@ -900,6 +914,7 @@ export const RotaScheduleTab = () => {
                         allStaff={allStaff}
                         sites={sites}
                         jobTitles={jobTitles}
+                        jobFamilies={jobFamilies}
                         currentSiteId={selectedSiteId!}
                         scheduledHours={staffScheduledHours}
                         requireOnCall={rotaRule?.require_oncall ?? true}

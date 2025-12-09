@@ -46,6 +46,12 @@ interface Site {
 interface JobTitle {
   id: string;
   name: string;
+  job_family_id?: string | null;
+}
+
+interface JobFamily {
+  id: string;
+  name: string;
 }
 
 interface ClinicRoomDayCellProps {
@@ -58,6 +64,7 @@ interface ClinicRoomDayCellProps {
   allStaff: StaffMember[];
   sites: Site[];
   jobTitles: JobTitle[];
+  jobFamilies: JobFamily[];
   currentSiteId: string;
   scheduledHours: Record<string, number>;
   requireOnCall: boolean;
@@ -87,6 +94,7 @@ export const ClinicRoomDayCell = ({
   allStaff,
   sites,
   jobTitles,
+  jobFamilies,
   currentSiteId,
   scheduledHours,
   requireOnCall,
@@ -525,6 +533,7 @@ export const ClinicRoomDayCell = ({
           currentSiteId={currentSiteId}
           sites={sites}
           jobTitles={jobTitles}
+          jobFamilies={jobFamilies}
           amShiftStart={amShiftStart}
           amShiftEnd={amShiftEnd}
           pmShiftStart={pmShiftStart}
