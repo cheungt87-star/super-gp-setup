@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { User, Clock, Sun, Moon, AlertTriangle } from "lucide-react";
+import { User, Clock, Sun, Moon, AlertTriangle, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
 import type { Database } from "@/integrations/supabase/types";
@@ -33,6 +33,12 @@ interface Site {
 interface JobTitle {
   id: string;
   name: string;
+  job_family_id?: string | null;
+}
+
+interface JobFamily {
+  id: string;
+  name: string;
 }
 
 interface StaffSelectionDialogProps {
@@ -50,6 +56,7 @@ interface StaffSelectionDialogProps {
   currentSiteId?: string;
   sites?: Site[];
   jobTitles?: JobTitle[];
+  jobFamilies?: JobFamily[];
   // AM/PM timing constraints for custom time selection
   amShiftStart?: string;
   amShiftEnd?: string;
@@ -87,6 +94,7 @@ export const StaffSelectionDialog = ({
   currentSiteId,
   sites,
   jobTitles,
+  jobFamilies,
   amShiftStart = "09:00",
   amShiftEnd = "13:00",
   pmShiftStart = "13:00",
@@ -98,11 +106,13 @@ export const StaffSelectionDialog = ({
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [selectedSiteId, setSelectedSiteId] = useState(currentSiteId || "");
+  const [selectedJobFamilyId, setSelectedJobFamilyId] = useState<string>("all");
   const [selectedJobTitleId, setSelectedJobTitleId] = useState<string>("all");
   const [isTempStaff, setIsTempStaff] = useState(false);
   const [tempConfirmed, setTempConfirmed] = useState(false);
   const [isExternalTemp, setIsExternalTemp] = useState(false);
   const [externalTempName, setExternalTempName] = useState("");
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
 
   const hasFilters = sites && sites.length > 0 && currentSiteId;
 
@@ -127,14 +137,17 @@ export const StaffSelectionDialog = ({
       setTempConfirmed(false);
       setIsExternalTemp(false);
       setExternalTempName("");
+      setSelectedStaffId(null);
     } else {
       // Reset to current site when opening
       setSelectedSiteId(currentSiteId || "");
+      setSelectedJobFamilyId("all");
       setSelectedJobTitleId("all");
       setIsTempStaff(false);
       setTempConfirmed(false);
       setIsExternalTemp(false);
       setExternalTempName("");
+      setSelectedStaffId(null);
       // Set default custom times to period boundaries
       if (periodConstraints) {
         setCustomStart(periodConstraints.min);
@@ -144,7 +157,20 @@ export const StaffSelectionDialog = ({
     onOpenChange(newOpen);
   };
 
-  // Filter staff based on site, working day, job title, and exclusions
+  // Filter job titles by selected job family
+  const filteredJobTitles = useMemo(() => {
+    if (!jobTitles) return [];
+    if (selectedJobFamilyId === "all") return jobTitles;
+    return jobTitles.filter(jt => jt.job_family_id === selectedJobFamilyId);
+  }, [jobTitles, selectedJobFamilyId]);
+
+  // Get job title IDs in the selected job family (for staff filtering)
+  const jobTitleIdsInFamily = useMemo(() => {
+    if (selectedJobFamilyId === "all") return null; // No filter
+    return filteredJobTitles.map(jt => jt.id);
+  }, [selectedJobFamilyId, filteredJobTitles]);
+
+  // Filter staff based on site, working day, job family, job title, and exclusions
   const filteredStaff = useMemo(() => {
     // If no allStaff provided, use availableStaff directly (backward compatibility)
     if (!allStaff || !hasFilters) {
@@ -163,6 +189,12 @@ export const StaffSelectionDialog = ({
             if (!worksThisDay) return false;
           }
         }
+        
+        // Filter by job family
+        if (jobTitleIdsInFamily && s.job_title_id && !jobTitleIdsInFamily.includes(s.job_title_id)) return false;
+        
+        // Filter by job title
+        if (selectedJobTitleId !== "all" && s.job_title_id !== selectedJobTitleId) return false;
         
         return true;
       });
@@ -187,25 +219,42 @@ export const StaffSelectionDialog = ({
         }
       }
       
+      // Filter by job family
+      if (jobTitleIdsInFamily && s.job_title_id && !jobTitleIdsInFamily.includes(s.job_title_id)) return false;
+      
       // Filter by job title if selected
       if (selectedJobTitleId !== "all" && s.job_title_id !== selectedJobTitleId) return false;
       
       return true;
     });
-  }, [availableStaff, allStaff, selectedSiteId, currentSiteId, excludeUserIds, dayOfWeek, selectedJobTitleId, hasFilters]);
+  }, [availableStaff, allStaff, selectedSiteId, currentSiteId, excludeUserIds, dayOfWeek, selectedJobTitleId, jobTitleIdsInFamily, hasFilters]);
 
-  const handleSelect = (userId: string | null, tempName?: string) => {
-    if (useCustomTime && customStart && customEnd) {
-      onSelectStaff(userId, false, customStart, customEnd, isTempStaff || isExternalTemp, (isTempStaff || isExternalTemp) ? tempConfirmed : false, tempName);
+  // Reset selected staff when filters change
+  const handleFilterChange = (filterType: 'site' | 'jobFamily' | 'jobTitle', value: string) => {
+    setSelectedStaffId(null);
+    if (filterType === 'site') {
+      setSelectedSiteId(value);
+    } else if (filterType === 'jobFamily') {
+      setSelectedJobFamilyId(value);
+      setSelectedJobTitleId("all"); // Reset job title when family changes
     } else {
-      onSelectStaff(userId, makeFullDay, undefined, undefined, isTempStaff || isExternalTemp, (isTempStaff || isExternalTemp) ? tempConfirmed : false, tempName);
+      setSelectedJobTitleId(value);
+    }
+  };
+
+  const handleAddStaff = () => {
+    if (!selectedStaffId) return;
+    
+    if (useCustomTime && customStart && customEnd) {
+      onSelectStaff(selectedStaffId, false, customStart, customEnd, isTempStaff, isTempStaff ? tempConfirmed : false, undefined);
+    } else {
+      onSelectStaff(selectedStaffId, makeFullDay, undefined, undefined, isTempStaff, isTempStaff ? tempConfirmed : false, undefined);
     }
     setMakeFullDay(false);
     setUseCustomTime(false);
     setIsTempStaff(false);
     setTempConfirmed(false);
-    setIsExternalTemp(false);
-    setExternalTempName("");
+    setSelectedStaffId(null);
     onOpenChange(false);
   };
 
@@ -213,7 +262,17 @@ export const StaffSelectionDialog = ({
     if (!externalTempName.trim()) {
       return;
     }
-    handleSelect(null, externalTempName.trim());
+    if (useCustomTime && customStart && customEnd) {
+      onSelectStaff(null, false, customStart, customEnd, true, tempConfirmed, externalTempName.trim());
+    } else {
+      onSelectStaff(null, makeFullDay, undefined, undefined, true, tempConfirmed, externalTempName.trim());
+    }
+    setMakeFullDay(false);
+    setUseCustomTime(false);
+    setIsExternalTemp(false);
+    setExternalTempName("");
+    setTempConfirmed(false);
+    onOpenChange(false);
   };
 
   const shiftDisplay = getShiftTypeDisplay(shiftType);
@@ -224,10 +283,14 @@ export const StaffSelectionDialog = ({
 
   // Validate custom times
   const isCustomTimeValid = !useCustomTime || (customStart && customEnd && customStart < customEnd);
+  
+  // Can add staff: must have staff selected (or external temp) and valid time config
+  const canAddStaff = selectedStaffId && isCustomTimeValid && !isExternalTemp;
+  const canAddExternalTemp = isExternalTemp && externalTempName.trim() && isCustomTimeValid;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShiftIcon className={cn("h-4 w-4", shiftDisplay.color)} />
@@ -236,59 +299,141 @@ export const StaffSelectionDialog = ({
           <p className="text-sm text-muted-foreground">{dateLabel}</p>
         </DialogHeader>
 
-        {/* Filters - only show if we have sites and currentSiteId */}
-        {hasFilters && (
-          <div className="flex gap-2 pb-2 border-b">
-            <div className="flex-1">
-              <Label className="text-xs text-muted-foreground mb-1 block">Site</Label>
-              <Select value={selectedSiteId} onValueChange={setSelectedSiteId}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select site" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sites?.map((site) => (
-                    <SelectItem key={site.id} value={site.id}>
-                      {site.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {jobTitles && jobTitles.length > 0 && (
-              <div className="flex-1">
-                <Label className="text-xs text-muted-foreground mb-1 block">Job Title</Label>
-                <Select value={selectedJobTitleId} onValueChange={setSelectedJobTitleId}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {jobTitles.map((jt) => (
-                      <SelectItem key={jt.id} value={jt.id}>
-                        {jt.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        <div className="flex-1 overflow-y-auto space-y-4">
+          {/* Filters - only show if we have sites and currentSiteId */}
+          {hasFilters && (
+            <div className="space-y-2 pb-3 border-b">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Site</Label>
+                  <Select value={selectedSiteId} onValueChange={(v) => handleFilterChange('site', v)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select site" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sites?.map((site) => (
+                        <SelectItem key={site.id} value={site.id}>
+                          {site.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {jobFamilies && jobFamilies.length > 0 && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Job Family</Label>
+                    <Select value={selectedJobFamilyId} onValueChange={(v) => handleFilterChange('jobFamily', v)}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="All" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {jobFamilies.map((jf) => (
+                          <SelectItem key={jf.id} value={jf.id}>
+                            {jf.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+              {filteredJobTitles && filteredJobTitles.length > 0 && (
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Job Title</Label>
+                  <Select value={selectedJobTitleId} onValueChange={(v) => handleFilterChange('jobTitle', v)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {filteredJobTitles.map((jt) => (
+                        <SelectItem key={jt.id} value={jt.id}>
+                          {jt.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
 
-        {filteredStaff.length === 0 ? (
-          <div className="py-8 text-center">
-            <User className="mx-auto h-12 w-12 text-muted-foreground/50 mb-2" />
-            <p className="text-sm text-muted-foreground">
-              No available staff{dayOfWeek ? ` for ${dayOfWeek}` : ""}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Check staff working days in Admin → Users
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Options */}
-            <div className="space-y-3 py-2 border-b">
+          {/* Staff List - MOVED BEFORE OPTIONS */}
+          {filteredStaff.length === 0 && !isExternalTemp ? (
+            <div className="py-6 text-center">
+              <User className="mx-auto h-10 w-10 text-muted-foreground/50 mb-2" />
+              <p className="text-sm text-muted-foreground">
+                No available staff{dayOfWeek ? ` for ${dayOfWeek}` : ""}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Check staff working days in Admin → Users
+              </p>
+            </div>
+          ) : !isExternalTemp && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Select Staff</Label>
+              <ScrollArea className="max-h-[180px]">
+                <div className="space-y-1.5">
+                  {filteredStaff.map((staff) => {
+                    const fullName = `${staff.first_name || ""} ${staff.last_name || ""}`.trim() || "Unknown";
+                    const hours = scheduledHours[staff.id] || 0;
+                    const contracted = staff.contracted_hours || 0;
+                    const hoursDisplay = contracted > 0 ? `${hours}/${contracted}h` : `${hours}h`;
+                    const isSelected = selectedStaffId === staff.id;
+
+                    return (
+                      <div
+                        key={staff.id}
+                        className={cn(
+                          "flex items-center gap-3 w-full p-2.5 rounded-md border cursor-pointer transition-colors",
+                          isSelected 
+                            ? "border-primary bg-primary/5 ring-1 ring-primary" 
+                            : "hover:bg-muted/50 border-border"
+                        )}
+                        onClick={() => setSelectedStaffId(isSelected ? null : staff.id)}
+                      >
+                        <div className={cn(
+                          "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+                          isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
+                        )}>
+                          {isSelected ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <User className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1 text-left min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-sm">{fullName}</p>
+                            {staff.job_title_name && (
+                              <span className={cn("text-xs px-1.5 py-0.5 rounded border", getJobTitleColors(staff.job_title_name))}>
+                                {staff.job_title_name}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            <span className={cn(
+                              contracted > 0 && hours >= contracted && "text-amber-600"
+                            )}>
+                              {hoursDisplay} scheduled
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
+          {/* Shift Options - MOVED AFTER STAFF LIST */}
+          {(filteredStaff.length > 0 || isExternalTemp) && (
+            <div className="space-y-3 pt-2 border-t">
+              <Label className="text-xs text-muted-foreground">Shift Options</Label>
+              
               {showMakeFullDayOption && (
                 <div className="flex items-center gap-2 px-1">
                   <Checkbox 
@@ -329,7 +474,7 @@ export const StaffSelectionDialog = ({
                   </div>
                   
                   {useCustomTime && periodConstraints && (
-                    <div className="flex items-center gap-2 pl-6">
+                    <div className="flex items-center gap-2 pl-6 flex-wrap">
                       <Input
                         type="time"
                         value={customStart}
@@ -355,45 +500,46 @@ export const StaffSelectionDialog = ({
                 </div>
               )}
 
-              {/* Temp Staff Option */}
-              <div className="space-y-2 px-1">
-                <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="isTempStaff" 
-                    checked={isTempStaff} 
-                    onCheckedChange={(checked) => {
-                      setIsTempStaff(checked === true);
-                      if (!checked) setTempConfirmed(false);
-                      if (checked) setIsExternalTemp(false);
-                    }}
-                  />
-                  <Label htmlFor="isTempStaff" className="text-sm cursor-pointer flex items-center gap-1">
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                    Mark as Temp (from staff list)
-                  </Label>
+              {/* Temp Staff Option - Only show when staff is selected */}
+              {selectedStaffId && (
+                <div className="space-y-2 px-1">
+                  <div className="flex items-center gap-2">
+                    <Checkbox 
+                      id="isTempStaff" 
+                      checked={isTempStaff} 
+                      onCheckedChange={(checked) => {
+                        setIsTempStaff(checked === true);
+                        if (!checked) setTempConfirmed(false);
+                      }}
+                    />
+                    <Label htmlFor="isTempStaff" className="text-sm cursor-pointer flex items-center gap-1">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                      Mark as Temp (from staff list)
+                    </Label>
+                  </div>
+                  
+                  {isTempStaff && (
+                    <RadioGroup 
+                      value={tempConfirmed ? "confirmed" : "unconfirmed"} 
+                      onValueChange={(v) => setTempConfirmed(v === "confirmed")}
+                      className="pl-6 space-y-1"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="unconfirmed" id="temp_unconfirmed" />
+                        <Label htmlFor="temp_unconfirmed" className="text-sm font-normal cursor-pointer text-destructive">
+                          Not Confirmed
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="confirmed" id="temp_confirmed" />
+                        <Label htmlFor="temp_confirmed" className="text-sm font-normal cursor-pointer text-amber-600">
+                          Confirmed
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  )}
                 </div>
-                
-                {isTempStaff && (
-                  <RadioGroup 
-                    value={tempConfirmed ? "confirmed" : "unconfirmed"} 
-                    onValueChange={(v) => setTempConfirmed(v === "confirmed")}
-                    className="pl-6 space-y-1"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="unconfirmed" id="temp_unconfirmed" />
-                      <Label htmlFor="temp_unconfirmed" className="text-sm font-normal cursor-pointer text-destructive">
-                        Not Confirmed
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="confirmed" id="temp_confirmed" />
-                      <Label htmlFor="temp_confirmed" className="text-sm font-normal cursor-pointer text-amber-600">
-                        Confirmed
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                )}
-              </div>
+              )}
 
               {/* External Temp Staff Option */}
               <div className="space-y-2 px-1 pt-2 border-t">
@@ -406,6 +552,7 @@ export const StaffSelectionDialog = ({
                       if (checked) {
                         setIsTempStaff(false);
                         setTempConfirmed(false);
+                        setSelectedStaffId(null);
                       }
                       if (!checked) {
                         setExternalTempName("");
@@ -449,64 +596,34 @@ export const StaffSelectionDialog = ({
                         </Label>
                       </div>
                     </RadioGroup>
-                    <Button
-                      onClick={handleAddExternalTemp}
-                      disabled={!externalTempName.trim() || (useCustomTime && !isCustomTimeValid)}
-                      className="w-full"
-                      variant="default"
-                    >
-                      Add External Temp Staff
-                    </Button>
                   </div>
                 )}
               </div>
             </div>
+          )}
+        </div>
 
-            <ScrollArea className="max-h-[300px]">
-              <div className="space-y-2">
-                {filteredStaff.map((staff) => {
-                  const fullName = `${staff.first_name || ""} ${staff.last_name || ""}`.trim() || "Unknown";
-                  const hours = scheduledHours[staff.id] || 0;
-                  const contracted = staff.contracted_hours || 0;
-                  const hoursDisplay = contracted > 0 ? `${hours}/${contracted}h` : `${hours}h`;
-
-                  return (
-                    <Button
-                      key={staff.id}
-                      variant="outline"
-                      className="w-full justify-start h-auto py-3"
-                      onClick={() => handleSelect(staff.id, undefined)}
-                      disabled={(useCustomTime && !isCustomTimeValid) || isExternalTemp}
-                    >
-                      <div className="flex items-center gap-3 w-full">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <User className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{fullName}</p>
-                            {staff.job_title_name && (
-                              <span className={cn("text-xs px-1.5 py-0.5 rounded border", getJobTitleColors(staff.job_title_name))}>
-                                {staff.job_title_name}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            <span className={cn(
-                              contracted > 0 && hours >= contracted && "text-amber-600"
-                            )}>
-                              {hoursDisplay} scheduled
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Button>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </>
+        {/* Footer with Add Button */}
+        {(filteredStaff.length > 0 || isExternalTemp) && (
+          <DialogFooter className="pt-4 border-t">
+            {isExternalTemp ? (
+              <Button
+                onClick={handleAddExternalTemp}
+                disabled={!canAddExternalTemp}
+                className="w-full"
+              >
+                Add External Temp Staff
+              </Button>
+            ) : (
+              <Button
+                onClick={handleAddStaff}
+                disabled={!canAddStaff}
+                className="w-full"
+              >
+                Add Staff
+              </Button>
+            )}
+          </DialogFooter>
         )}
       </DialogContent>
     </Dialog>
