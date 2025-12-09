@@ -278,6 +278,38 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
     }
   };
 
+  const deleteShiftsForDay = async (shiftDate: string) => {
+    if (!rotaWeek) return false;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("rota_shifts")
+        .delete()
+        .eq("rota_week_id", rotaWeek.id)
+        .eq("shift_date", shiftDate);
+
+      if (error) throw error;
+
+      await fetchSchedule(true);
+      toast({
+        title: "Day Cleared",
+        description: "All shifts for this day have been removed",
+      });
+      return true;
+    } catch (error: any) {
+      console.error("Error clearing day:", error);
+      toast({
+        title: "Error",
+        description: "Failed to clear shifts",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return {
     rotaWeek,
     shifts,
@@ -287,6 +319,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
     addShift,
     updateShift,
     deleteShift,
+    deleteShiftsForDay,
     updateWeekStatus,
     refetch: fetchSchedule,
   };

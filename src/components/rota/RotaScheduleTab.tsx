@@ -103,7 +103,7 @@ export const RotaScheduleTab = () => {
     organisationId,
   });
 
-  const { rotaWeek, shifts, loading: loadingSchedule, saving, addShift, updateShift, deleteShift, updateWeekStatus } =
+  const { rotaWeek, shifts, loading: loadingSchedule, saving, addShift, updateShift, deleteShift, deleteShiftsForDay, updateWeekStatus } =
     useRotaSchedule({
       siteId: selectedSiteId,
       organisationId,
@@ -935,6 +935,13 @@ export const RotaScheduleTab = () => {
                         onRepeatPreviousDay={handleRepeatPreviousDay}
                         onCopyToWholeWeek={handleCopyToWholeWeek}
                         onCopyFromPreviousWeek={handleCopyFromPreviousWeek}
+                        onClearAll={async (dateKey) => {
+                          await deleteShiftsForDay(dateKey);
+                          // Reset confirmation if it exists
+                          if (confirmations.some(c => c.shift_date === dateKey)) {
+                            await resetDayConfirmation(dateKey);
+                          }
+                        }}
                         copyingFromPrevWeek={copyingFromPrevWeek}
                       />
                     </TabsContent>
