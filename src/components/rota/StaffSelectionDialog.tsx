@@ -373,7 +373,7 @@ export const StaffSelectionDialog = ({
           ) : !isExternalTemp && (
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Select Staff</Label>
-              <ScrollArea className="max-h-[180px]">
+              <ScrollArea className="h-[180px]">
                 <div className="space-y-1.5">
                   {filteredStaff.map((staff) => {
                     const fullName = `${staff.first_name || ""} ${staff.last_name || ""}`.trim() || "Unknown";
