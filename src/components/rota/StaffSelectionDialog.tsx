@@ -500,6 +500,82 @@ export const StaffSelectionDialog = ({
             </div>
           )}
 
+          {/* Shift Options - Only show for AM/PM shifts when staff selected */}
+          {(selectedStaffId || isExternalTemp) && (showMakeFullDayOption || showCustomTimeOption) && (
+            <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Shift Options
+              </Label>
+              
+              {/* Make Full Day Option */}
+              {showMakeFullDayOption && (
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="makeFullDay"
+                    checked={makeFullDay}
+                    onCheckedChange={(checked) => {
+                      setMakeFullDay(checked as boolean);
+                      if (checked) setUseCustomTime(false);
+                    }}
+                  />
+                  <Label htmlFor="makeFullDay" className="text-sm font-normal cursor-pointer">
+                    Make Full Day (adds {oppositeShift} shift too)
+                  </Label>
+                </div>
+              )}
+              
+              {/* Custom Time Option */}
+              {showCustomTimeOption && (
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="useCustomTime"
+                      checked={useCustomTime}
+                      onCheckedChange={(checked) => {
+                        setUseCustomTime(checked as boolean);
+                        if (checked) setMakeFullDay(false);
+                      }}
+                    />
+                    <Label htmlFor="useCustomTime" className="text-sm font-normal cursor-pointer">
+                      Custom time slot
+                    </Label>
+                  </div>
+                  
+                  {useCustomTime && periodConstraints && (
+                    <div className="grid grid-cols-2 gap-3 pl-6">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Start Time</Label>
+                        <Input
+                          type="time"
+                          value={customStart}
+                          min={periodConstraints.min}
+                          max={periodConstraints.max}
+                          onChange={(e) => setCustomStart(e.target.value)}
+                          className="h-10"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">End Time</Label>
+                        <Input
+                          type="time"
+                          value={customEnd}
+                          min={periodConstraints.min}
+                          max={periodConstraints.max}
+                          onChange={(e) => setCustomEnd(e.target.value)}
+                          className="h-10"
+                        />
+                      </div>
+                      <p className="col-span-2 text-xs text-muted-foreground">
+                        {periodConstraints.label} period: {periodConstraints.min} - {periodConstraints.max}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
 
         {/* Footer with Add Button */}
