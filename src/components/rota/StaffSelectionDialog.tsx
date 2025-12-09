@@ -290,24 +290,24 @@ export const StaffSelectionDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShiftIcon className={cn("h-4 w-4", shiftDisplay.color)} />
+      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <ShiftIcon className={cn("h-5 w-5", shiftDisplay.color)} />
             Add {jobTitleName} - {shiftDisplay.label}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">{dateLabel}</p>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-5">
           {/* Filters - only show if we have sites and currentSiteId */}
           {hasFilters && (
-            <div className="space-y-2 pb-3 border-b">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-3 pb-4 border-b">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-muted-foreground mb-1 block">Site</Label>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Site</Label>
                   <Select value={selectedSiteId} onValueChange={(v) => handleFilterChange('site', v)}>
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-10">
                       <SelectValue placeholder="Select site" />
                     </SelectTrigger>
                     <SelectContent>
@@ -321,9 +321,9 @@ export const StaffSelectionDialog = ({
                 </div>
                 {jobFamilies && jobFamilies.length > 0 && (
                   <div>
-                    <Label className="text-xs text-muted-foreground mb-1 block">Job Family</Label>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Job Family</Label>
                     <Select value={selectedJobFamilyId} onValueChange={(v) => handleFilterChange('jobFamily', v)}>
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-10">
                         <SelectValue placeholder="All" />
                       </SelectTrigger>
                       <SelectContent>
@@ -340,9 +340,9 @@ export const StaffSelectionDialog = ({
               </div>
               {filteredJobTitles && filteredJobTitles.length > 0 && (
                 <div>
-                  <Label className="text-xs text-muted-foreground mb-1 block">Job Title</Label>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Job Title</Label>
                   <Select value={selectedJobTitleId} onValueChange={(v) => handleFilterChange('jobTitle', v)}>
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-10">
                       <SelectValue placeholder="All" />
                     </SelectTrigger>
                     <SelectContent>
@@ -359,10 +359,10 @@ export const StaffSelectionDialog = ({
             </div>
           )}
 
-          {/* Staff List - MOVED BEFORE OPTIONS */}
+          {/* Staff List */}
           {filteredStaff.length === 0 && !isExternalTemp ? (
-            <div className="py-6 text-center">
-              <User className="mx-auto h-10 w-10 text-muted-foreground/50 mb-2" />
+            <div className="py-8 text-center">
+              <User className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
               <p className="text-sm text-muted-foreground">
                 No available staff{dayOfWeek ? ` for ${dayOfWeek}` : ""}
               </p>
@@ -371,10 +371,10 @@ export const StaffSelectionDialog = ({
               </p>
             </div>
           ) : !isExternalTemp && (
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Select Staff</Label>
-              <ScrollArea className="h-[180px]">
-                <div className="space-y-1.5">
+            <div className="space-y-3">
+              <Label className="text-sm text-muted-foreground">Select Staff</Label>
+              <ScrollArea className="h-[280px]">
+                <div className="space-y-2 pr-3">
                   {filteredStaff.map((staff) => {
                     const fullName = `${staff.first_name || ""} ${staff.last_name || ""}`.trim() || "Unknown";
                     const hours = scheduledHours[staff.id] || 0;
@@ -386,7 +386,7 @@ export const StaffSelectionDialog = ({
                       <div
                         key={staff.id}
                         className={cn(
-                          "flex items-center gap-3 w-full p-2.5 rounded-md border cursor-pointer transition-colors",
+                          "flex items-center gap-3 w-full p-3 rounded-lg border cursor-pointer transition-colors",
                           isSelected 
                             ? "border-primary bg-primary/5 ring-1 ring-primary" 
                             : "hover:bg-muted/50 border-border"
@@ -394,26 +394,26 @@ export const StaffSelectionDialog = ({
                         onClick={() => setSelectedStaffId(isSelected ? null : staff.id)}
                       >
                         <div className={cn(
-                          "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+                          "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
                           isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
                         )}>
                           {isSelected ? (
-                            <Check className="h-4 w-4" />
+                            <Check className="h-5 w-5" />
                           ) : (
-                            <User className="h-4 w-4 text-muted-foreground" />
+                            <User className="h-5 w-5 text-muted-foreground" />
                           )}
                         </div>
                         <div className="flex-1 text-left min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-medium text-sm">{fullName}</p>
+                            <p className="font-medium text-base">{fullName}</p>
                             {staff.job_title_name && (
-                              <span className={cn("text-xs px-1.5 py-0.5 rounded border", getJobTitleColors(staff.job_title_name))}>
+                              <span className={cn("text-xs px-2 py-0.5 rounded border", getJobTitleColors(staff.job_title_name))}>
                                 {staff.job_title_name}
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
+                            <Clock className="h-3.5 w-3.5" />
                             <span className={cn(
                               contracted > 0 && hours >= contracted && "text-amber-600"
                             )}>
@@ -429,188 +429,87 @@ export const StaffSelectionDialog = ({
             </div>
           )}
 
-          {/* Shift Options - MOVED AFTER STAFF LIST */}
-          {(filteredStaff.length > 0 || isExternalTemp) && (
-            <div className="space-y-3 pt-2 border-t">
-              <Label className="text-xs text-muted-foreground">Shift Options</Label>
-              
-              {showMakeFullDayOption && (
-                <div className="flex items-center gap-2 px-1">
-                  <Checkbox 
-                    id="makeFullDay" 
-                    checked={makeFullDay} 
-                    onCheckedChange={(checked) => {
-                      setMakeFullDay(checked === true);
-                      if (checked) setUseCustomTime(false);
-                    }}
-                  />
-                  <Label htmlFor="makeFullDay" className="text-sm cursor-pointer">
-                    Make Full Day (add to {oppositeShift} as well)
-                  </Label>
-                </div>
-              )}
-              
-              {showCustomTimeOption && (
-                <div className="space-y-2 px-1">
-                  <div className="flex items-center gap-2">
-                    <Checkbox 
-                      id="useCustomTime" 
-                      checked={useCustomTime} 
-                      onCheckedChange={(checked) => {
-                        setUseCustomTime(checked === true);
-                        if (checked) {
-                          setMakeFullDay(false);
-                          // Reset to period boundaries
-                          if (periodConstraints) {
-                            setCustomStart(periodConstraints.min);
-                            setCustomEnd(periodConstraints.max);
-                          }
-                        }
-                      }}
-                    />
-                    <Label htmlFor="useCustomTime" className="text-sm cursor-pointer">
-                      Custom Time
-                    </Label>
-                  </div>
-                  
-                  {useCustomTime && periodConstraints && (
-                    <div className="flex items-center gap-2 pl-6 flex-wrap">
-                      <Input
-                        type="time"
-                        value={customStart}
-                        onChange={(e) => setCustomStart(e.target.value)}
-                        min={periodConstraints.min}
-                        max={periodConstraints.max}
-                        className="w-28 h-8"
-                      />
-                      <span className="text-sm text-muted-foreground">to</span>
-                      <Input
-                        type="time"
-                        value={customEnd}
-                        onChange={(e) => setCustomEnd(e.target.value)}
-                        min={periodConstraints.min}
-                        max={periodConstraints.max}
-                        className="w-28 h-8"
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        ({periodConstraints.label}: {periodConstraints.min}-{periodConstraints.max})
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Temp Staff Option - Only show when staff is selected */}
-              {selectedStaffId && (
-                <div className="space-y-2 px-1">
-                  <div className="flex items-center gap-2">
-                    <Checkbox 
-                      id="isTempStaff" 
-                      checked={isTempStaff} 
-                      onCheckedChange={(checked) => {
-                        setIsTempStaff(checked === true);
-                        if (!checked) setTempConfirmed(false);
-                      }}
-                    />
-                    <Label htmlFor="isTempStaff" className="text-sm cursor-pointer flex items-center gap-1">
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                      Mark as Temp (from staff list)
-                    </Label>
-                  </div>
-                  
-                  {isTempStaff && (
-                    <RadioGroup 
-                      value={tempConfirmed ? "confirmed" : "unconfirmed"} 
-                      onValueChange={(v) => setTempConfirmed(v === "confirmed")}
-                      className="pl-6 space-y-1"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="unconfirmed" id="temp_unconfirmed" />
-                        <Label htmlFor="temp_unconfirmed" className="text-sm font-normal cursor-pointer text-destructive">
-                          Not Confirmed
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="confirmed" id="temp_confirmed" />
-                        <Label htmlFor="temp_confirmed" className="text-sm font-normal cursor-pointer text-amber-600">
-                          Confirmed
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  )}
-                </div>
-              )}
-
-              {/* External Temp Staff Option */}
-              <div className="space-y-2 px-1 pt-2 border-t">
-                <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="isExternalTemp" 
-                    checked={isExternalTemp} 
-                    onCheckedChange={(checked) => {
-                      setIsExternalTemp(checked === true);
-                      if (checked) {
-                        setIsTempStaff(false);
-                        setTempConfirmed(false);
-                        setSelectedStaffId(null);
-                      }
-                      if (!checked) {
-                        setExternalTempName("");
-                        setTempConfirmed(false);
-                      }
-                    }}
-                  />
-                  <Label htmlFor="isExternalTemp" className="text-sm cursor-pointer flex items-center gap-1">
-                    <User className="h-3.5 w-3.5 text-orange-500" />
-                    Add External Agency Staff
-                  </Label>
-                </div>
-                
-                {isExternalTemp && (
-                  <div className="pl-6 space-y-3">
-                    <div className="space-y-1">
-                      <Label htmlFor="externalTempName" className="text-xs text-muted-foreground">Staff Name</Label>
-                      <Input
-                        id="externalTempName"
-                        placeholder="Enter temp staff name..."
-                        value={externalTempName}
-                        onChange={(e) => setExternalTempName(e.target.value)}
-                        className="h-9"
-                      />
-                    </div>
-                    <RadioGroup 
-                      value={tempConfirmed ? "confirmed" : "unconfirmed"} 
-                      onValueChange={(v) => setTempConfirmed(v === "confirmed")}
-                      className="space-y-1"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="unconfirmed" id="ext_temp_unconfirmed" />
-                        <Label htmlFor="ext_temp_unconfirmed" className="text-sm font-normal cursor-pointer text-destructive">
-                          Not Confirmed
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="confirmed" id="ext_temp_confirmed" />
-                        <Label htmlFor="ext_temp_confirmed" className="text-sm font-normal cursor-pointer text-amber-600">
-                          Confirmed
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                )}
+          {/* External Temp Staff Option - Now under staff list */}
+          {!isExternalTemp && filteredStaff.length > 0 && (
+            <div 
+              className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-muted-foreground/30 cursor-pointer hover:bg-muted/30 transition-colors"
+              onClick={() => setIsExternalTemp(true)}
+            >
+              <div className="h-10 w-10 rounded-full flex items-center justify-center bg-orange-100 dark:bg-orange-900/30">
+                <User className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-base">Add Temp/Locum Staff</p>
+                <p className="text-sm text-muted-foreground">Add external agency or locum staff</p>
               </div>
             </div>
           )}
+
+          {/* External Temp Staff Form - Shows when isExternalTemp is true */}
+          {isExternalTemp && (
+            <div className="space-y-4 p-4 rounded-lg border border-orange-200 dark:border-orange-900/50 bg-orange-50/50 dark:bg-orange-900/10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  <Label className="text-base font-medium">External Agency Staff</Label>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 text-xs"
+                  onClick={() => {
+                    setIsExternalTemp(false);
+                    setExternalTempName("");
+                    setTempConfirmed(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="externalTempName" className="text-sm text-muted-foreground">Staff Name</Label>
+                <Input
+                  id="externalTempName"
+                  placeholder="Enter temp staff name..."
+                  value={externalTempName}
+                  onChange={(e) => setExternalTempName(e.target.value)}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Booking Status</Label>
+                <RadioGroup 
+                  value={tempConfirmed ? "confirmed" : "unconfirmed"} 
+                  onValueChange={(v) => setTempConfirmed(v === "confirmed")}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-3 p-2 rounded-md hover:bg-background/50">
+                    <RadioGroupItem value="unconfirmed" id="ext_temp_unconfirmed" />
+                    <Label htmlFor="ext_temp_unconfirmed" className="text-sm font-normal cursor-pointer text-destructive">
+                      Not Confirmed
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-2 rounded-md hover:bg-background/50">
+                    <RadioGroupItem value="confirmed" id="ext_temp_confirmed" />
+                    <Label htmlFor="ext_temp_confirmed" className="text-sm font-normal cursor-pointer text-amber-600">
+                      Confirmed
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* Footer with Add Button */}
         {(filteredStaff.length > 0 || isExternalTemp) && (
-          <DialogFooter className="pt-4 border-t">
+          <DialogFooter className="pt-5 border-t">
             {isExternalTemp ? (
               <Button
                 onClick={handleAddExternalTemp}
                 disabled={!canAddExternalTemp}
-                className="w-full"
+                className="w-full h-11 text-base"
               >
                 Add External Temp Staff
               </Button>
@@ -618,7 +517,7 @@ export const StaffSelectionDialog = ({
               <Button
                 onClick={handleAddStaff}
                 disabled={!canAddStaff}
-                className="w-full"
+                className="w-full h-11 text-base"
               >
                 Add Staff
               </Button>
