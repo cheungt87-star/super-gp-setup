@@ -71,22 +71,20 @@ export function validateDay(
 
   const dayShifts = shifts.filter((s) => s.shift_date === dateKey);
 
-  // Rule 1: Check all on-call slots are assigned
-  if (requireOnCall) {
-    [1, 2, 3].forEach((slot) => {
-      const hasOnCallForSlot = dayShifts.some((s) => s.is_oncall && (s as any).oncall_slot === slot);
-      if (!hasOnCallForSlot) {
-        const slotLabel = slot === 1 ? "On Call" : `On Call ${slot}`;
-        results.push({
-          type: "no_oncall",
-          severity: slot === 1 ? "error" : "warning", // First slot is critical, others are warnings
-          day: dayLabel,
-          dateKey,
-          message: `${slotLabel} not assigned for ${dayLabel}`,
-        });
-      }
-    });
-  }
+  // Rule 1: Check all on-call slots are assigned (always mandatory)
+  [1, 2, 3].forEach((slot) => {
+    const hasOnCallForSlot = dayShifts.some((s) => s.is_oncall && (s as any).oncall_slot === slot);
+    if (!hasOnCallForSlot) {
+      const slotLabel = slot === 1 ? "On Call" : `On Call ${slot}`;
+      results.push({
+        type: "no_oncall",
+        severity: slot === 1 ? "error" : "warning", // First slot is critical, others are warnings
+        day: dayLabel,
+        dateKey,
+        message: `${slotLabel} not assigned for ${dayLabel}`,
+      });
+    }
+  });
 
   // Rule 2: Rooms left empty (check AM and PM coverage)
   clinicRooms.forEach((room) => {

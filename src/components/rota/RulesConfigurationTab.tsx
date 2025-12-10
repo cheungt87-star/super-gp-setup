@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Plus, Save, Users, AlertCircle, Settings } from "lucide-react";
+import { Loader2, Plus, Users, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganisation } from "@/contexts/OrganisationContext";
 import { useRotaRules } from "@/hooks/useRotaRules";
@@ -29,9 +27,6 @@ export const RulesConfigurationTab = () => {
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [loadingSites, setLoadingSites] = useState(true);
-
-  // Form state
-  const [requireOncall, setRequireOncall] = useState(true);
 
   // Adding new staffing rule
   const [isAddingRule, setIsAddingRule] = useState(false);
@@ -74,28 +69,6 @@ export const RulesConfigurationTab = () => {
     fetchData();
   }, [organisationId]);
 
-  // Update form when rule loads
-  useEffect(() => {
-    if (rotaRule) {
-      setRequireOncall(rotaRule.require_oncall);
-    } else {
-      setRequireOncall(true);
-    }
-  }, [rotaRule]);
-
-  const handleSaveOnCall = async () => {
-    const saved = await saveRotaRule({
-      require_oncall: requireOncall,
-    });
-
-    if (saved) {
-      toast({
-        title: "Settings saved",
-        description: "On-call settings have been updated successfully",
-      });
-    }
-  };
-
   const handleAddStaffingRule = async () => {
     if (!newJobTitleId) {
       toast({
@@ -109,7 +82,7 @@ export const RulesConfigurationTab = () => {
     // If no rota rule exists yet, create one first
     if (!rotaRule) {
       const saved = await saveRotaRule({
-        require_oncall: requireOncall,
+        require_oncall: true, // Always mandatory
       });
       if (!saved) return;
     }
@@ -177,44 +150,6 @@ export const RulesConfigurationTab = () => {
 
       {selectedSiteId && (
         <>
-          {/* General Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Settings className="h-5 w-5" />
-                General Settings
-              </CardTitle>
-              <CardDescription>
-                Configure general rota settings for this site. Shift times are inherited from the site's opening hours in Admin → Sites.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <Label className="text-sm font-medium">Require On-Call</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Require at least one staff member to be assigned as on-call each day
-                      </p>
-                    </div>
-                    <Switch checked={requireOncall} onCheckedChange={setRequireOncall} />
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button onClick={handleSaveOnCall} disabled={saving}>
-                      {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                      Save Settings
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Staffing Requirements */}
           <Card>

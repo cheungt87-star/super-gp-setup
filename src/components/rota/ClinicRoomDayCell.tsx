@@ -399,58 +399,56 @@ export const ClinicRoomDayCell = ({
 
       {!isClosed && (
         <div className="p-4 space-y-4">
-          {/* On-Call Rows - 3 slots */}
-          {requireOnCall && (
-            <div className="rounded-lg border overflow-hidden">
-              {[1, 2, 3].map((slot) => {
-                const slotShift = getOnCallShiftForSlot(slot);
-                const slotLabel = slot === 1 ? "On Call" : `On Call ${slot}`;
-                
-                return (
-                  <div 
-                    key={slot} 
-                    className={cn(
-                      "flex items-center justify-between px-3 py-2",
-                      slot !== 3 && "border-b"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{slotLabel}</span>
-                    </div>
-                    {slotShift ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
-                          {slotShift.user_name}
-                        </span>
-                        {slotShift.job_title_name && (
-                          <Badge variant="outline" className={cn("text-[10px]", getJobTitleColors(slotShift.job_title_name))}>{slotShift.job_title_name}</Badge>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 hover:bg-destructive/20"
-                          onClick={() => onDeleteShift(slotShift.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={loading}
-                        onClick={() => handleAddClick("", slotLabel, "oncall", slot)}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add
-                      </Button>
-                    )}
+          {/* On-Call Rows - 3 slots (always mandatory) */}
+          <div className="rounded-lg border overflow-hidden">
+            {[1, 2, 3].map((slot) => {
+              const slotShift = getOnCallShiftForSlot(slot);
+              const slotLabel = slot === 1 ? "On Call" : `On Call ${slot}`;
+              
+              return (
+                <div 
+                  key={slot} 
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2",
+                    slot !== 3 && "border-b"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{slotLabel}</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  {slotShift ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {slotShift.user_name}
+                      </span>
+                      {slotShift.job_title_name && (
+                        <Badge variant="outline" className={cn("text-[10px]", getJobTitleColors(slotShift.job_title_name))}>{slotShift.job_title_name}</Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-destructive/20"
+                        onClick={() => onDeleteShift(slotShift.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={loading}
+                      onClick={() => handleAddClick("", slotLabel, "oncall", slot)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
           {/* Clinic Rooms Table */}
           {clinicRooms.length > 0 ? (
