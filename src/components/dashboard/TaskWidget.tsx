@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ClipboardList, User, Building2 } from "lucide-react";
+import { ClipboardList, User, Users } from "lucide-react";
 import { TaskWithDueDate } from "@/lib/taskUtils";
 import TaskRowItem from "./TaskRowItem";
 
@@ -7,11 +7,11 @@ interface TaskWidgetProps {
   title: string;
   tasks: TaskWithDueDate[];
   onTaskClick: (task: TaskWithDueDate) => void;
-  variant: "personal" | "site";
+  variant: "personal" | "jobfamily";
 }
 
 const TaskWidget = ({ title, tasks, onTaskClick, variant }: TaskWidgetProps) => {
-  const Icon = variant === "personal" ? User : Building2;
+  const Icon = variant === "personal" ? User : Users;
   
   return (
     <Card className="h-full">

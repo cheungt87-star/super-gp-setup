@@ -27,88 +27,59 @@ const Dashboard = () => {
   
   // Task state
   const [myTasks, setMyTasks] = useState<TaskWithDueDate[]>([]);
-  const [siteTasks, setSiteTasks] = useState<TaskWithDueDate[]>([]);
+  const [jobFamilyTasks, setJobFamilyTasks] = useState<TaskWithDueDate[]>([]);
   const [selectedTask, setSelectedTask] = useState<TaskWithDueDate | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
 
   const fetchTasks = useCallback(async (userId: string, primarySiteId: string | null, userJobFamilyId: string | null) => {
     try {
-      // Fetch tasks assigned to me directly OR assigned to my job family
-      let myTasksQuery = supabase
+      const taskSelectFields = `
+        id,
+        name,
+        description,
+        site_id,
+        facility_id,
+        assignee_id,
+        job_family_id,
+        initial_due_date,
+        recurrence_pattern,
+        recurrence_interval_days,
+        is_active,
+        organisation_id,
+        sites!inner(name),
+        facilities(name),
+        profiles!workflow_tasks_assignee_id_fkey(first_name, last_name),
+        job_families(name)
+      `;
+
+      // Fetch tasks assigned directly to me (personal assignments only)
+      const { data: myTasksData, error: myError } = await supabase
         .from("workflow_tasks")
-        .select(`
-          id,
-          name,
-          description,
-          site_id,
-          facility_id,
-          assignee_id,
-          job_family_id,
-          initial_due_date,
-          recurrence_pattern,
-          recurrence_interval_days,
-          is_active,
-          organisation_id,
-          sites!inner(name),
-          facilities(name),
-          profiles!workflow_tasks_assignee_id_fkey(first_name, last_name),
-          job_families(name)
-        `)
-        .eq("is_active", true);
-
-      // Build OR filter for tasks assigned to user or their job family
-      if (userJobFamilyId) {
-        myTasksQuery = myTasksQuery.or(`assignee_id.eq.${userId},job_family_id.eq.${userJobFamilyId}`);
-      } else {
-        myTasksQuery = myTasksQuery.eq("assignee_id", userId);
-      }
-
-      const { data: myTasksData, error: myError } = await myTasksQuery;
+        .select(taskSelectFields)
+        .eq("is_active", true)
+        .eq("assignee_id", userId);
 
       if (myError) throw myError;
 
-      // Fetch tasks for my site (excluding ones already assigned to me or my job family)
-      let siteTasksData: any[] = [];
-      if (primarySiteId) {
-        let siteQuery = supabase
+      // Fetch job family tasks at my site (separate query)
+      let jobFamilyTasksData: any[] = [];
+      if (userJobFamilyId && primarySiteId) {
+        const { data, error: jfError } = await supabase
           .from("workflow_tasks")
-          .select(`
-            id,
-            name,
-            description,
-            site_id,
-            facility_id,
-            assignee_id,
-            job_family_id,
-            initial_due_date,
-            recurrence_pattern,
-            recurrence_interval_days,
-            is_active,
-            organisation_id,
-            sites!inner(name),
-            facilities(name),
-            profiles!workflow_tasks_assignee_id_fkey(first_name, last_name),
-            job_families(name)
-          `)
-          .eq("site_id", primarySiteId)
+          .select(taskSelectFields)
           .eq("is_active", true)
-          .neq("assignee_id", userId);
+          .eq("job_family_id", userJobFamilyId)
+          .eq("site_id", primarySiteId)
+          .is("assignee_id", null); // Only job family assignments, not individual
 
-        // Exclude tasks assigned to user's job family
-        if (userJobFamilyId) {
-          siteQuery = siteQuery.neq("job_family_id", userJobFamilyId);
-        }
-
-        const { data, error: siteError } = await siteQuery;
-
-        if (siteError) throw siteError;
-        siteTasksData = data || [];
+        if (jfError) throw jfError;
+        jobFamilyTasksData = data || [];
       }
 
       // Get all task IDs to check for recent completions
       const allTaskIds = [
         ...(myTasksData || []).map(t => t.id),
-        ...siteTasksData.map(t => t.id)
+        ...jobFamilyTasksData.map(t => t.id)
       ];
 
       // Fetch recent completions to filter out completed tasks
@@ -122,7 +93,7 @@ const Dashboard = () => {
       );
 
       // Transform and enrich tasks
-      const transformTask = (task: any): WorkflowTaskWithDetails => ({
+      const transformTask = (task: any, isJobFamilyAssignment: boolean = false): WorkflowTaskWithDetails => ({
         id: task.id,
         name: task.name,
         description: task.description,
@@ -140,7 +111,8 @@ const Dashboard = () => {
         recurrence_pattern: task.recurrence_pattern,
         recurrence_interval_days: task.recurrence_interval_days,
         is_active: task.is_active,
-        organisation_id: task.organisation_id
+        organisation_id: task.organisation_id,
+        isJobFamilyAssignment
       });
 
       const filterCompletedTasks = (tasks: TaskWithDueDate[]): TaskWithDueDate[] => {
@@ -162,15 +134,15 @@ const Dashboard = () => {
       };
 
       const enrichedMyTasks = (myTasksData || [])
-        .map(transformTask)
+        .map(t => transformTask(t, false))
         .map(enrichTaskWithDueDate);
       
-      const enrichedSiteTasks = siteTasksData
-        .map(transformTask)
+      const enrichedJobFamilyTasks = jobFamilyTasksData
+        .map(t => transformTask(t, true))
         .map(enrichTaskWithDueDate);
 
       setMyTasks(sortTasks(filterCompletedTasks(enrichedMyTasks)));
-      setSiteTasks(sortTasks(filterCompletedTasks(enrichedSiteTasks)));
+      setJobFamilyTasks(sortTasks(filterCompletedTasks(enrichedJobFamilyTasks)));
     } catch (error) {
       console.error("Error fetching tasks:", error);
     }
@@ -293,7 +265,7 @@ const Dashboard = () => {
       </div>
 
       {/* Your Day Headline Card */}
-      <YourDayCard todayTasks={myTasks.filter(t => t.isToday)} />
+      <YourDayCard todayTasks={[...myTasks.filter(t => t.isToday), ...jobFamilyTasks.filter(t => t.isToday)]} />
 
       {/* Invitation Code Card for Admins */}
       {isAdmin && inviteCode && (
@@ -346,10 +318,10 @@ const Dashboard = () => {
           variant="personal"
         />
         <TaskWidget
-          title="Tasks at My Site"
-          tasks={siteTasks}
+          title="Tasks assigned to my job family"
+          tasks={jobFamilyTasks}
           onTaskClick={handleTaskClick}
-          variant="site"
+          variant="jobfamily"
         />
       </div>
 
