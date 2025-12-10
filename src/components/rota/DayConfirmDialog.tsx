@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import {
   AlertTriangle,
   XCircle,
@@ -172,8 +172,8 @@ export const DayConfirmDialog = ({
           </div>
 
           {/* Violations List */}
-          <ScrollArea className="flex-1 min-h-0 max-h-[50vh]">
-            <div className="space-y-3 pr-4">
+          <div className="flex-1 min-h-0 max-h-[50vh] overflow-y-auto">
+            <div className="space-y-3 pr-2">
               {violations.map((v, i) => {
                 const override = overrides[i];
                 const isChecked = override?.checked || false;
@@ -245,7 +245,7 @@ export const DayConfirmDialog = ({
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
