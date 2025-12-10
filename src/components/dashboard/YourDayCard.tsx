@@ -206,20 +206,16 @@ export function YourDayCard({ todayTasks }: YourDayCardProps) {
               <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">On-Call</span>
             </div>
             {onCallList.length > 0 ? (
-              <div className="space-y-3">
-                {onCallList.map((oc) => (
-                  <div key={oc.slot} className="space-y-1">
-                    <p className="font-medium text-sm">
-                      {oc.slot > 1 && <span className="text-muted-foreground">#{oc.slot}: </span>}
-                      {oc.name}
+              <div className="space-y-1.5">
+                {onCallList.map((oc) => {
+                  const slotLabel = oc.slot === 1 ? "Manager" : oc.slot === 2 ? "Doctor 1" : "Doctor 2";
+                  return (
+                    <p key={oc.slot} className="text-sm">
+                      <span className="text-muted-foreground">{slotLabel}:</span>{" "}
+                      <span className="font-medium">{oc.name}</span>
                     </p>
-                    {oc.phone && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Phone className="h-3 w-3" /> {oc.phone}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No on-call assigned</p>
