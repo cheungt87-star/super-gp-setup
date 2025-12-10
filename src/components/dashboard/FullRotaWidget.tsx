@@ -397,7 +397,9 @@ export function FullRotaWidget() {
                     <td className="p-3 border border-border">
                       <div className="flex items-center gap-2 font-medium">
                         <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>{slot === 1 ? "On-Call" : `On-Call ${slot}`}</span>
+                        <span>
+                          {slot === 1 ? "On Call Manager" : slot === 2 ? "On Duty Doctor 1" : "On Duty Doctor 2"}
+                        </span>
                       </div>
                     </td>
                     {openDays.map(day => {
