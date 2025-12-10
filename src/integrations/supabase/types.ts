@@ -1019,6 +1019,7 @@ export type Database = {
           primary_site_id: string
           registration_completed: boolean
           role: string
+          secondary_roles: Json
           site_name: string
           working_days: Json
         }[]

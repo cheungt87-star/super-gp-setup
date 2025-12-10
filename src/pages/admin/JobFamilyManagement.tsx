@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { FolderTree, Plus, Pencil, Trash2, Loader2, X, ChevronDown, ChevronRight, ArrowRight } from "lucide-react";
+import { FolderTree, Plus, Pencil, Trash2, Loader2, X, ChevronDown, ChevronRight, ArrowRight, Award } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,12 +45,19 @@ interface JobFamily {
   job_titles: JobTitle[];
 }
 
+interface SecondaryRole {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
 const JobFamilyManagement = () => {
   const { toast } = useToast();
   const { organisationId } = useOrganisation();
 
   const [jobFamilies, setJobFamilies] = useState<JobFamily[]>([]);
   const [unassignedTitles, setUnassignedTitles] = useState<JobTitle[]>([]);
+  const [secondaryRoles, setSecondaryRoles] = useState<SecondaryRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -81,10 +88,19 @@ const JobFamilyManagement = () => {
   const [deleteFamilyId, setDeleteFamilyId] = useState<string | null>(null);
   const [deleteTitleId, setDeleteTitleId] = useState<string | null>(null);
 
+  // Secondary roles state
+  const [showAddSecondaryRoleForm, setShowAddSecondaryRoleForm] = useState(false);
+  const [newSecondaryRoleName, setNewSecondaryRoleName] = useState("");
+  const [newSecondaryRoleDescription, setNewSecondaryRoleDescription] = useState("");
+  const [editingSecondaryRoleId, setEditingSecondaryRoleId] = useState<string | null>(null);
+  const [editSecondaryRoleName, setEditSecondaryRoleName] = useState("");
+  const [editSecondaryRoleDescription, setEditSecondaryRoleDescription] = useState("");
+  const [deleteSecondaryRoleId, setDeleteSecondaryRoleId] = useState<string | null>(null);
+
   const fetchData = useCallback(async () => {
     if (!organisationId) return;
 
-    const [familiesRes, titlesRes] = await Promise.all([
+    const [familiesRes, titlesRes, secondaryRolesRes] = await Promise.all([
       supabase
         .from("job_families")
         .select("id, name, description")
@@ -93,6 +109,11 @@ const JobFamilyManagement = () => {
       supabase
         .from("job_titles")
         .select("id, name, description, job_family_id")
+        .eq("organisation_id", organisationId)
+        .order("name"),
+      supabase
+        .from("secondary_roles" as any)
+        .select("id, name, description")
         .eq("organisation_id", organisationId)
         .order("name"),
     ]);
@@ -129,6 +150,7 @@ const JobFamilyManagement = () => {
 
     setJobFamilies(familiesWithTitles);
     setUnassignedTitles(unassigned);
+    setSecondaryRoles((secondaryRolesRes.data as any[]) || []);
     
     // Auto-expand all families on first load
     if (expandedFamilies.size === 0) {
@@ -319,7 +341,81 @@ const JobFamilyManagement = () => {
     }
   };
 
-  const renderTitleRow = (title: JobTitle) => {
+  // Secondary Role CRUD
+  const handleAddSecondaryRole = async () => {
+    if (!newSecondaryRoleName.trim() || !organisationId) return;
+
+    setSaving(true);
+    const { error } = await supabase.from("secondary_roles" as any).insert({
+      name: newSecondaryRoleName.trim(),
+      description: newSecondaryRoleDescription.trim() || null,
+      organisation_id: organisationId,
+    } as any);
+    setSaving(false);
+
+    if (error) {
+      toast({
+        title: error.code === "23505" ? "Duplicate secondary role" : "Error adding secondary role",
+        description: error.code === "23505" ? "A secondary role with this name already exists" : error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({ title: "Secondary role added" });
+    setNewSecondaryRoleName("");
+    setNewSecondaryRoleDescription("");
+    setShowAddSecondaryRoleForm(false);
+    fetchData();
+  };
+
+  const startEditSecondaryRole = (role: SecondaryRole) => {
+    setEditingSecondaryRoleId(role.id);
+    setEditSecondaryRoleName(role.name);
+    setEditSecondaryRoleDescription(role.description || "");
+  };
+
+  const handleSaveEditSecondaryRole = async () => {
+    if (!editSecondaryRoleName.trim() || !editingSecondaryRoleId) return;
+
+    setSaving(true);
+    const { error } = await supabase
+      .from("secondary_roles" as any)
+      .update({
+        name: editSecondaryRoleName.trim(),
+        description: editSecondaryRoleDescription.trim() || null,
+      } as any)
+      .eq("id", editingSecondaryRoleId);
+    setSaving(false);
+
+    if (error) {
+      toast({
+        title: error.code === "23505" ? "Duplicate secondary role" : "Error updating",
+        description: error.code === "23505" ? "A secondary role with this name already exists" : error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({ title: "Secondary role updated" });
+    setEditingSecondaryRoleId(null);
+    fetchData();
+  };
+
+  const handleDeleteSecondaryRole = async () => {
+    if (!deleteSecondaryRoleId) return;
+
+    const { error } = await supabase.from("secondary_roles" as any).delete().eq("id", deleteSecondaryRoleId);
+
+    if (error) {
+      toast({ title: "Error deleting secondary role", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Secondary role deleted" });
+      fetchData();
+    }
+    setDeleteSecondaryRoleId(null);
+  };
+
     if (editingTitleId === title.id) {
       return (
         <div key={title.id} className="flex items-center gap-2 py-2 px-3 bg-muted/50 rounded-md">
@@ -603,6 +699,118 @@ const JobFamilyManagement = () => {
         </CardContent>
       </Card>
 
+      {/* Secondary Roles Section */}
+      <Card className="animate-fade-in">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-violet-500/10 flex items-center justify-center">
+                <Award className="h-5 w-5 text-violet-600" />
+              </div>
+              <div>
+                <CardTitle>Secondary Roles</CardTitle>
+                <CardDescription>
+                  Lead roles that can be assigned to any user across all sites
+                </CardDescription>
+              </div>
+            </div>
+            {!showAddSecondaryRoleForm && (
+              <Button onClick={() => setShowAddSecondaryRoleForm(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Role
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Add Secondary Role Form */}
+          {showAddSecondaryRoleForm && (
+            <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium">New Secondary Role</h3>
+                <Button variant="ghost" size="icon" onClick={() => setShowAddSecondaryRoleForm(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="space-y-3">
+                <Input
+                  placeholder="Role name (e.g., Surgery Lead, QI Lead)"
+                  value={newSecondaryRoleName}
+                  onChange={(e) => setNewSecondaryRoleName(e.target.value)}
+                />
+                <Textarea
+                  placeholder="Description (optional)"
+                  value={newSecondaryRoleDescription}
+                  onChange={(e) => setNewSecondaryRoleDescription(e.target.value)}
+                  rows={2}
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setShowAddSecondaryRoleForm(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleAddSecondaryRole} disabled={saving || !newSecondaryRoleName.trim()}>
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Add
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Secondary Roles List */}
+          {secondaryRoles.length === 0 && !showAddSecondaryRoleForm ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Award className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>No secondary roles yet</p>
+              <p className="text-sm">Add roles like "Surgery Lead" or "QI Lead"</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {secondaryRoles.map((role) => (
+                editingSecondaryRoleId === role.id ? (
+                  <div key={role.id} className="flex items-center gap-2 py-2 px-3 bg-muted/50 rounded-md">
+                    <Input
+                      value={editSecondaryRoleName}
+                      onChange={(e) => setEditSecondaryRoleName(e.target.value)}
+                      placeholder="Role name"
+                      className="flex-1"
+                    />
+                    <Button size="sm" variant="ghost" onClick={() => setEditingSecondaryRoleId(null)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" onClick={handleSaveEditSecondaryRole} disabled={saving || !editSecondaryRoleName.trim()}>
+                      Save
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    key={role.id}
+                    className="flex items-center justify-between py-2 px-3 hover:bg-muted/50 rounded-md group border"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="bg-violet-100 text-violet-700">
+                        {role.name}
+                      </Badge>
+                      {role.description && (
+                        <span className="text-sm text-muted-foreground">{role.description}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditSecondaryRole(role)}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteSecondaryRoleId(role.id)}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                )
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Delete Family Dialog */}
       <AlertDialog open={!!deleteFamilyId} onOpenChange={(open) => !open && setDeleteFamilyId(null)}>
         <AlertDialogContent>
@@ -616,6 +824,27 @@ const JobFamilyManagement = () => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteFamily}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Secondary Role Dialog */}
+      <AlertDialog open={!!deleteSecondaryRoleId} onOpenChange={(open) => !open && setDeleteSecondaryRoleId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Secondary Role</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this secondary role? Users with this role will have it removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSecondaryRole}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
