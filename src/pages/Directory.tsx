@@ -57,11 +57,13 @@ export default function Directory() {
   const [users, setUsers] = useState<User[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
+  const [secondaryRoles, setSecondaryRoles] = useState<SecondaryRole[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [jobTitleFilter, setJobTitleFilter] = useState<string>("all");
   const [siteFilter, setSiteFilter] = useState<string>("all");
+  const [secondaryRoleFilter, setSecondaryRoleFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<"name" | "job_title" | "site">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
@@ -76,10 +78,11 @@ export default function Directory() {
       
       setLoading(true);
       
-      const [usersResult, sitesResult, jobTitlesResult] = await Promise.all([
+      const [usersResult, sitesResult, jobTitlesResult, secondaryRolesResult] = await Promise.all([
         supabase.rpc("get_organisation_users", { p_organisation_id: organisationId }),
         supabase.from("sites").select("id, name").eq("organisation_id", organisationId).eq("is_active", true).order("name"),
         supabase.from("job_titles").select("id, name").eq("organisation_id", organisationId).order("name"),
+        supabase.from("secondary_roles").select("id, name").eq("organisation_id", organisationId).order("name"),
       ]);
 
       if (usersResult.data) {
@@ -93,6 +96,7 @@ export default function Directory() {
       }
       if (sitesResult.data) setSites(sitesResult.data);
       if (jobTitlesResult.data) setJobTitles(jobTitlesResult.data);
+      if (secondaryRolesResult.data) setSecondaryRoles(secondaryRolesResult.data);
       
       setLoading(false);
     };
@@ -109,6 +113,12 @@ export default function Directory() {
 
     if (siteFilter && siteFilter !== "all") {
       result = result.filter(u => u.primary_site_id === siteFilter);
+    }
+
+    if (secondaryRoleFilter && secondaryRoleFilter !== "all") {
+      result = result.filter(u => 
+        u.secondary_roles.some(role => role.id === secondaryRoleFilter)
+      );
     }
 
     if (searchQuery) {
@@ -144,7 +154,7 @@ export default function Directory() {
     });
 
     return result;
-  }, [users, jobTitleFilter, siteFilter, searchQuery, sortField, sortDirection]);
+  }, [users, jobTitleFilter, siteFilter, secondaryRoleFilter, searchQuery, sortField, sortDirection]);
 
   const parseWorkingDays = (wd: Json | null): WorkingDays => {
     const defaultDays = { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false };
@@ -211,6 +221,18 @@ export default function Directory() {
             <SelectItem value="all">All Sites</SelectItem>
             {sites.map((site) => (
               <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={secondaryRoleFilter} onValueChange={setSecondaryRoleFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All Secondary Roles" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Secondary Roles</SelectItem>
+            {secondaryRoles.map((role) => (
+              <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
