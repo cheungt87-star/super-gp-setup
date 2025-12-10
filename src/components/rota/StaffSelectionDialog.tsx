@@ -338,7 +338,7 @@ export const StaffSelectionDialog = ({
                 <div>
                   <Label className="text-xs text-muted-foreground mb-1.5 block">Site</Label>
                   <Select value={selectedSiteId} onValueChange={(v) => handleFilterChange('site', v)}>
-                    <SelectTrigger className="h-10">
+                    <SelectTrigger className="h-10 px-3">
                       <SelectValue placeholder="Select site" />
                     </SelectTrigger>
                     <SelectContent>
@@ -354,7 +354,7 @@ export const StaffSelectionDialog = ({
                   <div>
                     <Label className="text-xs text-muted-foreground mb-1.5 block">Job Family</Label>
                     <Select value={selectedJobFamilyId} onValueChange={(v) => handleFilterChange('jobFamily', v)}>
-                      <SelectTrigger className="h-10">
+                      <SelectTrigger className="h-10 px-3">
                         <SelectValue placeholder="All" />
                       </SelectTrigger>
                       <SelectContent>
@@ -373,7 +373,7 @@ export const StaffSelectionDialog = ({
                 <div>
                   <Label className="text-xs text-muted-foreground mb-1.5 block">Job Title</Label>
                   <Select value={selectedJobTitleId} onValueChange={(v) => handleFilterChange('jobTitle', v)}>
-                    <SelectTrigger className="h-10">
+                    <SelectTrigger className="h-10 px-3">
                       <SelectValue placeholder="All" />
                     </SelectTrigger>
                     <SelectContent>
