@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input"; // Still used for external temp name
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { User, Clock, Sun, Moon, AlertTriangle, Check } from "lucide-react";
+import { User, Clock, Sun, Moon, AlertTriangle, Check, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
 import type { Database } from "@/integrations/supabase/types";
@@ -113,6 +113,7 @@ export const StaffSelectionDialog = ({
   const [isExternalTemp, setIsExternalTemp] = useState(false);
   const [externalTempName, setExternalTempName] = useState("");
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const hasFilters = sites && sites.length > 0 && currentSiteId;
 
@@ -169,6 +170,7 @@ export const StaffSelectionDialog = ({
       setIsExternalTemp(false);
       setExternalTempName("");
       setSelectedStaffId(null);
+      setSearchQuery("");
     } else {
       // Reset to current site when opening
       setSelectedSiteId(currentSiteId || "");
@@ -179,6 +181,7 @@ export const StaffSelectionDialog = ({
       setIsExternalTemp(false);
       setExternalTempName("");
       setSelectedStaffId(null);
+      setSearchQuery("");
       // Set default custom times to period boundaries
       if (periodConstraints) {
         setCustomStart(periodConstraints.min);
@@ -201,48 +204,15 @@ export const StaffSelectionDialog = ({
     return filteredJobTitles.map(jt => jt.id);
   }, [selectedJobFamilyId, filteredJobTitles]);
 
-  // Filter staff based on site, working day, job family, job title, and exclusions
+  // Filter staff based on site, working day, job family, job title, search query, and exclusions
   const filteredStaff = useMemo(() => {
-    // If no allStaff provided, use availableStaff directly (backward compatibility)
-    if (!allStaff || !hasFilters) {
-      // Simple filtering without site/working day if no enhanced filtering
-      return availableStaff.filter((s) => {
-        // Exclude already assigned users
-        if (excludeUserIds.includes(s.id)) return false;
-        
-        // If we have dayOfWeek, filter by working days
-        if (dayOfWeek) {
-          const worksDayKey = dayOfWeek.toLowerCase();
-          // If working_days is null or has no true values, treat as available any day
-          const hasConfiguredDays = s.working_days && Object.values(s.working_days).some(v => v === true);
-          if (hasConfiguredDays) {
-            const worksThisDay = s.working_days?.[worksDayKey] === true;
-            if (!worksThisDay) return false;
-          }
-        }
-        
-        // Filter by job family
-        if (jobTitleIdsInFamily && s.job_title_id && !jobTitleIdsInFamily.includes(s.job_title_id)) return false;
-        
-        // Filter by job title
-        if (selectedJobTitleId !== "all" && s.job_title_id !== selectedJobTitleId) return false;
-        
-        return true;
-      });
-    }
-    
-    // Enhanced filtering with site selection
-    // Filter allStaff by selected site
-    const staffPool = allStaff.filter((s: any) => s.primary_site_id === selectedSiteId);
-    
-    return staffPool.filter((s) => {
+    const applyCommonFilters = (s: StaffMember) => {
       // Exclude already assigned users
       if (excludeUserIds.includes(s.id)) return false;
       
-      // Filter by working day
+      // If we have dayOfWeek, filter by working days
       if (dayOfWeek) {
         const worksDayKey = dayOfWeek.toLowerCase();
-        // If working_days is null or has no true values, treat as available any day
         const hasConfiguredDays = s.working_days && Object.values(s.working_days).some(v => v === true);
         if (hasConfiguredDays) {
           const worksThisDay = s.working_days?.[worksDayKey] === true;
@@ -253,12 +223,29 @@ export const StaffSelectionDialog = ({
       // Filter by job family
       if (jobTitleIdsInFamily && s.job_title_id && !jobTitleIdsInFamily.includes(s.job_title_id)) return false;
       
-      // Filter by job title if selected
+      // Filter by job title
       if (selectedJobTitleId !== "all" && s.job_title_id !== selectedJobTitleId) return false;
       
+      // Search by name
+      if (searchQuery.trim()) {
+        const fullName = `${s.first_name || ""} ${s.last_name || ""}`.toLowerCase();
+        if (!fullName.includes(searchQuery.toLowerCase().trim())) {
+          return false;
+        }
+      }
+      
       return true;
-    });
-  }, [availableStaff, allStaff, selectedSiteId, currentSiteId, excludeUserIds, dayOfWeek, selectedJobTitleId, jobTitleIdsInFamily, hasFilters]);
+    };
+
+    // If no allStaff provided, use availableStaff directly (backward compatibility)
+    if (!allStaff || !hasFilters) {
+      return availableStaff.filter(applyCommonFilters);
+    }
+    
+    // Enhanced filtering with site selection
+    const staffPool = allStaff.filter((s: any) => s.primary_site_id === selectedSiteId);
+    return staffPool.filter(applyCommonFilters);
+  }, [availableStaff, allStaff, selectedSiteId, currentSiteId, excludeUserIds, dayOfWeek, selectedJobTitleId, jobTitleIdsInFamily, hasFilters, searchQuery]);
 
   // Reset selected staff when filters change
   const handleFilterChange = (filterType: 'site' | 'jobFamily' | 'jobTitle', value: string) => {
@@ -321,7 +308,7 @@ export const StaffSelectionDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[48rem] max-h-[90vh] flex flex-col">
         <DialogHeader className="pb-2">
           <DialogTitle className="flex items-center gap-2 text-lg">
             <ShiftIcon className={cn("h-5 w-5", shiftDisplay.color)} />
@@ -404,7 +391,17 @@ export const StaffSelectionDialog = ({
           ) : !isExternalTemp && (
             <div className="space-y-3">
               <Label className="text-sm text-muted-foreground">Select Staff</Label>
-              <ScrollArea className="h-[280px]">
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-10"
+                />
+              </div>
+              <ScrollArea className="h-[420px]">
                 <div className="space-y-2 pr-3">
                   {filteredStaff.map((staff) => {
                     const fullName = `${staff.first_name || ""} ${staff.last_name || ""}`.trim() || "Unknown";
