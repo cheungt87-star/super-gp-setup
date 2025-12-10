@@ -27,6 +27,7 @@ interface ShiftData {
   shift_date: string;
   shift_type: string;
   is_oncall: boolean;
+  oncall_slot: number | null;
   is_temp_staff: boolean;
   temp_confirmed: boolean;
   temp_staff_name: string | null;
@@ -161,6 +162,7 @@ export function FullRotaWidget() {
           shift_date,
           shift_type,
           is_oncall,
+          oncall_slot,
           is_temp_staff,
           temp_confirmed,
           temp_staff_name,
@@ -196,6 +198,7 @@ export function FullRotaWidget() {
             shift_date: shift.shift_date,
             shift_type: shift.shift_type,
             is_oncall: shift.is_oncall,
+            oncall_slot: shift.oncall_slot,
             is_temp_staff: shift.is_temp_staff,
             temp_confirmed: shift.temp_confirmed,
             temp_staff_name: shift.temp_staff_name,
@@ -388,26 +391,29 @@ export function FullRotaWidget() {
                 </tr>
               </thead>
               <tbody>
-                {/* On-Call Row */}
-                <tr className="bg-muted/10">
-                  <td className="p-3 border border-border">
-                    <div className="flex items-center gap-2 font-medium">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>On-Call</span>
-                    </div>
-                  </td>
-                  {openDays.map(day => (
-                    <td key={day.dateKey} className="p-3 border border-border text-center">
-                      <span className="text-green-700">
-                        {day.onCallShifts.length > 0 
-                          ? day.onCallShifts.map(s => formatStaffName(s)).reduce((prev, curr, i) => (
-                              <>{prev}{i > 0 && ", "}{curr}</>
-                            ), <></>) 
-                          : "-"}
-                      </span>
+                {/* On-Call Rows - 3 slots */}
+                {[1, 2, 3].map((slot) => (
+                  <tr key={`oncall-${slot}`} className="bg-muted/10">
+                    <td className="p-3 border border-border">
+                      <div className="flex items-center gap-2 font-medium">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span>{slot === 1 ? "On-Call" : `On-Call ${slot}`}</span>
+                      </div>
                     </td>
-                  ))}
-                </tr>
+                    {openDays.map(day => {
+                      const slotShifts = day.onCallShifts.filter(s => (s as any).oncall_slot === slot || (!s.hasOwnProperty('oncall_slot') && slot === 1));
+                      return (
+                        <td key={day.dateKey} className="p-3 border border-border text-center">
+                          <span className="text-green-700">
+                            {slotShifts.length > 0 
+                              ? slotShifts.map((s, i) => <div key={s.id}>{formatStaffName(s)}</div>)
+                              : "-"}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
 
                 {/* Room Rows */}
                 {Array.from(facilities.entries()).map(([roomId, roomName]) => (

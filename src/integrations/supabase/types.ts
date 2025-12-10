@@ -534,6 +534,7 @@ export type Database = {
           is_oncall: boolean
           is_temp_staff: boolean
           notes: string | null
+          oncall_slot: number | null
           organisation_id: string
           rota_week_id: string
           shift_date: string
@@ -552,6 +553,7 @@ export type Database = {
           is_oncall?: boolean
           is_temp_staff?: boolean
           notes?: string | null
+          oncall_slot?: number | null
           organisation_id: string
           rota_week_id: string
           shift_date: string
@@ -570,6 +572,7 @@ export type Database = {
           is_oncall?: boolean
           is_temp_staff?: boolean
           notes?: string | null
+          oncall_slot?: number | null
           organisation_id?: string
           rota_week_id?: string
           shift_date?: string

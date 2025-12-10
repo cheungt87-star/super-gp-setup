@@ -7,6 +7,7 @@ import { format, startOfWeek } from "date-fns";
 import { TaskWithDueDate } from "@/lib/taskUtils";
 
 interface OnCallInfo {
+  slot: number;
   name: string;
   phone: string | null;
   email: string;
@@ -25,7 +26,7 @@ interface YourDayCardProps {
 
 export function YourDayCard({ todayTasks }: YourDayCardProps) {
   const [loading, setLoading] = useState(true);
-  const [onCall, setOnCall] = useState<OnCallInfo | null>(null);
+  const [onCallList, setOnCallList] = useState<OnCallInfo[]>([]);
   const [shift, setShift] = useState<ShiftInfo | null>(null);
   const today = new Date();
 
@@ -60,35 +61,47 @@ export function YourDayCard({ todayTasks }: YourDayCardProps) {
         .maybeSingle();
 
       if (rotaWeek) {
-        // Fetch on-call for today
-        const { data: onCallShift } = await supabase
+        // Fetch all on-call shifts for today (up to 3 slots)
+        const { data: onCallShifts } = await supabase
           .from("rota_shifts")
           .select(`
             user_id,
             temp_staff_name,
             is_temp_staff,
+            oncall_slot,
             profiles!rota_shifts_user_id_fkey(first_name, last_name, phone, email)
           `)
           .eq("rota_week_id", rotaWeek.id)
           .eq("shift_date", todayStr)
           .eq("is_oncall", true)
-          .maybeSingle();
+          .order("oncall_slot");
 
-        if (onCallShift) {
-          if (onCallShift.is_temp_staff && onCallShift.temp_staff_name) {
-            setOnCall({
-              name: onCallShift.temp_staff_name,
+        if (onCallShifts && onCallShifts.length > 0) {
+          const onCallInfoList: OnCallInfo[] = onCallShifts.map((shift) => {
+            if (shift.is_temp_staff && shift.temp_staff_name) {
+              return {
+                slot: shift.oncall_slot || 1,
+                name: shift.temp_staff_name,
+                phone: null,
+                email: "-"
+              };
+            } else if (shift.profiles) {
+              const p = shift.profiles as any;
+              return {
+                slot: shift.oncall_slot || 1,
+                name: `${p.first_name || ""} ${p.last_name || ""}`.trim() || "Unknown",
+                phone: p.phone,
+                email: p.email
+              };
+            }
+            return {
+              slot: shift.oncall_slot || 1,
+              name: "Unknown",
               phone: null,
               email: "-"
-            });
-          } else if (onCallShift.profiles) {
-            const p = onCallShift.profiles as any;
-            setOnCall({
-              name: `${p.first_name || ""} ${p.last_name || ""}`.trim() || "Unknown",
-              phone: p.phone,
-              email: p.email
-            });
-          }
+            };
+          });
+          setOnCallList(onCallInfoList);
         }
 
         // Fetch user's shift for today
@@ -192,17 +205,21 @@ export function YourDayCard({ todayTasks }: YourDayCardProps) {
               <Phone className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">On-Call</span>
             </div>
-            {onCall ? (
-              <div className="space-y-1">
-                <p className="font-medium">{onCall.name}</p>
-                {onCall.phone && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Phone className="h-3 w-3" /> {onCall.phone}
-                  </p>
-                )}
-                <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Mail className="h-3 w-3" /> {onCall.email}
-                </p>
+            {onCallList.length > 0 ? (
+              <div className="space-y-3">
+                {onCallList.map((oc) => (
+                  <div key={oc.slot} className="space-y-1">
+                    <p className="font-medium text-sm">
+                      {oc.slot > 1 && <span className="text-muted-foreground">#{oc.slot}: </span>}
+                      {oc.name}
+                    </p>
+                    {oc.phone && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Phone className="h-3 w-3" /> {oc.phone}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No on-call assigned</p>
