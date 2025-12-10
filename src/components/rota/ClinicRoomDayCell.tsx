@@ -403,7 +403,12 @@ export const ClinicRoomDayCell = ({
           <div className="rounded-lg border overflow-hidden">
             {[1, 2, 3].map((slot) => {
               const slotShift = getOnCallShiftForSlot(slot);
-              const slotLabel = slot === 1 ? "On Call" : `On Call ${slot}`;
+              const slotLabels: Record<number, string> = {
+                1: "On Call Manager",
+                2: "On Duty Doctor 1",
+                3: "On Duty Doctor 2"
+              };
+              const slotLabel = slotLabels[slot];
               
               return (
                 <div 
