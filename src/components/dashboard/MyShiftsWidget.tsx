@@ -389,49 +389,59 @@ export const MyShiftsWidget = () => {
                   ) : day.shifts.length === 0 && day.onCallAssignments.length === 0 ? (
                     <span className="text-sm text-muted-foreground italic">Not working</span>
                   ) : (
-                    <div className="space-y-2">
-                      {/* On-Call assignments from rota_oncalls */}
-                      {day.onCallAssignments.map((oc) => (
-                        <div key={`oncall-${oc.slot}`} className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
-                            <Phone className="h-3 w-3 mr-1" />
-                            {oc.slotLabel}
-                          </Badge>
-                        </div>
-                      ))}
-                      {day.shifts.map((shift) => (
-                        <div key={shift.id} className="flex flex-wrap items-center gap-2">
-                          {/* On-Call badge - show prominently first */}
-                          {shift.isOnCall && (
-                            <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
+                    <div className="flex items-start justify-between gap-4">
+                      {/* Left side: Shifts */}
+                      <div className="flex-1 space-y-2">
+                        {day.shifts.length === 0 ? (
+                          <span className="text-sm text-muted-foreground italic">Not working</span>
+                        ) : (
+                          day.shifts.map((shift) => (
+                            <div key={shift.id} className="flex flex-wrap items-center gap-2">
+                              {/* On-Call badge - show prominently first */}
+                              {shift.isOnCall && (
+                                <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
+                                  <Phone className="h-3 w-3 mr-1" />
+                                  On-Call
+                                </Badge>
+                              )}
+                              {/* Facility/Room name if assigned */}
+                              {shift.facilityName && (
+                                <div className="flex items-center gap-1 text-sm">
+                                  <DoorOpen className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">{shift.facilityName}</span>
+                                </div>
+                              )}
+                              {/* Shift type badge - only show if has facility or not on-call-only */}
+                              {(shift.facilityName || !shift.isOnCall) && getShiftTypeBadge(shift.shiftType)}
+                              {/* Time display - only show if has facility or not on-call-only */}
+                              {(shift.facilityName || !shift.isOnCall) && (
+                                <span className="text-xs text-muted-foreground">
+                                  {shift.timeDisplay}
+                                </span>
+                              )}
+                              {/* Colleagues in same room */}
+                              {shift.colleagues.length > 0 && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground ml-2">
+                                  <Users className="h-3 w-3" />
+                                  <span>Also working: {shift.colleagues.join(", ")}</span>
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      
+                      {/* Right side: On-Call badges aligned to right border */}
+                      {day.onCallAssignments.length > 0 && (
+                        <div className="flex flex-col gap-1 items-end shrink-0">
+                          {day.onCallAssignments.map((oc) => (
+                            <Badge key={`oncall-${oc.slot}`} variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
                               <Phone className="h-3 w-3 mr-1" />
-                              On-Call
+                              {oc.slotLabel}
                             </Badge>
-                          )}
-                          {/* Facility/Room name if assigned */}
-                          {shift.facilityName && (
-                            <div className="flex items-center gap-1 text-sm">
-                              <DoorOpen className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">{shift.facilityName}</span>
-                            </div>
-                          )}
-                          {/* Shift type badge - only show if has facility or not on-call-only */}
-                          {(shift.facilityName || !shift.isOnCall) && getShiftTypeBadge(shift.shiftType)}
-                          {/* Time display - only show if has facility or not on-call-only */}
-                          {(shift.facilityName || !shift.isOnCall) && (
-                            <span className="text-xs text-muted-foreground">
-                              {shift.timeDisplay}
-                            </span>
-                          )}
-                          {/* Colleagues in same room */}
-                          {shift.colleagues.length > 0 && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground ml-2">
-                              <Users className="h-3 w-3" />
-                              <span>Also working: {shift.colleagues.join(", ")}</span>
-                            </div>
-                          )}
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
                 </div>
