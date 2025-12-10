@@ -18,17 +18,8 @@ interface JobTitlesStepProps {
   organisationId: string | null;
 }
 
-const DEFAULT_JOB_TITLES: JobTitle[] = [
-  { name: "GP Partner", description: "Senior GP with partnership stake" },
-  { name: "Salaried GP", description: "Full or part-time employed GP" },
-  { name: "Practice Manager", description: "Overall practice management" },
-  { name: "Practice Nurse", description: "Registered nurse" },
-  { name: "Healthcare Assistant", description: "Support clinical staff" },
-  { name: "Receptionist", description: "Front desk and admin" },
-];
-
 export const JobTitlesStep = ({ onNext, onBack, organisationId }: JobTitlesStepProps) => {
-  const [jobTitles, setJobTitles] = useState<JobTitle[]>(DEFAULT_JOB_TITLES);
+  const [jobTitles, setJobTitles] = useState<JobTitle[]>([{ name: "", description: "" }]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasExisting, setHasExisting] = useState(false);
@@ -133,7 +124,7 @@ export const JobTitlesStep = ({ onNext, onBack, organisationId }: JobTitlesStepP
           </div>
           <div>
             <CardTitle>Define job titles</CardTitle>
-            <CardDescription>We've added common roles. Edit or add more as needed.</CardDescription>
+            <CardDescription>Add job titles for your organisation. You can edit these later in admin settings.</CardDescription>
           </div>
         </div>
       </CardHeader>
