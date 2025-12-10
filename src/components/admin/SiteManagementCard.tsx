@@ -23,7 +23,11 @@ import {
 interface Site {
   id: string;
   name: string;
-  address: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  county: string | null;
+  postcode: string | null;
   email: string | null;
   phone: string | null;
   phone_ext: string | null;
@@ -77,7 +81,7 @@ export const SiteManagementCard = () => {
       supabase
         .from('sites')
         .select(`
-          id, name, address, email, phone, phone_ext, site_manager_id, is_active,
+          id, name, address_line_1, address_line_2, city, county, postcode, email, phone, phone_ext, site_manager_id, is_active,
           manager:profiles!site_manager_id(id, first_name, last_name)
         `)
         .eq('organisation_id', organisationId)
@@ -175,9 +179,14 @@ export const SiteManagementCard = () => {
           .from('sites')
           .update({
             name: data.name,
-            address: data.address || null,
+            address_line_1: data.address_line_1 || null,
+            address_line_2: data.address_line_2 || null,
+            city: data.city || null,
+            county: data.county || null,
+            postcode: data.postcode || null,
             email: data.email || null,
             phone: data.phone || null,
+            phone_ext: data.phone_ext || null,
             site_manager_id: data.site_manager_id || null,
           })
           .eq('id', selectedSite.id);
@@ -189,9 +198,14 @@ export const SiteManagementCard = () => {
           .from('sites')
           .insert({
             name: data.name,
-            address: data.address || null,
+            address_line_1: data.address_line_1 || null,
+            address_line_2: data.address_line_2 || null,
+            city: data.city || null,
+            county: data.county || null,
+            postcode: data.postcode || null,
             email: data.email || null,
             phone: data.phone || null,
+            phone_ext: data.phone_ext || null,
             site_manager_id: data.site_manager_id || null,
             organisation_id: organisationId,
           })

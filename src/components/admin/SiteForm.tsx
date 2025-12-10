@@ -31,14 +31,18 @@ import { OpeningHoursForm, OpeningHour } from "./OpeningHoursForm";
 
 const siteSchema = z.object({
   name: z.string().min(1, "Site name is required").max(100),
-  address: z.string().max(255).optional().or(z.literal("")),
+  address_line_1: z.string().min(1, "Address Line 1 is required").max(255),
+  address_line_2: z.string().max(255).optional().or(z.literal("")),
+  city: z.string().min(1, "City is required").max(100),
+  county: z.string().min(1, "County is required").max(100),
+  postcode: z.string().min(1, "Postcode is required").max(20),
   email: z.string().email("Invalid email").max(255).optional().or(z.literal("")),
   phone: z.string().max(20).optional().or(z.literal("")),
   phone_ext: z.string().max(10).optional().or(z.literal("")),
   site_manager_id: z.string().uuid().optional().nullable(),
 });
 
-type SiteFormData = z.infer<typeof siteSchema>;
+export type SiteFormData = z.infer<typeof siteSchema>;
 
 interface UserOption {
   id: string;
@@ -49,7 +53,11 @@ interface UserOption {
 interface Site {
   id: string;
   name: string;
-  address: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  county: string | null;
+  postcode: string | null;
   email: string | null;
   phone: string | null;
   phone_ext: string | null;
@@ -83,7 +91,11 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
     resolver: zodResolver(siteSchema),
     defaultValues: {
       name: "",
-      address: "",
+      address_line_1: "",
+      address_line_2: "",
+      city: "",
+      county: "",
+      postcode: "",
       email: "",
       phone: "",
       phone_ext: "",
@@ -95,7 +107,11 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
     if (site) {
       form.reset({
         name: site.name,
-        address: site.address || "",
+        address_line_1: site.address_line_1 || "",
+        address_line_2: site.address_line_2 || "",
+        city: site.city || "",
+        county: site.county || "",
+        postcode: site.postcode || "",
         email: site.email || "",
         phone: site.phone || "",
         phone_ext: site.phone_ext || "",
@@ -105,7 +121,11 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
     } else {
       form.reset({
         name: "",
-        address: "",
+        address_line_1: "",
+        address_line_2: "",
+        city: "",
+        county: "",
+        postcode: "",
         email: "",
         phone: "",
         phone_ext: "",
@@ -160,12 +180,26 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
 
             <FormField
               control={form.control}
-              name="address"
+              name="address_line_1"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address</FormLabel>
+                  <FormLabel>Address Line 1 *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. 123 High Street, London" {...field} />
+                    <Input placeholder="123 Main Street" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="address_line_2"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address Line 2</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Suite 100 (optional)" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -173,6 +207,50 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
             />
 
             <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="London" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="county"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>County *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Greater London" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="postcode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Postcode *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="SW1A 1AA" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="email"
@@ -186,7 +264,9 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
                   </FormItem>
                 )}
               />
+            </div>
 
+            <div className="grid grid-cols-[1fr_auto] gap-4">
               <FormField
                 control={form.control}
                 name="phone"

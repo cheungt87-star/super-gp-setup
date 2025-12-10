@@ -793,6 +793,10 @@ export type Database = {
       sites: {
         Row: {
           address: string | null
+          address_line_1: string | null
+          address_line_2: string | null
+          city: string | null
+          county: string | null
           created_at: string
           email: string | null
           id: string
@@ -801,11 +805,16 @@ export type Database = {
           organisation_id: string | null
           phone: string | null
           phone_ext: string | null
+          postcode: string | null
           site_manager_id: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          city?: string | null
+          county?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -814,11 +823,16 @@ export type Database = {
           organisation_id?: string | null
           phone?: string | null
           phone_ext?: string | null
+          postcode?: string | null
           site_manager_id?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          city?: string | null
+          county?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -827,6 +841,7 @@ export type Database = {
           organisation_id?: string | null
           phone?: string | null
           phone_ext?: string | null
+          postcode?: string | null
           site_manager_id?: string | null
           updated_at?: string
         }
