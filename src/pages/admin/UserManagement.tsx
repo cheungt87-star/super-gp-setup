@@ -15,6 +15,13 @@ import { InlineSelectCell } from "@/components/admin/InlineSelectCell";
 import { InlineWorkingDaysCell, WorkingDays } from "@/components/admin/InlineWorkingDaysCell";
 import { BulkEditBar } from "@/components/admin/BulkEditBar";
 import { AddUserDialog } from "@/components/admin/AddUserDialog";
+import { SecondaryRolesSelect } from "@/components/admin/SecondaryRolesSelect";
+import { Json } from "@/integrations/supabase/types";
+
+interface SecondaryRole {
+  id: string;
+  name: string;
+}
 
 interface OrgUser {
   id: string;
@@ -31,6 +38,7 @@ interface OrgUser {
   registration_completed: boolean;
   contracted_hours: number | null;
   working_days: WorkingDays | null;
+  secondary_roles: SecondaryRole[];
 }
 
 interface FilterOption {
@@ -50,6 +58,7 @@ const UserManagement = () => {
   const [users, setUsers] = useState<OrgUser[]>([]);
   const [jobTitles, setJobTitles] = useState<FilterOption[]>([]);
   const [sites, setSites] = useState<FilterOption[]>([]);
+  const [secondaryRoles, setSecondaryRoles] = useState<SecondaryRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   
@@ -64,6 +73,11 @@ const UserManagement = () => {
   
   // Bulk selection
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+
+  const parseSecondaryRoles = (roles: Json | null): SecondaryRole[] => {
+    if (!roles || !Array.isArray(roles)) return [];
+    return roles.map((r: any) => ({ id: r.id, name: r.name }));
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -85,21 +99,24 @@ const UserManagement = () => {
       return;
     }
     
-    const [usersResult, jobTitlesResult, sitesResult] = await Promise.all([
+    const [usersResult, jobTitlesResult, sitesResult, secondaryRolesResult] = await Promise.all([
       supabase.rpc('get_organisation_users', { p_organisation_id: organisationId }),
       supabase.from('job_titles').select('id, name').eq('organisation_id', organisationId),
       supabase.from('sites').select('id, name').eq('organisation_id', organisationId).eq('is_active', true),
+      supabase.from('secondary_roles' as any).select('id, name').eq('organisation_id', organisationId).order('name'),
     ]);
     
     if (usersResult.data) {
       const mappedUsers: OrgUser[] = usersResult.data.map((u: any) => ({
         ...u,
         working_days: u.working_days as WorkingDays | null,
+        secondary_roles: parseSecondaryRoles(u.secondary_roles),
       }));
       setUsers(mappedUsers);
     }
     if (jobTitlesResult.data) setJobTitles(jobTitlesResult.data);
     if (sitesResult.data) setSites(sitesResult.data);
+    if (secondaryRolesResult.data) setSecondaryRoles((secondaryRolesResult.data as any[]).map((r: any) => ({ id: r.id, name: r.name })));
     
     setLoading(false);
   }, [organisationId]);
@@ -432,6 +449,7 @@ const UserManagement = () => {
                 </TableHead>
                 <TableHead><SortableHeader field="name">Contact</SortableHeader></TableHead>
                 <TableHead><SortableHeader field="job_title">Job Title</SortableHeader></TableHead>
+                <TableHead>Secondary Roles</TableHead>
                 <TableHead><SortableHeader field="site">Site</SortableHeader></TableHead>
                 <TableHead><SortableHeader field="hours">Hours</SortableHeader></TableHead>
                 <TableHead>Working Days</TableHead>
@@ -442,7 +460,7 @@ const UserManagement = () => {
             <TableBody>
               {filteredAndSortedUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -484,6 +502,21 @@ const UserManagement = () => {
                         options={jobTitles}
                         onSave={async (val) => updateUserField(user.id, "job_title_id", val)}
                       />
+                    </TableCell>
+                    <TableCell>
+                      {organisationId && (
+                        <SecondaryRolesSelect
+                          userId={user.id}
+                          organisationId={organisationId}
+                          currentRoles={user.secondary_roles}
+                          availableRoles={secondaryRoles}
+                          onUpdate={(newRoles) => {
+                            setUsers(users.map(u => 
+                              u.id === user.id ? { ...u, secondary_roles: newRoles } : u
+                            ));
+                          }}
+                        />
+                      )}
                     </TableCell>
                     <TableCell>
                       <InlineSelectCell

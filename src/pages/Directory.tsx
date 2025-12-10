@@ -20,6 +20,11 @@ interface WorkingDays {
   sun: boolean;
 }
 
+interface SecondaryRole {
+  id: string;
+  name: string;
+}
+
 interface User {
   id: string;
   email: string;
@@ -31,6 +36,7 @@ interface User {
   primary_site_id: string | null;
   site_name: string | null;
   working_days: Json | null;
+  secondary_roles: SecondaryRole[];
 }
 
 interface Site {
@@ -59,6 +65,11 @@ export default function Directory() {
   const [sortField, setSortField] = useState<"name" | "job_title" | "site">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
+  const parseSecondaryRoles = (roles: Json | null): SecondaryRole[] => {
+    if (!roles || !Array.isArray(roles)) return [];
+    return roles.map((r: any) => ({ id: r.id, name: r.name }));
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (!organisationId) return;
@@ -72,7 +83,13 @@ export default function Directory() {
       ]);
 
       if (usersResult.data) {
-        setUsers(usersResult.data.filter(u => u.is_active));
+        const mappedUsers: User[] = usersResult.data
+          .filter((u: any) => u.is_active)
+          .map((u: any) => ({
+            ...u,
+            secondary_roles: parseSecondaryRoles(u.secondary_roles),
+          }));
+        setUsers(mappedUsers);
       }
       if (sitesResult.data) setSites(sitesResult.data);
       if (jobTitlesResult.data) setJobTitles(jobTitlesResult.data);
@@ -86,17 +103,14 @@ export default function Directory() {
   const filteredAndSortedUsers = useMemo(() => {
     let result = [...users];
 
-    // Filter by job title
     if (jobTitleFilter && jobTitleFilter !== "all") {
       result = result.filter(u => u.job_title_id === jobTitleFilter);
     }
 
-    // Filter by site
     if (siteFilter && siteFilter !== "all") {
       result = result.filter(u => u.primary_site_id === siteFilter);
     }
 
-    // Search by name
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(u =>
@@ -106,7 +120,6 @@ export default function Directory() {
       );
     }
 
-    // Sort
     result.sort((a, b) => {
       let aVal = "";
       let bVal = "";
@@ -132,15 +145,6 @@ export default function Directory() {
 
     return result;
   }, [users, jobTitleFilter, siteFilter, searchQuery, sortField, sortDirection]);
-
-  const handleSortChange = (field: "name" | "job_title" | "site") => {
-    if (sortField === field) {
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  };
 
   const parseWorkingDays = (wd: Json | null): WorkingDays => {
     const defaultDays = { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false };
@@ -257,11 +261,22 @@ export default function Directory() {
                     <h3 className="font-semibold text-lg">
                       {user.first_name || ""} {user.last_name || ""}
                     </h3>
-                    {user.job_title_name && (
-                      <Badge className={`mt-1 ${jobTitleColor}`}>
-                        {user.job_title_name}
-                      </Badge>
-                    )}
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {user.job_title_name && (
+                        <Badge className={jobTitleColor}>
+                          {user.job_title_name}
+                        </Badge>
+                      )}
+                      {user.secondary_roles.map((role) => (
+                        <Badge
+                          key={role.id}
+                          variant="secondary"
+                          className="bg-violet-100 text-violet-700"
+                        >
+                          {role.name}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Contact Info */}
