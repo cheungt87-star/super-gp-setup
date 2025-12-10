@@ -43,7 +43,7 @@ interface Assignee {
 type SortField = "name" | "site_name" | "assignee_name" | "current_due_date" | "status";
 type SortDirection = "asc" | "desc";
 
-const TaskAudit = () => {
+const TaskAuditTrail = () => {
   const { organisationId } = useOrganisation();
   
   const [tasks, setTasks] = useState<TaskAuditRow[]>([]);
@@ -320,7 +320,7 @@ const TaskAudit = () => {
         <CardHeader>
           <div className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5" />
-            <CardTitle>Task Audit</CardTitle>
+            <CardTitle>Audit Trail</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="flex justify-center py-8">
@@ -336,7 +336,7 @@ const TaskAudit = () => {
         <div className="flex items-center gap-2">
           <ClipboardList className="h-5 w-5" />
           <div>
-            <CardTitle>Task Audit</CardTitle>
+            <CardTitle>Audit Trail</CardTitle>
             <CardDescription>
               Track and audit all workflow tasks across your organisation
             </CardDescription>
@@ -472,4 +472,4 @@ const TaskAudit = () => {
   );
 };
 
-export default TaskAudit;
+export default TaskAuditTrail;
