@@ -154,6 +154,30 @@ export function FullRotaWidget() {
 
       setRotaExists(true);
 
+      // Get organization ID for on-calls
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("organisation_id")
+        .eq("primary_site_id", selectedSiteId)
+        .limit(1)
+        .maybeSingle();
+
+      // Fetch on-calls from organization-wide table
+      const weekDates = Array.from({ length: 7 }, (_, i) => format(addDays(weekStart, i), "yyyy-MM-dd"));
+      const { data: oncallsData } = await supabase
+        .from("rota_oncalls")
+        .select(`
+          oncall_date,
+          oncall_slot,
+          user_id,
+          is_temp_staff,
+          temp_confirmed,
+          temp_staff_name,
+          profiles(first_name, last_name, job_titles(name))
+        `)
+        .eq("organisation_id", profile?.organisation_id || "")
+        .in("oncall_date", weekDates);
+
       // Get shifts with user details and job titles
       const { data: shiftsData } = await supabase
         .from("rota_shifts")
@@ -161,8 +185,6 @@ export function FullRotaWidget() {
           id,
           shift_date,
           shift_type,
-          is_oncall,
-          oncall_slot,
           is_temp_staff,
           temp_confirmed,
           temp_staff_name,
@@ -183,6 +205,7 @@ export function FullRotaWidget() {
         const hours = hoursMap.get(dayOfWeek) || null;
 
         const dayShifts = (shiftsData || []).filter(s => s.shift_date === dateKey);
+        const dayOncalls = (oncallsData || []).filter(oc => oc.oncall_date === dateKey);
         const onCallShifts: ShiftData[] = [];
         const roomShifts = new Map<string, { am: ShiftData[]; pm: ShiftData[]; fullDay: ShiftData[] }>();
 
@@ -191,14 +214,40 @@ export function FullRotaWidget() {
           roomShifts.set(id, { am: [], pm: [], fullDay: [] });
         });
 
+        // Process on-calls from rota_oncalls table
+        dayOncalls.forEach(oc => {
+          const profileData = oc.profiles as { first_name: string | null; last_name: string | null; job_titles: { name: string } | null } | null;
+          onCallShifts.push({
+            id: `oncall-${oc.oncall_date}-${oc.oncall_slot}`,
+            shift_date: oc.oncall_date,
+            shift_type: "full_day",
+            is_oncall: true,
+            oncall_slot: oc.oncall_slot,
+            is_temp_staff: oc.is_temp_staff,
+            temp_confirmed: oc.temp_confirmed,
+            temp_staff_name: oc.temp_staff_name,
+            custom_start_time: null,
+            custom_end_time: null,
+            facility_id: null,
+            user_id: oc.user_id,
+            staff_name: oc.is_temp_staff && !oc.user_id
+              ? oc.temp_staff_name
+              : profileData
+                ? `${profileData.first_name || ""} ${profileData.last_name || ""}`.trim()
+                : null,
+            job_title_name: profileData?.job_titles?.name || null
+          });
+        });
+
+        // Process room shifts
         dayShifts.forEach(shift => {
           const profileData = shift.profiles as { first_name: string | null; last_name: string | null; job_titles: { name: string } | null } | null;
           const shiftData: ShiftData = {
             id: shift.id,
             shift_date: shift.shift_date,
             shift_type: shift.shift_type,
-            is_oncall: shift.is_oncall,
-            oncall_slot: shift.oncall_slot,
+            is_oncall: false,
+            oncall_slot: null,
             is_temp_staff: shift.is_temp_staff,
             temp_confirmed: shift.temp_confirmed,
             temp_staff_name: shift.temp_staff_name,
@@ -214,9 +263,7 @@ export function FullRotaWidget() {
             job_title_name: profileData?.job_titles?.name || null
           };
 
-          if (shift.is_oncall && !shift.facility_id) {
-            onCallShifts.push(shiftData);
-          } else if (shift.facility_id && roomShifts.has(shift.facility_id)) {
+          if (shift.facility_id && roomShifts.has(shift.facility_id)) {
             const room = roomShifts.get(shift.facility_id)!;
             if (shift.shift_type === "am") {
               room.am.push(shiftData);

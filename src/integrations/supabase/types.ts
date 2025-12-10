@@ -409,6 +409,53 @@ export type Database = {
           },
         ]
       }
+      rota_oncalls: {
+        Row: {
+          created_at: string
+          id: string
+          is_temp_staff: boolean
+          oncall_date: string
+          oncall_slot: number
+          organisation_id: string
+          temp_confirmed: boolean
+          temp_staff_name: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_temp_staff?: boolean
+          oncall_date: string
+          oncall_slot?: number
+          organisation_id: string
+          temp_confirmed?: boolean
+          temp_staff_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_temp_staff?: boolean
+          oncall_date?: string
+          oncall_slot?: number
+          organisation_id?: string
+          temp_confirmed?: boolean
+          temp_staff_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rota_oncalls_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rota_rule_overrides: {
         Row: {
           created_at: string

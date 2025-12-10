@@ -12,6 +12,7 @@ import { useOrganisation } from "@/contexts/OrganisationContext";
 import { useRotaSchedule, RotaShift } from "@/hooks/useRotaSchedule";
 import { useRotaRules } from "@/hooks/useRotaRules";
 import { useRotaDayConfirmations, DayOverride } from "@/hooks/useRotaDayConfirmations";
+import { useRotaOncalls, RotaOncall } from "@/hooks/useRotaOncalls";
 import { WeekSelector } from "./WeekSelector";
 import { ClinicRoomDayCell } from "./ClinicRoomDayCell";
 import { RotaPreviewDialog } from "./RotaPreviewDialog";
@@ -109,6 +110,22 @@ export const RotaScheduleTab = () => {
       organisationId,
       weekStart: weekStartStr,
     });
+
+  // Organization-wide on-calls hook
+  const {
+    oncalls,
+    loading: loadingOncalls,
+    saving: savingOncalls,
+    addOncall,
+    deleteOncall,
+    deleteOncallsForDay,
+    copyOncallsFromDay,
+    getOncallsForDate,
+    getOncallForSlot,
+  } = useRotaOncalls({
+    organisationId,
+    weekStart: weekStartStr,
+  });
 
   // Day confirmations hook
   const {
@@ -299,22 +316,55 @@ export const RotaScheduleTab = () => {
     return byDay;
   }, [openingHours]);
 
-  const handleAddShift = async (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string, oncallSlot?: number) => {
-    const dayShifts = shiftsByDate[dateKey] || [];
-    
-    // If adding on-call, check if there's already one for this slot
-    if (isOnCall) {
-      const slot = oncallSlot || 1;
-      const existingOnCall = dayShifts.find((s) => s.is_oncall && s.oncall_slot === slot);
-      if (existingOnCall) {
-        toast({
-          title: "On-call already assigned",
-          description: `Remove the current on-call assignment from slot ${slot} first`,
-          variant: "destructive",
-        });
-        return;
-      }
+  // Handle adding on-call (organization-wide)
+  const handleAddOncall = async (
+    dateKey: string,
+    slot: number,
+    userId: string | null,
+    isTempStaff?: boolean,
+    tempConfirmed?: boolean,
+    tempStaffName?: string
+  ) => {
+    const existingOncall = getOncallForSlot(dateKey, slot);
+    if (existingOncall) {
+      toast({
+        title: "On-call already assigned",
+        description: `Remove the current on-call assignment from slot ${slot} first`,
+        variant: "destructive",
+      });
+      return;
     }
+
+    const result = await addOncall(dateKey, slot, userId, isTempStaff || false, tempConfirmed || false, tempStaffName);
+    if (result) {
+      const slotLabels: Record<number, string> = { 1: "On Call Manager", 2: "On Duty Doctor 1", 3: "On Duty Doctor 2" };
+      const staffLabel = tempStaffName || "Staff member";
+      toast({
+        title: "On-call assigned",
+        description: `${staffLabel} assigned to ${slotLabels[slot]}`,
+      });
+    }
+  };
+
+  // Handle deleting on-call
+  const handleDeleteOncall = async (dateKey: string, slot: number) => {
+    const success = await deleteOncall(dateKey, slot);
+    if (success) {
+      toast({
+        title: "On-call removed",
+        description: "On-call assignment has been removed",
+      });
+    }
+  };
+
+  const handleAddShift = async (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string, oncallSlot?: number) => {
+    // On-calls are now handled separately via handleAddOncall
+    if (isOnCall) {
+      await handleAddOncall(dateKey, oncallSlot || 1, userId, isTempStaff, tempConfirmed, tempStaffName);
+      return;
+    }
+
+    const dayShifts = shiftsByDate[dateKey] || [];
 
     // For facility-based scheduling, check conflicts within the same facility (skip for external temps with no userId)
     if (facilityId && userId) {
@@ -353,13 +403,13 @@ export const RotaScheduleTab = () => {
       }
     }
 
-    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, isOnCall, facilityId, isTempStaff || false, tempConfirmed || false, tempStaffName, oncallSlot);
+    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, false, facilityId, isTempStaff || false, tempConfirmed || false, tempStaffName);
 
     if (result) {
-      const shiftLabel = isOnCall ? "On-call" : shiftType === "full_day" ? "Full Day" : shiftType.toUpperCase();
+      const shiftLabel = shiftType === "full_day" ? "Full Day" : shiftType.toUpperCase();
       const staffLabel = tempStaffName ? tempStaffName : "Staff member";
       toast({
-        title: isOnCall ? "On-call assigned" : "Shift added",
+        title: "Shift added",
         description: `${staffLabel} has been assigned to ${shiftLabel} shift${(isTempStaff || tempStaffName) ? " (Temp)" : ""}`,
       });
     }
@@ -399,8 +449,9 @@ export const RotaScheduleTab = () => {
   const handleRepeatPreviousDay = async (dateKey: string, previousDateKey: string) => {
     const previousShifts = shiftsByDate[previousDateKey] || [];
     const currentShifts = shiftsByDate[dateKey] || [];
+    const previousOncalls = getOncallsForDate(previousDateKey);
 
-    if (previousShifts.length === 0) {
+    if (previousShifts.length === 0 && previousOncalls.length === 0) {
       toast({
         title: "No shifts to copy",
         description: "The previous day has no shifts assigned",
@@ -413,8 +464,14 @@ export const RotaScheduleTab = () => {
       await deleteShift(shift.id);
     }
 
-    // Copy all shifts from previous day
-    let copiedCount = 0;
+    // Copy on-calls (organization-wide)
+    let oncallsCopied = 0;
+    if (previousOncalls.length > 0) {
+      oncallsCopied = await copyOncallsFromDay(previousDateKey, dateKey);
+    }
+
+    // Copy all room shifts from previous day (excluding on-calls which are now separate)
+    let shiftsCopied = 0;
     for (const shift of previousShifts) {
       const result = await addShift(
         shift.user_id,
@@ -422,26 +479,27 @@ export const RotaScheduleTab = () => {
         shift.shift_type,
         shift.custom_start_time || undefined,
         shift.custom_end_time || undefined,
-        shift.is_oncall,
+        false,
         shift.facility_id || undefined,
         shift.is_temp_staff,
         shift.temp_confirmed,
-        shift.temp_staff_name || undefined,
-        shift.oncall_slot || undefined
+        shift.temp_staff_name || undefined
       );
-      if (result) copiedCount++;
+      if (result) shiftsCopied++;
     }
 
+    const totalCopied = shiftsCopied + oncallsCopied;
     toast({
-      title: `Copied ${copiedCount} shift${copiedCount !== 1 ? "s" : ""}`,
-      description: "Previous day's schedule copied (replaced existing shifts)",
+      title: `Copied ${totalCopied} assignment${totalCopied !== 1 ? "s" : ""}`,
+      description: "Previous day's schedule copied (replaced existing)",
     });
   };
 
   const handleCopyToWholeWeek = async (sourceDateKey: string) => {
     const sourceShifts = shiftsByDate[sourceDateKey] || [];
+    const sourceOncalls = getOncallsForDate(sourceDateKey);
 
-    if (sourceShifts.length === 0) {
+    if (sourceShifts.length === 0 && sourceOncalls.length === 0) {
       toast({
         title: "No shifts to copy",
         description: "This day has no shifts assigned",
@@ -449,7 +507,8 @@ export const RotaScheduleTab = () => {
       return;
     }
 
-    let totalCopied = 0;
+    let totalShiftsCopied = 0;
+    let totalOncallsCopied = 0;
 
     // Copy to all remaining open days in the week
     for (let i = 1; i < weekDays.length; i++) {
@@ -468,7 +527,13 @@ export const RotaScheduleTab = () => {
         await deleteShift(shift.id);
       }
 
-      // Copy all shifts from source day
+      // Copy on-calls (organization-wide)
+      if (sourceOncalls.length > 0) {
+        const oncallsCopied = await copyOncallsFromDay(sourceDateKey, targetDateKey);
+        totalOncallsCopied += oncallsCopied;
+      }
+
+      // Copy all room shifts from source day
       for (const shift of sourceShifts) {
         const result = await addShift(
           shift.user_id,
@@ -476,20 +541,20 @@ export const RotaScheduleTab = () => {
           shift.shift_type,
           shift.custom_start_time || undefined,
           shift.custom_end_time || undefined,
-          shift.is_oncall,
+          false,
           shift.facility_id || undefined,
           shift.is_temp_staff,
           shift.temp_confirmed,
-          shift.temp_staff_name || undefined,
-          shift.oncall_slot || undefined
+          shift.temp_staff_name || undefined
         );
-        if (result) totalCopied++;
+        if (result) totalShiftsCopied++;
       }
     }
 
+    const totalCopied = totalShiftsCopied + totalOncallsCopied;
     toast({
-      title: `Copied ${totalCopied} shift${totalCopied !== 1 ? "s" : ""}`,
-      description: "Schedule copied to all open days this week (replaced existing shifts)",
+      title: `Copied ${totalCopied} assignment${totalCopied !== 1 ? "s" : ""}`,
+      description: "Schedule copied to all open days this week (replaced existing)",
     });
   };
 
@@ -511,23 +576,34 @@ export const RotaScheduleTab = () => {
       
       if (prevWeekError) throw prevWeekError;
       
-      if (!prevWeekData) {
+      // Fetch previous week's on-calls (organization-wide)
+      const prevWeekDates = getWeekDays(subWeeks(weekStart, 1)).map(formatDateKey);
+      const { data: prevOncalls } = await supabase
+        .from("rota_oncalls")
+        .select("*")
+        .eq("organisation_id", organisationId)
+        .in("oncall_date", prevWeekDates);
+      
+      if (!prevWeekData && (!prevOncalls || prevOncalls.length === 0)) {
         toast({
           title: "No previous week",
           description: "No rota exists for the previous week",
         });
         return;
       }
+
+      // Fetch previous week's shifts (if rota exists)
+      let prevShifts: any[] = [];
+      if (prevWeekData) {
+        const { data, error: shiftsError } = await supabase
+          .from("rota_shifts")
+          .select("*")
+          .eq("rota_week_id", prevWeekData.id);
+        if (shiftsError) throw shiftsError;
+        prevShifts = data || [];
+      }
       
-      // Fetch previous week's shifts
-      const { data: prevShifts, error: shiftsError } = await supabase
-        .from("rota_shifts")
-        .select("*")
-        .eq("rota_week_id", prevWeekData.id);
-      
-      if (shiftsError) throw shiftsError;
-      
-      if (!prevShifts || prevShifts.length === 0) {
+      if (prevShifts.length === 0 && (!prevOncalls || prevOncalls.length === 0)) {
         toast({
           title: "No shifts to copy",
           description: "The previous week has no shifts assigned",
@@ -540,36 +616,46 @@ export const RotaScheduleTab = () => {
         await deleteShift(shift.id);
       }
 
-      // Copy each shift, adjusting date by +7 days
-      let copiedCount = 0;
-      for (const shift of prevShifts) {
-        const newDate = formatDateKey(addDays(new Date(shift.shift_date), 7));
-        
-        // Check if day is closed
+      // Copy on-calls (adjusted by +7 days)
+      let oncallsCopied = 0;
+      for (const oc of prevOncalls || []) {
+        const newDate = formatDateKey(addDays(new Date(oc.oncall_date), 7));
         const dayOfWeek = new Date(newDate).getDay();
         const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         if (openingHoursByDay[adjustedDay]?.is_closed) continue;
         
-        // Add shift
+        await deleteOncall(newDate, oc.oncall_slot);
+        const result = await addOncall(newDate, oc.oncall_slot, oc.user_id, oc.is_temp_staff, oc.temp_confirmed, oc.temp_staff_name);
+        if (result) oncallsCopied++;
+      }
+
+      // Copy each shift, adjusting date by +7 days
+      let shiftsCopied = 0;
+      for (const shift of prevShifts) {
+        const newDate = formatDateKey(addDays(new Date(shift.shift_date), 7));
+        const dayOfWeek = new Date(newDate).getDay();
+        const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        if (openingHoursByDay[adjustedDay]?.is_closed) continue;
+        
         const result = await addShift(
           shift.user_id,
           newDate,
           shift.shift_type,
           shift.custom_start_time || undefined,
           shift.custom_end_time || undefined,
-          shift.is_oncall,
+          false,
           shift.facility_id || undefined,
           shift.is_temp_staff,
           shift.temp_confirmed,
-          shift.temp_staff_name || undefined,
-          shift.oncall_slot || undefined
+          shift.temp_staff_name || undefined
         );
-        if (result) copiedCount++;
+        if (result) shiftsCopied++;
       }
       
+      const totalCopied = shiftsCopied + oncallsCopied;
       toast({
-        title: `Copied ${copiedCount} shift${copiedCount !== 1 ? "s" : ""}`,
-        description: "Schedule copied from previous week (replaced existing shifts)",
+        title: `Copied ${totalCopied} assignment${totalCopied !== 1 ? "s" : ""}`,
+        description: "Schedule copied from previous week (replaced existing)",
       });
     } catch (error) {
       console.error("Error copying from previous week:", error);

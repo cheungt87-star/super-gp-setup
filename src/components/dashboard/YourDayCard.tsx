@@ -52,7 +52,49 @@ export function YourDayCard({ todayTasks }: YourDayCardProps) {
       const todayStr = format(today, "yyyy-MM-dd");
       const weekStart = format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd");
 
-      // Fetch rota week
+      // Fetch on-calls from organization-wide rota_oncalls table
+      const { data: onCallShifts } = await supabase
+        .from("rota_oncalls")
+        .select(`
+          user_id,
+          temp_staff_name,
+          is_temp_staff,
+          oncall_slot,
+          profiles(first_name, last_name, phone, email)
+        `)
+        .eq("organisation_id", profile.organisation_id)
+        .eq("oncall_date", todayStr)
+        .order("oncall_slot");
+
+      if (onCallShifts && onCallShifts.length > 0) {
+        const onCallInfoList: OnCallInfo[] = onCallShifts.map((shift) => {
+          if (shift.is_temp_staff && shift.temp_staff_name) {
+            return {
+              slot: shift.oncall_slot || 1,
+              name: shift.temp_staff_name,
+              phone: null,
+              email: "-"
+            };
+          } else if (shift.profiles) {
+            const p = shift.profiles as any;
+            return {
+              slot: shift.oncall_slot || 1,
+              name: `${p.first_name || ""} ${p.last_name || ""}`.trim() || "Unknown",
+              phone: p.phone,
+              email: p.email
+            };
+          }
+          return {
+            slot: shift.oncall_slot || 1,
+            name: "Unknown",
+            phone: null,
+            email: "-"
+          };
+        });
+        setOnCallList(onCallInfoList);
+      }
+
+      // Fetch rota week for user's shift
       const { data: rotaWeek } = await supabase
         .from("rota_weeks")
         .select("id")
@@ -61,48 +103,6 @@ export function YourDayCard({ todayTasks }: YourDayCardProps) {
         .maybeSingle();
 
       if (rotaWeek) {
-        // Fetch all on-call shifts for today (up to 3 slots)
-        const { data: onCallShifts } = await supabase
-          .from("rota_shifts")
-          .select(`
-            user_id,
-            temp_staff_name,
-            is_temp_staff,
-            oncall_slot,
-            profiles!rota_shifts_user_id_fkey(first_name, last_name, phone, email)
-          `)
-          .eq("rota_week_id", rotaWeek.id)
-          .eq("shift_date", todayStr)
-          .eq("is_oncall", true)
-          .order("oncall_slot");
-
-        if (onCallShifts && onCallShifts.length > 0) {
-          const onCallInfoList: OnCallInfo[] = onCallShifts.map((shift) => {
-            if (shift.is_temp_staff && shift.temp_staff_name) {
-              return {
-                slot: shift.oncall_slot || 1,
-                name: shift.temp_staff_name,
-                phone: null,
-                email: "-"
-              };
-            } else if (shift.profiles) {
-              const p = shift.profiles as any;
-              return {
-                slot: shift.oncall_slot || 1,
-                name: `${p.first_name || ""} ${p.last_name || ""}`.trim() || "Unknown",
-                phone: p.phone,
-                email: p.email
-              };
-            }
-            return {
-              slot: shift.oncall_slot || 1,
-              name: "Unknown",
-              phone: null,
-              email: "-"
-            };
-          });
-          setOnCallList(onCallInfoList);
-        }
 
         // Fetch user's shift for today
         const { data: userShifts } = await supabase
