@@ -17,6 +17,7 @@ export interface WorkflowTaskWithDetails {
   recurrence_interval_days: number | null;
   is_active: boolean;
   organisation_id: string;
+  isJobFamilyAssignment?: boolean;
 }
 
 export interface TaskWithDueDate extends WorkflowTaskWithDetails {
