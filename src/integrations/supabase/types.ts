@@ -703,6 +703,33 @@ export type Database = {
           },
         ]
       }
+      secondary_roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          organisation_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          organisation_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          organisation_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_opening_hours: {
         Row: {
           am_close_time: string | null
@@ -889,6 +916,38 @@ export type Database = {
             columns: ["organisation_id"]
             isOneToOne: false
             referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_secondary_roles: {
+        Row: {
+          created_at: string
+          id: string
+          organisation_id: string
+          secondary_role_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organisation_id: string
+          secondary_role_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organisation_id?: string
+          secondary_role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_secondary_roles_secondary_role_id_fkey"
+            columns: ["secondary_role_id"]
+            isOneToOne: false
+            referencedRelation: "secondary_roles"
             referencedColumns: ["id"]
           },
         ]
