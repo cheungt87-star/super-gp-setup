@@ -151,7 +151,7 @@ export const DayConfirmDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Confirm {format(date, "EEEE do MMMM")}</DialogTitle>
           <DialogDescription>
@@ -172,7 +172,7 @@ export const DayConfirmDialog = ({
           </div>
 
           {/* Violations List */}
-          <ScrollArea className="flex-1 min-h-0">
+          <ScrollArea className="flex-1 min-h-0 max-h-[50vh]">
             <div className="space-y-3 pr-4">
               {violations.map((v, i) => {
                 const override = overrides[i];
