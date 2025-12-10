@@ -458,7 +458,7 @@ export const RotaPreviewDialog = ({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   {violations.length > 0 && (
-                    <ScrollArea className="max-h-[200px]">
+                    <div className="max-h-[40vh] overflow-y-auto">
                       <div className="px-3 pb-3 space-y-1.5">
                         {visibleViolations.map((v, i) => (
                           <div
@@ -499,7 +499,7 @@ export const RotaPreviewDialog = ({
                           </Button>
                         )}
                       </div>
-                    </ScrollArea>
+                    </div>
                   )}
                 </CollapsibleContent>
               </div>
