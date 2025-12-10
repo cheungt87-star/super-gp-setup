@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2, Trash2 } from "lucide-react";
 import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
+import type { RotaOncall } from "@/hooks/useRotaOncalls";
 import type { Database } from "@/integrations/supabase/types";
 
 type ShiftType = Database["public"]["Enums"]["shift_type"];
@@ -58,6 +59,7 @@ interface ClinicRoomDayCellProps {
   date: Date;
   dateKey: string;
   shifts: RotaShift[];
+  oncalls: RotaOncall[];
   openingHours: OpeningHours | null;
   clinicRooms: ClinicRoom[];
   availableStaff: StaffMember[];
@@ -78,6 +80,7 @@ interface ClinicRoomDayCellProps {
   onAddShift: (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string, oncallSlot?: number) => Promise<void>;
   onDeleteShift: (shiftId: string) => void;
   onEditShift: (shift: RotaShift) => void;
+  onDeleteOncall: (dateKey: string, slot: number) => Promise<boolean | void>;
   onRepeatPreviousDay?: (dateKey: string, previousDateKey: string) => Promise<void>;
   onCopyToWholeWeek?: (dateKey: string) => Promise<void>;
   onCopyFromPreviousWeek?: () => Promise<void>;
@@ -89,6 +92,7 @@ export const ClinicRoomDayCell = ({
   date,
   dateKey,
   shifts,
+  oncalls,
   openingHours,
   clinicRooms,
   availableStaff,
@@ -109,6 +113,7 @@ export const ClinicRoomDayCell = ({
   onAddShift,
   onDeleteShift,
   onEditShift,
+  onDeleteOncall,
   onRepeatPreviousDay,
   onCopyToWholeWeek,
   onCopyFromPreviousWeek,
@@ -126,9 +131,8 @@ export const ClinicRoomDayCell = ({
   const isClosed = openingHours?.is_closed ?? true;
   const dateLabel = format(date, "EEEE, d MMMM");
 
-  // Separate shifts by type and on-call slot
-  const onCallShifts = shifts.filter((s) => s.is_oncall);
-  const getOnCallShiftForSlot = (slot: number) => onCallShifts.find((s) => s.oncall_slot === slot) || null;
+  // Get on-call for a specific slot from the oncalls prop
+  const getOncallForSlot = (slot: number) => oncalls.find((o) => o.oncall_slot === slot) || null;
   const regularShifts = shifts.filter((s) => !s.is_oncall);
 
   // Check if two time ranges overlap
@@ -157,8 +161,8 @@ export const ClinicRoomDayCell = ({
   const getConflictingUserIds = (targetShiftType: ShiftType | "oncall", facilityId?: string, customStart?: string, customEnd?: string, oncallSlot?: number): string[] => {
     if (targetShiftType === "oncall") {
       // For on-call, only exclude the user already assigned to this specific slot
-      const slotShift = getOnCallShiftForSlot(oncallSlot || 1);
-      return slotShift?.user_id ? [slotShift.user_id] : [];
+      const slotOncall = getOncallForSlot(oncallSlot || 1);
+      return slotOncall?.user_id ? [slotOncall.user_id] : [];
     }
 
     // Determine the target time range
@@ -402,7 +406,7 @@ export const ClinicRoomDayCell = ({
           {/* On-Call Rows - 3 slots (always mandatory) */}
           <div className="rounded-lg border overflow-hidden">
             {[1, 2, 3].map((slot) => {
-              const slotShift = getOnCallShiftForSlot(slot);
+              const slotOncall = getOncallForSlot(slot);
               const slotLabels: Record<number, string> = {
                 1: "On Call Manager",
                 2: "On Duty Doctor 1",
@@ -422,19 +426,19 @@ export const ClinicRoomDayCell = ({
                     <Phone className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{slotLabel}</span>
                   </div>
-                  {slotShift ? (
+                  {slotOncall ? (
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">
-                        {slotShift.user_name}
+                        {slotOncall.user_name}
                       </span>
-                      {slotShift.job_title_name && (
-                        <Badge variant="outline" className={cn("text-[10px]", getJobTitleColors(slotShift.job_title_name))}>{slotShift.job_title_name}</Badge>
+                      {slotOncall.job_title_name && (
+                        <Badge variant="outline" className={cn("text-[10px]", getJobTitleColors(slotOncall.job_title_name))}>{slotOncall.job_title_name}</Badge>
                       )}
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 hover:bg-destructive/20"
-                        onClick={() => onDeleteShift(slotShift.id)}
+                        onClick={() => onDeleteOncall(dateKey, slot)}
                       >
                         <X className="h-4 w-4" />
                       </Button>

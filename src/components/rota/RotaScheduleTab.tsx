@@ -998,6 +998,7 @@ export const RotaScheduleTab = () => {
                         date={day}
                         dateKey={dateKey}
                         shifts={shiftsByDate[dateKey] || []}
+                        oncalls={getOncallsForDate(dateKey)}
                         openingHours={dayHours}
                         clinicRooms={clinicRooms}
                         availableStaff={staff}
@@ -1022,11 +1023,13 @@ export const RotaScheduleTab = () => {
                         onAddShift={handleAddShift}
                         onDeleteShift={handleDeleteShift}
                         onEditShift={setEditingShift}
+                        onDeleteOncall={deleteOncall}
                         onRepeatPreviousDay={handleRepeatPreviousDay}
                         onCopyToWholeWeek={handleCopyToWholeWeek}
                         onCopyFromPreviousWeek={handleCopyFromPreviousWeek}
                         onClearAll={async (dateKey) => {
                           await deleteShiftsForDay(dateKey);
+                          await deleteOncallsForDay(dateKey);
                           // Reset confirmation if it exists
                           if (confirmations.some(c => c.shift_date === dateKey)) {
                             await resetDayConfirmation(dateKey);
