@@ -30,10 +30,16 @@ interface ColleagueShift {
   profiles?: { first_name: string | null; last_name: string | null } | null;
 }
 
+interface OnCallAssignment {
+  slot: number;
+  slotLabel: string;
+}
+
 interface DayShifts {
   date: Date;
   dateKey: string;
   isClosed: boolean;
+  onCallAssignments: OnCallAssignment[];
   shifts: {
     id: string;
     facilityName: string | null;
@@ -117,10 +123,10 @@ export const MyShiftsWidget = () => {
       const currentUserId = session.user.id;
       setUserId(currentUserId);
 
-      // Get user's primary site
+      // Get user's primary site and organisation
       const { data: profile } = await supabase
         .from("profiles")
-        .select("primary_site_id")
+        .select("primary_site_id, organisation_id")
         .eq("id", currentUserId)
         .maybeSingle();
 
@@ -131,6 +137,7 @@ export const MyShiftsWidget = () => {
       }
 
       const siteId = profile.primary_site_id;
+      const organisationId = profile.organisation_id;
       setPrimarySiteId(siteId);
 
       const weekStartKey = formatDateKey(weekStart);
@@ -210,12 +217,44 @@ export const MyShiftsWidget = () => {
         colleagueShifts = (colleagues || []) as unknown as ColleagueShift[];
       }
 
+      // Fetch user's on-call assignments from rota_oncalls
+      let onCallData: { oncall_date: string; oncall_slot: number }[] = [];
+      if (organisationId) {
+        const { data: onCalls } = await supabase
+          .from("rota_oncalls")
+          .select("oncall_date, oncall_slot")
+          .eq("organisation_id", organisationId)
+          .eq("user_id", currentUserId)
+          .in("oncall_date", dateKeys);
+        
+        onCallData = onCalls || [];
+      }
+
+      // Helper to get slot label
+      const getSlotLabel = (slot: number): string => {
+        switch (slot) {
+          case 1: return "On Call Manager";
+          case 2: return "On Duty Doctor 1";
+          case 3: return "On Duty Doctor 2";
+          default: return `On Call ${slot}`;
+        }
+      };
+
       // Build day shifts data
       const result: DayShifts[] = weekDays.map((date, index) => {
         const dateKey = formatDateKey(date);
         const dayOfWeek = index; // 0 = Monday
         const openingHours = openingHoursMap.get(dayOfWeek);
         const isClosed = openingHours?.is_closed ?? false;
+
+        // Get on-call assignments for this day
+        const dayOnCalls = onCallData
+          .filter(oc => oc.oncall_date === dateKey)
+          .map(oc => ({
+            slot: oc.oncall_slot,
+            slotLabel: getSlotLabel(oc.oncall_slot),
+          }))
+          .sort((a, b) => a.slot - b.slot);
 
         const shiftsForDay = (myShifts || [])
           .filter(s => s.shift_date === dateKey)
@@ -252,6 +291,7 @@ export const MyShiftsWidget = () => {
           date,
           dateKey,
           isClosed,
+          onCallAssignments: dayOnCalls,
           shifts: shiftsForDay,
         };
       });
@@ -346,10 +386,19 @@ export const MyShiftsWidget = () => {
                     <Badge variant="secondary" className="bg-muted text-muted-foreground">
                       Closed
                     </Badge>
-                  ) : day.shifts.length === 0 ? (
+                  ) : day.shifts.length === 0 && day.onCallAssignments.length === 0 ? (
                     <span className="text-sm text-muted-foreground italic">Not working</span>
                   ) : (
                     <div className="space-y-2">
+                      {/* On-Call assignments from rota_oncalls */}
+                      {day.onCallAssignments.map((oc) => (
+                        <div key={`oncall-${oc.slot}`} className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
+                            <Phone className="h-3 w-3 mr-1" />
+                            {oc.slotLabel}
+                          </Badge>
+                        </div>
+                      ))}
                       {day.shifts.map((shift) => (
                         <div key={shift.id} className="flex flex-wrap items-center gap-2">
                           {/* On-Call badge - show prominently first */}
