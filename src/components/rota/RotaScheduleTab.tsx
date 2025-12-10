@@ -299,16 +299,17 @@ export const RotaScheduleTab = () => {
     return byDay;
   }, [openingHours]);
 
-  const handleAddShift = async (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string) => {
+  const handleAddShift = async (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string, oncallSlot?: number) => {
     const dayShifts = shiftsByDate[dateKey] || [];
     
-    // If adding on-call, check if there's already one
+    // If adding on-call, check if there's already one for this slot
     if (isOnCall) {
-      const existingOnCall = dayShifts.find((s) => s.is_oncall);
+      const slot = oncallSlot || 1;
+      const existingOnCall = dayShifts.find((s) => s.is_oncall && s.oncall_slot === slot);
       if (existingOnCall) {
         toast({
           title: "On-call already assigned",
-          description: "Remove the current on-call assignment first",
+          description: `Remove the current on-call assignment from slot ${slot} first`,
           variant: "destructive",
         });
         return;
@@ -352,7 +353,7 @@ export const RotaScheduleTab = () => {
       }
     }
 
-    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, isOnCall, facilityId, isTempStaff || false, tempConfirmed || false, tempStaffName);
+    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, isOnCall, facilityId, isTempStaff || false, tempConfirmed || false, tempStaffName, oncallSlot);
 
     if (result) {
       const shiftLabel = isOnCall ? "On-call" : shiftType === "full_day" ? "Full Day" : shiftType.toUpperCase();
@@ -425,7 +426,8 @@ export const RotaScheduleTab = () => {
         shift.facility_id || undefined,
         shift.is_temp_staff,
         shift.temp_confirmed,
-        shift.temp_staff_name || undefined
+        shift.temp_staff_name || undefined,
+        shift.oncall_slot || undefined
       );
       if (result) copiedCount++;
     }
@@ -478,7 +480,8 @@ export const RotaScheduleTab = () => {
           shift.facility_id || undefined,
           shift.is_temp_staff,
           shift.temp_confirmed,
-          shift.temp_staff_name || undefined
+          shift.temp_staff_name || undefined,
+          shift.oncall_slot || undefined
         );
         if (result) totalCopied++;
       }
@@ -558,7 +561,8 @@ export const RotaScheduleTab = () => {
           shift.facility_id || undefined,
           shift.is_temp_staff,
           shift.temp_confirmed,
-          shift.temp_staff_name || undefined
+          shift.temp_staff_name || undefined,
+          shift.oncall_slot || undefined
         );
         if (result) copiedCount++;
       }

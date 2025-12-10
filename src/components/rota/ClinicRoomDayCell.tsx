@@ -75,7 +75,7 @@ interface ClinicRoomDayCellProps {
   amShiftEnd?: string;
   pmShiftStart?: string;
   pmShiftEnd?: string;
-  onAddShift: (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string) => Promise<void>;
+  onAddShift: (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string, oncallSlot?: number) => Promise<void>;
   onDeleteShift: (shiftId: string) => void;
   onEditShift: (shift: RotaShift) => void;
   onRepeatPreviousDay?: (dateKey: string, previousDateKey: string) => Promise<void>;
@@ -120,13 +120,15 @@ export const ClinicRoomDayCell = ({
     facilityId: string;
     facilityName: string;
     shiftType: ShiftType | "oncall";
+    oncallSlot?: number;
   } | null>(null);
 
   const isClosed = openingHours?.is_closed ?? true;
   const dateLabel = format(date, "EEEE, d MMMM");
 
-  // Separate shifts by type
-  const onCallShift = shifts.find((s) => s.is_oncall) || null;
+  // Separate shifts by type and on-call slot
+  const onCallShifts = shifts.filter((s) => s.is_oncall);
+  const getOnCallShiftForSlot = (slot: number) => onCallShifts.find((s) => s.oncall_slot === slot) || null;
   const regularShifts = shifts.filter((s) => !s.is_oncall);
 
   // Check if two time ranges overlap
@@ -152,9 +154,11 @@ export const ClinicRoomDayCell = ({
   };
 
   // Get user IDs that conflict with a given shift type - checks ALL shifts site-wide
-  const getConflictingUserIds = (targetShiftType: ShiftType | "oncall", facilityId?: string, customStart?: string, customEnd?: string): string[] => {
+  const getConflictingUserIds = (targetShiftType: ShiftType | "oncall", facilityId?: string, customStart?: string, customEnd?: string, oncallSlot?: number): string[] => {
     if (targetShiftType === "oncall") {
-      return onCallShift?.user_id ? [onCallShift.user_id] : [];
+      // For on-call, only exclude the user already assigned to this specific slot
+      const slotShift = getOnCallShiftForSlot(oncallSlot || 1);
+      return slotShift?.user_id ? [slotShift.user_id] : [];
     }
 
     // Determine the target time range
@@ -229,8 +233,8 @@ export const ClinicRoomDayCell = ({
     }
   };
 
-  const handleAddClick = (facilityId: string, facilityName: string, shiftType: ShiftType | "oncall") => {
-    setSelectionDialog({ open: true, facilityId, facilityName, shiftType });
+  const handleAddClick = (facilityId: string, facilityName: string, shiftType: ShiftType | "oncall", oncallSlot?: number) => {
+    setSelectionDialog({ open: true, facilityId, facilityName, shiftType, oncallSlot });
   };
 
   const handleSelectStaff = async (userId: string | null, makeFullDay?: boolean, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string) => {
@@ -248,8 +252,8 @@ export const ClinicRoomDayCell = ({
       actualShiftType = selectionDialog.shiftType as ShiftType;
     }
     
-    // Add the primary shift
-    await onAddShift(userId, dateKey, actualShiftType, isOnCall, facilityId, customStartTime, customEndTime, isTempStaff, tempConfirmed, tempStaffName);
+    // Add the primary shift (with oncallSlot for on-call shifts)
+    await onAddShift(userId, dateKey, actualShiftType, isOnCall, facilityId, customStartTime, customEndTime, isTempStaff, tempConfirmed, tempStaffName, selectionDialog.oncallSlot);
     
     // If "Make Full Day" was checked and we have a user (not external temp), add the opposite shift too
     if (makeFullDay && userId && !isOnCall && (selectionDialog.shiftType === "am" || selectionDialog.shiftType === "pm")) {
@@ -395,43 +399,56 @@ export const ClinicRoomDayCell = ({
 
       {!isClosed && (
         <div className="p-4 space-y-4">
-          {/* On-Call Row */}
+          {/* On-Call Rows - 3 slots */}
           {requireOnCall && (
-            <div className="rounded-lg border px-3 py-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">On-Call</span>
-                </div>
-                {onCallShift ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {onCallShift.user_name}
-                    </span>
-                    {onCallShift.job_title_name && (
-                      <Badge variant="outline" className={cn("text-[10px]", getJobTitleColors(onCallShift.job_title_name))}>{onCallShift.job_title_name}</Badge>
+            <div className="rounded-lg border overflow-hidden">
+              {[1, 2, 3].map((slot) => {
+                const slotShift = getOnCallShiftForSlot(slot);
+                const slotLabel = slot === 1 ? "On Call" : `On Call ${slot}`;
+                
+                return (
+                  <div 
+                    key={slot} 
+                    className={cn(
+                      "flex items-center justify-between px-3 py-2",
+                      slot !== 3 && "border-b"
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 hover:bg-destructive/20"
-                      onClick={() => onDeleteShift(onCallShift.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={loading}
-                    onClick={() => handleAddClick("", "On-Call Staff", "oncall")}
                   >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add
-                  </Button>
-                )}
-              </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{slotLabel}</span>
+                    </div>
+                    {slotShift ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {slotShift.user_name}
+                        </span>
+                        {slotShift.job_title_name && (
+                          <Badge variant="outline" className={cn("text-[10px]", getJobTitleColors(slotShift.job_title_name))}>{slotShift.job_title_name}</Badge>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 hover:bg-destructive/20"
+                          onClick={() => onDeleteShift(slotShift.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={loading}
+                        onClick={() => handleAddClick("", slotLabel, "oncall", slot)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
