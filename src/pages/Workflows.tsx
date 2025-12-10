@@ -50,7 +50,7 @@ const Workflows = () => {
             </div>
             <CardTitle>Access Restricted</CardTitle>
             <CardDescription>
-              You don't have permission to manage workflow tasks. Contact your administrator for access.
+              Sorry, you don't have the right permissions to access this page. Please contact your Management Team to gain access.
             </CardDescription>
           </CardHeader>
         </Card>

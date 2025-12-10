@@ -57,9 +57,9 @@ export function AdminLayout() {
             <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
               <ShieldAlert className="h-6 w-6 text-destructive" />
             </div>
-            <CardTitle>Access Denied</CardTitle>
+            <CardTitle>Access Restricted</CardTitle>
             <CardDescription>
-              Sorry, you don't have access to this page. Only administrators can manage users.
+              Sorry, you don't have the right permissions to access this page. Please contact your Management Team to gain access.
             </CardDescription>
           </CardHeader>
         </Card>
