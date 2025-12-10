@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Building2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, Building2, AlertTriangle, Eye, EyeOff, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { InvitationCodeForm } from "@/components/auth/InvitationCodeForm";
 
@@ -48,6 +48,9 @@ const Auth = () => {
   const [mode, setMode] = useState<AuthMode>(getInitialMode);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -199,6 +202,16 @@ const Auth = () => {
     setMode("register");
   };
 
+  // Password validation helper
+  const validatePassword = (pwd: string) => {
+    const hasNumber = /\d/.test(pwd);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\;'`~]/.test(pwd);
+    const hasMinLength = pwd.length >= 6;
+    return { hasNumber, hasSpecialChar, hasMinLength, isValid: hasNumber && hasSpecialChar && hasMinLength };
+  };
+
+  const passwordsMatch = password && confirmPassword && password === confirmPassword;
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -219,6 +232,19 @@ const Auth = () => {
     if (!isFirstUser && !orgConfirmed) {
       toast.error("Please confirm your organisation");
       setMode("org-confirm");
+      return;
+    }
+
+    // Validate password requirements
+    const pwdValidation = validatePassword(password);
+    if (!pwdValidation.isValid) {
+      toast.error("Password must have at least 6 characters, 1 number, and 1 special character");
+      return;
+    }
+
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      toast.error("Passwords don't match");
       return;
     }
 
@@ -332,6 +358,9 @@ const Auth = () => {
     setSelectedJobTitleName("");
     setEmail("");
     setPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setFirstName("");
     setLastName("");
     setPhone("");
@@ -664,17 +693,75 @@ const Auth = () => {
                     )}
                   </>
                 )}
+                {/* Password field with visibility toggle */}
                 <div className="space-y-2">
                   <Label htmlFor="regPassword">Password</Label>
-                  <Input
-                    id="regPassword"
-                    type="password"
-                    placeholder="Min. 6 characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="regPassword"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Min. 6 chars, 1 number, 1 special char"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                    </Button>
+                  </div>
+                  {/* Password strength hints */}
+                  {password && (
+                    <div className="text-xs space-y-1">
+                      <p className={validatePassword(password).hasMinLength ? "text-green-600" : "text-muted-foreground"}>
+                        {validatePassword(password).hasMinLength ? "✓" : "○"} At least 6 characters
+                      </p>
+                      <p className={validatePassword(password).hasNumber ? "text-green-600" : "text-muted-foreground"}>
+                        {validatePassword(password).hasNumber ? "✓" : "○"} At least 1 number
+                      </p>
+                      <p className={validatePassword(password).hasSpecialChar ? "text-green-600" : "text-muted-foreground"}>
+                        {validatePassword(password).hasSpecialChar ? "✓" : "○"} At least 1 special character
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Confirm Password field */}
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Re-enter password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      className={`pr-16 ${confirmPassword && passwordsMatch ? "border-green-500" : ""}`}
+                    />
+                    {/* Show tick when passwords match */}
+                    {confirmPassword && passwordsMatch && (
+                      <Check className="absolute right-10 top-1/2 -translate-y-1/2 h-4 w-4 text-green-600" />
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                    </Button>
+                  </div>
+                  {confirmPassword && !passwordsMatch && (
+                    <p className="text-xs text-destructive">Passwords don't match</p>
+                  )}
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
