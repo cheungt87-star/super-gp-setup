@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { Users, Building2, Loader2, ShieldAlert, FolderTree } from "lucide-react";
+import { ListChecks, ClipboardList, Loader2, ShieldAlert } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { canManageRoles } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
-const adminNavItems = [
-  { title: "Users", path: "/admin/users", icon: Users },
-  { title: "Sites", path: "/admin/sites", icon: Building2 },
-  { title: "Job Families", path: "/admin/job-families", icon: FolderTree },
+const workflowNavItems = [
+  { title: "Task Manager", path: "/workflows/tasksmanager", icon: ListChecks },
+  { title: "Audit Trail", path: "/workflows/audittrail", icon: ClipboardList },
 ];
 
-export function AdminLayout() {
+export function WorkflowsLayout() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
@@ -25,13 +23,8 @@ export function AdminLayout() {
         return;
       }
 
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      setHasAccess(canManageRoles(roleData?.role));
+      const { data } = await supabase.rpc("can_manage_roles", { _user_id: user.id });
+      setHasAccess(data === true);
       setLoading(false);
     };
 
@@ -51,7 +44,12 @@ export function AdminLayout() {
   if (!hasAccess) {
     return (
       <div className="container py-12">
-        <Card className="max-w-md mx-auto animate-fade-in">
+        <div className="mb-8 animate-fade-in">
+          <h1 className="text-3xl font-bold mb-2">Workflows</h1>
+          <p className="text-muted-foreground">Create and manage recurring operational tasks across your sites.</p>
+        </div>
+
+        <Card className="max-w-md animate-fade-in">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
               <ShieldAlert className="h-6 w-6 text-destructive" />
@@ -69,13 +67,13 @@ export function AdminLayout() {
   return (
     <div className="container py-8">
       <div className="mb-8 animate-fade-in">
-        <h1 className="text-3xl font-bold mb-2">Admin</h1>
-        <p className="text-muted-foreground">Manage your organisation settings and users.</p>
+        <h1 className="text-3xl font-bold mb-2">Workflows</h1>
+        <p className="text-muted-foreground">Create and manage recurring operational tasks across your sites.</p>
       </div>
 
       {/* Sub-navigation tabs */}
       <nav className="flex gap-1 mb-6 border-b border-border">
-        {adminNavItems.map((item) => (
+        {workflowNavItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
