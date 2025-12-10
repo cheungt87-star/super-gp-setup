@@ -416,6 +416,7 @@ const JobFamilyManagement = () => {
     setDeleteSecondaryRoleId(null);
   };
 
+  const renderJobTitle = (title: JobTitle) => {
     if (editingTitleId === title.id) {
       return (
         <div key={title.id} className="flex items-center gap-2 py-2 px-3 bg-muted/50 rounded-md">
@@ -655,7 +656,7 @@ const JobFamilyManagement = () => {
                           <p className="text-sm text-muted-foreground py-2">No job titles in this family</p>
                         ) : (
                           <div className="space-y-1">
-                            {family.job_titles.map(renderTitleRow)}
+                            {family.job_titles.map(renderJobTitle)}
                           </div>
                         )}
                         {renderAddTitleForm(family.id)}
@@ -687,7 +688,7 @@ const JobFamilyManagement = () => {
                     <CollapsibleContent>
                       <div className="border-t bg-background px-4 py-2">
                         <div className="space-y-1">
-                          {unassignedTitles.map(renderTitleRow)}
+                          {unassignedTitles.map(renderJobTitle)}
                         </div>
                       </div>
                     </CollapsibleContent>
