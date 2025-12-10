@@ -19,7 +19,11 @@ interface OpeningHour {
 interface Site {
   id: string;
   name: string;
-  address: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  county: string | null;
+  postcode: string | null;
   email: string | null;
   phone: string | null;
   site_manager_id: string | null;
@@ -61,12 +65,28 @@ export const SiteCard = ({
     return null;
   };
 
+  const formatAddress = () => {
+    const parts: string[] = [];
+    if (site.address_line_1) parts.push(site.address_line_1);
+    if (site.address_line_2) parts.push(site.address_line_2);
+    
+    const cityCounty: string[] = [];
+    if (site.city) cityCounty.push(site.city);
+    if (site.county) cityCounty.push(site.county);
+    if (cityCounty.length > 0) parts.push(cityCounty.join(", "));
+    
+    if (site.postcode) parts.push(site.postcode);
+    
+    return parts;
+  };
+
   const handleSaveFacility = async (name: string, capacity: number, facilityType: "clinic_room" | "general_facility", facilityId?: string) => {
     await onSaveFacility(site.id, name, capacity, facilityType, facilityId);
   };
 
   const managerName = getManagerName();
-  const hasContactInfo = site.address || site.phone || site.email || managerName;
+  const addressLines = formatAddress();
+  const hasContactInfo = addressLines.length > 0 || site.phone || site.email || managerName;
 
   return (
     <Card className="animate-fade-in">
@@ -97,10 +117,14 @@ export const SiteCard = ({
             <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Details</h4>
             {hasContactInfo ? (
               <div className="space-y-2 text-sm">
-                {site.address && (
+                {addressLines.length > 0 && (
                   <div className="flex items-start gap-2 text-muted-foreground">
                     <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
-                    <span>{site.address}</span>
+                    <div className="flex flex-col">
+                      {addressLines.map((line, idx) => (
+                        <span key={idx}>{line}</span>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {site.phone && (

@@ -9,7 +9,11 @@ import { Plus, Trash2, Loader2, Building2 } from "lucide-react";
 
 interface Site {
   name: string;
-  address: string;
+  address_line_1: string;
+  address_line_2: string;
+  city: string;
+  county: string;
+  postcode: string;
   email: string;
   phone: string;
   phone_ext: string;
@@ -17,18 +21,19 @@ interface Site {
 
 interface SitesStepProps {
   onNext: () => void;
+  onSkip?: () => void;
   userId: string | null;
   organisationId: string | null;
 }
 
-export const SitesStep = ({ onNext, userId, organisationId }: SitesStepProps) => {
+export const SitesStep = ({ onNext, onSkip, userId, organisationId }: SitesStepProps) => {
   const [sites, setSites] = useState<Site[]>([
-    { name: "", address: "", email: "", phone: "", phone_ext: "" },
+    { name: "", address_line_1: "", address_line_2: "", city: "", county: "", postcode: "", email: "", phone: "", phone_ext: "" },
   ]);
   const [saving, setSaving] = useState(false);
 
   const addSite = () => {
-    setSites([...sites, { name: "", address: "", email: "", phone: "", phone_ext: "" }]);
+    setSites([...sites, { name: "", address_line_1: "", address_line_2: "", city: "", county: "", postcode: "", email: "", phone: "", phone_ext: "" }]);
   };
 
   const removeSite = (index: number) => {
@@ -43,11 +48,40 @@ export const SitesStep = ({ onNext, userId, organisationId }: SitesStepProps) =>
     setSites(updated);
   };
 
+  const validateSites = (): boolean => {
+    for (const site of sites) {
+      if (site.name.trim()) {
+        // If name is provided, validate required address fields
+        if (!site.address_line_1.trim()) {
+          toast.error("Address Line 1 is required for all sites");
+          return false;
+        }
+        if (!site.city.trim()) {
+          toast.error("City is required for all sites");
+          return false;
+        }
+        if (!site.county.trim()) {
+          toast.error("County is required for all sites");
+          return false;
+        }
+        if (!site.postcode.trim()) {
+          toast.error("Postcode is required for all sites");
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
   const handleSave = async () => {
     const validSites = sites.filter((site) => site.name.trim());
     
     if (validSites.length === 0) {
       toast.error("Please add at least one site");
+      return;
+    }
+
+    if (!validateSites()) {
       return;
     }
 
@@ -61,7 +95,11 @@ export const SitesStep = ({ onNext, userId, organisationId }: SitesStepProps) =>
     const { error } = await supabase.from("sites").insert(
       validSites.map((site) => ({
         name: site.name,
-        address: site.address || null,
+        address_line_1: site.address_line_1,
+        address_line_2: site.address_line_2 || null,
+        city: site.city,
+        county: site.county,
+        postcode: site.postcode,
         email: site.email || null,
         phone: site.phone || null,
         phone_ext: site.phone_ext || null,
@@ -114,15 +152,57 @@ export const SitesStep = ({ onNext, userId, organisationId }: SitesStepProps) =>
                   onChange={(e) => updateSite(index, "name", e.target.value)}
                 />
               </div>
+              
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor={`site-address-${index}`}>Address</Label>
+                <Label htmlFor={`site-address1-${index}`}>Address Line 1 *</Label>
                 <Input
-                  id={`site-address-${index}`}
-                  placeholder="123 Main Street, London, SW1A 1AA"
-                  value={site.address}
-                  onChange={(e) => updateSite(index, "address", e.target.value)}
+                  id={`site-address1-${index}`}
+                  placeholder="123 Main Street"
+                  value={site.address_line_1}
+                  onChange={(e) => updateSite(index, "address_line_1", e.target.value)}
                 />
               </div>
+              
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor={`site-address2-${index}`}>Address Line 2</Label>
+                <Input
+                  id={`site-address2-${index}`}
+                  placeholder="Suite 100 (optional)"
+                  value={site.address_line_2}
+                  onChange={(e) => updateSite(index, "address_line_2", e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor={`site-city-${index}`}>City *</Label>
+                <Input
+                  id={`site-city-${index}`}
+                  placeholder="London"
+                  value={site.city}
+                  onChange={(e) => updateSite(index, "city", e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor={`site-county-${index}`}>County *</Label>
+                <Input
+                  id={`site-county-${index}`}
+                  placeholder="Greater London"
+                  value={site.county}
+                  onChange={(e) => updateSite(index, "county", e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor={`site-postcode-${index}`}>Postcode *</Label>
+                <Input
+                  id={`site-postcode-${index}`}
+                  placeholder="SW1A 1AA"
+                  value={site.postcode}
+                  onChange={(e) => updateSite(index, "postcode", e.target.value)}
+                />
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor={`site-email-${index}`}>Contact Email</Label>
                 <Input
@@ -133,6 +213,7 @@ export const SitesStep = ({ onNext, userId, organisationId }: SitesStepProps) =>
                   onChange={(e) => updateSite(index, "email", e.target.value)}
                 />
               </div>
+              
               <div className="grid grid-cols-[1fr_auto] gap-2">
                 <div className="space-y-2">
                   <Label htmlFor={`site-phone-${index}`}>Phone</Label>
@@ -162,11 +243,18 @@ export const SitesStep = ({ onNext, userId, organisationId }: SitesStepProps) =>
           Add Another Site
         </Button>
 
-        <div className="flex justify-end pt-4">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Continue
-          </Button>
+        <div className="flex justify-between pt-4">
+          {onSkip && (
+            <Button type="button" variant="ghost" onClick={onSkip}>
+              Skip for now
+            </Button>
+          )}
+          <div className={onSkip ? "" : "ml-auto"}>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Continue
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
