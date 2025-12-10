@@ -318,14 +318,14 @@ export const StaffSelectionDialog = ({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-5">
-          {/* Filters - only show if we have sites and currentSiteId */}
+          {/* Filters - Row 1: Site, Job Family, Job Title in 3 columns */}
           {hasFilters && (
             <div className="space-y-3 pb-4 border-b">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label className="text-xs text-muted-foreground mb-1.5 block">Site</Label>
                   <Select value={selectedSiteId} onValueChange={(v) => handleFilterChange('site', v)}>
-                    <SelectTrigger className="h-10 px-3">
+                    <SelectTrigger className="h-9 px-3">
                       <SelectValue placeholder="Select site" />
                     </SelectTrigger>
                     <SelectContent>
@@ -341,7 +341,7 @@ export const StaffSelectionDialog = ({
                   <div>
                     <Label className="text-xs text-muted-foreground mb-1.5 block">Job Family</Label>
                     <Select value={selectedJobFamilyId} onValueChange={(v) => handleFilterChange('jobFamily', v)}>
-                      <SelectTrigger className="h-10 px-3">
+                      <SelectTrigger className="h-9 px-3">
                         <SelectValue placeholder="All" />
                       </SelectTrigger>
                       <SelectContent>
@@ -355,25 +355,35 @@ export const StaffSelectionDialog = ({
                     </Select>
                   </div>
                 )}
+                {filteredJobTitles && filteredJobTitles.length > 0 && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Job Title</Label>
+                    <Select value={selectedJobTitleId} onValueChange={(v) => handleFilterChange('jobTitle', v)}>
+                      <SelectTrigger className="h-9 px-3">
+                        <SelectValue placeholder="All" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {filteredJobTitles.map((jt) => (
+                          <SelectItem key={jt.id} value={jt.id}>
+                            {jt.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
-              {filteredJobTitles && filteredJobTitles.length > 0 && (
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1.5 block">Job Title</Label>
-                  <Select value={selectedJobTitleId} onValueChange={(v) => handleFilterChange('jobTitle', v)}>
-                    <SelectTrigger className="h-10 px-3">
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {filteredJobTitles.map((jt) => (
-                        <SelectItem key={jt.id} value={jt.id}>
-                          {jt.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              {/* Row 2: Search by name */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9"
+                />
+              </div>
             </div>
           )}
 
@@ -390,19 +400,8 @@ export const StaffSelectionDialog = ({
             </div>
           ) : !isExternalTemp && (
             <div className="space-y-3">
-              <Label className="text-sm text-muted-foreground">Select Staff</Label>
-              {/* Search Input */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-10"
-                />
-              </div>
               <ScrollArea className="h-[420px]">
-                <div className="space-y-2 pr-3">
+                <div className="grid grid-cols-2 gap-3 pr-3">
                   {filteredStaff.map((staff) => {
                     const fullName = `${staff.first_name || ""} ${staff.last_name || ""}`.trim() || "Unknown";
                     const hours = scheduledHours[staff.id] || 0;
@@ -410,11 +409,11 @@ export const StaffSelectionDialog = ({
                     const hoursDisplay = contracted > 0 ? `${hours}/${contracted}h` : `${hours}h`;
                     const isSelected = selectedStaffId === staff.id;
 
-                    return (
+                      return (
                       <div
                         key={staff.id}
                         className={cn(
-                          "flex items-center gap-3 w-full p-3 rounded-lg border cursor-pointer transition-colors",
+                          "flex items-center gap-2.5 w-full p-2.5 rounded-lg border cursor-pointer transition-colors",
                           isSelected 
                             ? "border-primary bg-primary/5 ring-1 ring-primary" 
                             : "hover:bg-muted/50 border-border"
@@ -422,17 +421,17 @@ export const StaffSelectionDialog = ({
                         onClick={() => setSelectedStaffId(isSelected ? null : staff.id)}
                       >
                         <div className={cn(
-                          "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+                          "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
                           isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
                         )}>
                           {isSelected ? (
-                            <Check className="h-5 w-5" />
+                            <Check className="h-4 w-4" />
                           ) : (
-                            <User className="h-5 w-5 text-muted-foreground" />
+                            <User className="h-4 w-4 text-muted-foreground" />
                           )}
                         </div>
                         <div className="flex-1 text-left min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="font-medium text-base">{fullName}</p>
                             {staff.job_title_name && (
                               <span className={cn("text-xs px-2 py-0.5 rounded border", getJobTitleColors(staff.job_title_name))}>
