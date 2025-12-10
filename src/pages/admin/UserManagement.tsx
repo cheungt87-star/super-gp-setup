@@ -454,13 +454,12 @@ const UserManagement = () => {
                 <TableHead><SortableHeader field="hours">Hours</SortableHeader></TableHead>
                 <TableHead>Working Days</TableHead>
                 <TableHead><SortableHeader field="role">Role</SortableHeader></TableHead>
-                <TableHead className="text-center"><SortableHeader field="registered">Registered</SortableHeader></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredAndSortedUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -550,19 +549,6 @@ const UserManagement = () => {
                           currentUserId={currentUserId || ''}
                           onRoleChange={handleRoleChange}
                         />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {user.registration_completed ? (
-                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
-                          <Check className="h-3 w-3 mr-1" />
-                          Yes
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
-                          <X className="h-3 w-3 mr-1" />
-                          No
-                        </Badge>
                       )}
                     </TableCell>
                   </TableRow>
