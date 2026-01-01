@@ -1,8 +1,43 @@
+import { useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Users, Building2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const redirectIfSignedIn = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("organisation_id")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (!profile?.organisation_id) {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      const { data: org } = await supabase
+        .from("organisations")
+        .select("onboarding_complete")
+        .eq("id", profile.organisation_id)
+        .maybeSingle();
+
+      navigate(org?.onboarding_complete ? "/dashboard" : "/onboarding", { replace: true });
+    };
+
+    redirectIfSignedIn();
+  }, [navigate]);
+
   return (
     <div className="min-h-screen gradient-subtle">
       {/* Header */}
@@ -29,14 +64,14 @@ const Index = () => {
             <Shield className="h-4 w-4" />
             Built for UK GP Clinics
           </div>
-          
+
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
             Your clinic,{" "}
             <span className="text-primary">streamlined</span>
           </h1>
-          
+
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-            Super GP brings SOP management, rota planning, and compliance tracking 
+            Super GP brings SOP management, rota planning, and compliance tracking
             into one elegant platform. Get started in minutes.
           </p>
 
@@ -46,7 +81,7 @@ const Index = () => {
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </Link>
-          
+
           <p className="text-sm text-muted-foreground mt-4">
             Need an invitation? Contact your organisation administrator.
           </p>
@@ -99,3 +134,4 @@ const FeatureCard = ({ icon: Icon, title, description }: FeatureCardProps) => (
 );
 
 export default Index;
+
