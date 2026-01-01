@@ -254,7 +254,7 @@ const Auth = () => {
       email,
       password,
       options: {
-        emailRedirectTo: 'https://supergp.theunknown.digital/onboarding',
+        emailRedirectTo: `${window.location.origin}/`,
         data: {
           first_name: firstName,
           last_name: lastName,

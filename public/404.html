@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <script>
+      (function () {
+        var l = window.location;
+        // Preserve full path including query + hash so the SPA can restore it.
+        var redirectTarget = l.pathname + l.search + l.hash;
+
+        // Avoid loops (this page is only meant for non-root paths)
+        if (l.pathname === "/") return;
+
+        l.replace("/?redirect=" + encodeURIComponent(redirectTarget));
+      })();
+    </script>
+  </body>
+</html>

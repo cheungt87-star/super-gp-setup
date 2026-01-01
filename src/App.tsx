@@ -1,8 +1,16 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { OrganisationProvider } from "@/contexts/OrganisationContext";
 import { AuthenticatedLayout } from "@/components/layout/AuthenticatedLayout";
 import { AdminLayout } from "@/components/layout/AdminLayout";
@@ -24,9 +32,31 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const RedirectBootstrapper = () => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const redirectTarget = searchParams.get("redirect");
+    if (!redirectTarget) return;
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("redirect");
+    setSearchParams(nextParams, { replace: true });
+
+    // Only allow internal redirects
+    if (redirectTarget.startsWith("/") && !redirectTarget.startsWith("//")) {
+      navigate(redirectTarget, { replace: true });
+    }
+  }, [navigate, searchParams, setSearchParams]);
+
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
+      <RedirectBootstrapper />
       <OrganisationProvider>
         <TooltipProvider>
           <Toaster />
