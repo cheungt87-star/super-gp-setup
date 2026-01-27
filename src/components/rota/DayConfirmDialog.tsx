@@ -59,7 +59,7 @@ export const DayConfirmDialog = ({
   const allOverridden = useMemo(() => {
     return violations.every((_, i) => {
       const override = overrides[i];
-      return override?.checked && override?.reason.trim().length > 0;
+      return override?.checked;
     });
   }, [violations, overrides]);
 
@@ -234,7 +234,7 @@ export const DayConfirmDialog = ({
                     {isChecked && (
                       <div className="pl-6">
                         <Input
-                          placeholder="Reason for override (required)"
+                          placeholder="Reason for override (optional)"
                           value={reason}
                           onChange={(e) => handleReasonChange(i, e.target.value)}
                           className="text-sm"
