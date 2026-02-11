@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Calendar, Clock, Printer } from "lucide-react";
 import { format, addDays, startOfWeek } from "date-fns";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
 import { cn } from "@/lib/utils";
@@ -324,6 +324,12 @@ export function FullRotaWidget() {
     return `${format(start, "d MMM")} - ${format(end, "d MMM")} ${year}`;
   };
 
+  const selectedSiteName = sites.find(s => s.id === selectedSiteId)?.name || "";
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   // Get only open days for columns
   const openDays = schedule.filter(day => !day.isClosed);
 
@@ -365,8 +371,13 @@ export function FullRotaWidget() {
   }
 
   return (
-    <Card className="mb-6 animate-fade-in">
-      <CardHeader className="pb-4">
+    <Card className="mb-6 animate-fade-in print-full-rota" data-print-rota>
+      {/* Print-only header */}
+      <div className="hidden print:block print:mb-4 print:text-center">
+        <h1 className="text-xl font-bold">{selectedSiteName} — Full Rota</h1>
+        <p className="text-sm">{formatWeekRange(weekStart)}</p>
+      </div>
+      <CardHeader className="pb-4 print:hidden">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
@@ -399,7 +410,10 @@ export function FullRotaWidget() {
               <Button variant="outline" size="icon" onClick={goToNextWeek}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
-            </div>
+              <Button variant="outline" size="icon" onClick={handlePrint} title="Print rota">
+                <Printer className="h-4 w-4" />
+              </Button>
+          </div>
           </div>
         </div>
       </CardHeader>

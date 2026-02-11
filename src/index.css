@@ -118,3 +118,44 @@
     @apply bg-gradient-to-b from-background to-muted/30;
   }
 }
+
+/* Print styles for Full Rota */
+@media print {
+  /* Hide everything except the rota widget */
+  body * {
+    visibility: hidden;
+  }
+
+  .print-full-rota,
+  .print-full-rota * {
+    visibility: visible !important;
+  }
+
+  .print-full-rota {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Preserve colors in print */
+  .print-full-rota * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Clean up table for print */
+  .print-full-rota table {
+    width: 100% !important;
+    font-size: 11px !important;
+  }
+
+  .print-full-rota td,
+  .print-full-rota th {
+    padding: 4px 6px !important;
+  }
+}
