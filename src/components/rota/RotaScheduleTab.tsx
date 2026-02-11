@@ -863,20 +863,33 @@ export const RotaScheduleTab = () => {
                   Preview
                 </Button>
               )}
-              {rotaWeek?.status === "draft" && (
-                <Button
-                  size="sm"
-                  onClick={() => updateWeekStatus("published")}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="mr-2 h-4 w-4" />
-                  )}
-                  Publish
-                </Button>
-              )}
+              {rotaWeek?.status === "draft" && (() => {
+                const openDayDates = weekDays.filter((day) => {
+                  const dw = day.getDay();
+                  const adj = dw === 0 ? 6 : dw - 1;
+                  return !openingHoursByDay[adj]?.is_closed;
+                });
+                const allDaysCompleted = openDayDates.length > 0 &&
+                  openDayDates.every(day => {
+                    const s = getConfirmationStatus(formatDateKey(day));
+                    return s && s.status;
+                  });
+                return (
+                  <Button
+                    size="sm"
+                    onClick={() => updateWeekStatus("published")}
+                    disabled={saving || !allDaysCompleted}
+                    title={!allDaysCompleted ? "All days must be confirmed before publishing" : undefined}
+                  >
+                    {saving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="mr-2 h-4 w-4" />
+                    )}
+                    Publish
+                  </Button>
+                );
+              })()}
             </div>
           </div>
         </CardContent>
@@ -1023,6 +1036,15 @@ export const RotaScheduleTab = () => {
                     // Hide closed days
                     if (isClosed) return null;
 
+                    // Compute day status
+                    const dayShiftsForStatus = shiftsByDate[dateKey] || [];
+                    const hasConfirmation = confirmation?.status;
+                    const dayStatus: "not_started" | "in_progress" | "completed" = hasConfirmation
+                      ? "completed"
+                      : dayShiftsForStatus.length > 0
+                        ? "in_progress"
+                        : "not_started";
+
                     return (
                       <TabsTrigger
                         key={index}
@@ -1030,16 +1052,16 @@ export const RotaScheduleTab = () => {
                         className="flex-1 py-2.5 px-4 rounded-md transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-muted/60"
                       >
                         <div className="flex flex-col items-center gap-0.5">
-                          <div className="flex items-center gap-1">
-                            <span className="text-sm font-medium">{format(day, "EEE")}</span>
-                            {confirmation?.status === "confirmed" && (
-                              <CheckCircle2 className="h-3 w-3 text-green-500 data-[state=active]:text-green-200" />
-                            )}
-                            {confirmation?.status === "confirmed_with_overrides" && (
-                              <AlertTriangle className="h-3 w-3 text-amber-500 data-[state=active]:text-amber-200" />
-                            )}
-                          </div>
+                          <span className="text-sm font-medium">{format(day, "EEE")}</span>
                           <span className="text-xs">{format(day, "do MMM")}</span>
+                          <span className={cn(
+                            "text-[10px] px-1.5 py-0.5 rounded-full font-medium mt-0.5",
+                            dayStatus === "not_started" && "bg-gray-100 text-gray-500",
+                            dayStatus === "in_progress" && "bg-amber-100 text-amber-600",
+                            dayStatus === "completed" && "bg-green-100 text-green-600",
+                          )}>
+                            {dayStatus === "not_started" ? "Not Started" : dayStatus === "in_progress" ? "In Progress" : "Completed"}
+                          </span>
                         </div>
                       </TabsTrigger>
                     );
@@ -1166,10 +1188,22 @@ export const RotaScheduleTab = () => {
         allStaff={allStaff}
         requireOnCall={rotaRule?.require_oncall ?? true}
         oncalls={oncalls}
-        onPublish={rotaWeek?.status === "draft" ? () => {
-          updateWeekStatus("published");
-          setShowPreview(false);
-        } : undefined}
+        onPublish={rotaWeek?.status === "draft" ? (() => {
+          const openDayDates = weekDays.filter((day) => {
+            const dw = day.getDay();
+            const adj = dw === 0 ? 6 : dw - 1;
+            return !openingHoursByDay[adj]?.is_closed;
+          });
+          const allCompleted = openDayDates.length > 0 &&
+            openDayDates.every(day => {
+              const s = getConfirmationStatus(formatDateKey(day));
+              return s && s.status;
+            });
+          return allCompleted ? () => {
+            updateWeekStatus("published");
+            setShowPreview(false);
+          } : undefined;
+        })() : undefined}
         saving={saving}
       />
     </div>
