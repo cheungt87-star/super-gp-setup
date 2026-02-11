@@ -184,9 +184,12 @@ export const RotaPreviewDialog = ({
             (s) => s.shift_type === slotType || s.shift_type === "full_day"
           );
           return slotShifts.map((s) => {
-            const staff = allStaff.find((st) => st.id === s.user_id);
+            const staff = s.user_id ? allStaff.find((st) => st.id === s.user_id) : null;
+            const name = s.is_temp_staff && s.temp_staff_name
+              ? s.temp_staff_name
+              : staff ? `${staff.first_name || ""} ${staff.last_name || ""}`.trim() : "Unknown";
             return {
-              name: staff ? `${staff.first_name || ""} ${staff.last_name || ""}`.trim() : "Unknown",
+              name,
               isTemp: s.is_temp_staff,
               tempConfirmed: s.temp_confirmed,
               isCrossSite: staff?.primary_site_id && staff.primary_site_id !== currentSiteId,
