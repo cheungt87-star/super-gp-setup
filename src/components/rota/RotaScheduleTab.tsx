@@ -80,6 +80,7 @@ export const RotaScheduleTab = () => {
   const [clinicRooms, setClinicRooms] = useState<ClinicRoom[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [loadingSiteData, setLoadingSiteData] = useState(false);
+  const [crossSiteShifts, setCrossSiteShifts] = useState<RotaShift[]>([]);
 
   // Edit state
   const [editingShift, setEditingShift] = useState<RotaShift | null>(null);
@@ -253,6 +254,74 @@ export const RotaScheduleTab = () => {
     fetchSiteData();
   }, [selectedSiteId, organisationId]);
 
+  // Fetch shifts from OTHER sites for the same week (for cross-site conflict checking)
+  useEffect(() => {
+    const fetchCrossSiteShifts = async () => {
+      if (!organisationId || !selectedSiteId || !weekStartStr) {
+        setCrossSiteShifts([]);
+        return;
+      }
+
+      try {
+        // Get rota_weeks for other sites in the same week
+        const { data: otherRotaWeeks } = await supabase
+          .from("rota_weeks")
+          .select("id, site_id")
+          .eq("organisation_id", organisationId)
+          .eq("week_start", weekStartStr)
+          .neq("site_id", selectedSiteId);
+
+        if (!otherRotaWeeks || otherRotaWeeks.length === 0) {
+          setCrossSiteShifts([]);
+          return;
+        }
+
+        const otherWeekIds = otherRotaWeeks.map(rw => rw.id);
+
+        const { data: otherShifts } = await supabase
+          .from("rota_shifts")
+          .select(`
+            id, rota_week_id, user_id, shift_date, shift_type,
+            custom_start_time, custom_end_time, is_oncall, oncall_slot,
+            notes, facility_id, is_temp_staff, temp_confirmed, temp_staff_name,
+            profiles(first_name, last_name, job_title_id, job_titles(name)),
+            facilities(name)
+          `)
+          .in("rota_week_id", otherWeekIds);
+
+        const mapped: RotaShift[] = (otherShifts || []).map((s: any) => ({
+          id: s.id,
+          rota_week_id: s.rota_week_id,
+          user_id: s.user_id,
+          shift_date: s.shift_date,
+          shift_type: s.shift_type,
+          custom_start_time: s.custom_start_time,
+          custom_end_time: s.custom_end_time,
+          is_oncall: s.is_oncall,
+          oncall_slot: s.oncall_slot,
+          notes: s.notes,
+          facility_id: s.facility_id,
+          is_temp_staff: s.is_temp_staff,
+          temp_confirmed: s.temp_confirmed,
+          temp_staff_name: s.temp_staff_name,
+          user_name: s.profiles
+            ? `${s.profiles.first_name || ""} ${s.profiles.last_name || ""}`.trim()
+            : s.temp_staff_name || undefined,
+          job_title_name: s.profiles?.job_titles?.name || undefined,
+          job_title_id: s.profiles?.job_title_id || undefined,
+          facility_name: s.facilities?.name || undefined,
+        }));
+
+        setCrossSiteShifts(mapped);
+      } catch (error) {
+        console.error("Error fetching cross-site shifts:", error);
+        setCrossSiteShifts([]);
+      }
+    };
+
+    fetchCrossSiteShifts();
+  }, [organisationId, selectedSiteId, weekStartStr, shifts]);
+
   // Calculate scheduled hours per staff
   const staffScheduledHours = useMemo(() => {
     const hours: Record<string, number> = {};
@@ -388,6 +457,31 @@ export const RotaScheduleTab = () => {
           toast({
             title: "Conflict detected",
             description: "This staff member already has a PM or Full Day shift in this room",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    }
+
+    // Check cross-site conflicts (skip for external temps with no userId)
+    if (userId) {
+      const crossSiteDayShifts = crossSiteShifts.filter(s => s.shift_date === dateKey && s.user_id === userId && !s.is_oncall);
+      if (crossSiteDayShifts.length > 0) {
+        const hasTimeConflict = crossSiteDayShifts.some(s => {
+          if (shiftType === "full_day") return true;
+          if (shiftType === "am" && (s.shift_type === "am" || s.shift_type === "full_day")) return true;
+          if (shiftType === "pm" && (s.shift_type === "pm" || s.shift_type === "full_day")) return true;
+          if (s.shift_type === "full_day") return true;
+          return false;
+        });
+        if (hasTimeConflict) {
+          const conflictSiteName = crossSiteDayShifts[0]?.facility_name
+            ? `another site (${crossSiteDayShifts[0].facility_name})`
+            : "another site";
+          toast({
+            title: "Cross-site conflict",
+            description: `This staff member is already assigned at ${conflictSiteName} for this time slot`,
             variant: "destructive",
           });
           return;
@@ -1029,6 +1123,7 @@ export const RotaScheduleTab = () => {
                           }
                         }}
                         copyingFromPrevWeek={copyingFromPrevWeek}
+                        crossSiteShifts={crossSiteShifts.filter(s => s.shift_date === dateKey)}
                       />
                     </TabsContent>
                   );
