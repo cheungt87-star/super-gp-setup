@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Calendar, DoorOpen, Sun, Moon, Clock, Phone, Users, MapPin } from "lucide-react";
 import { WeekSelector } from "@/components/rota/WeekSelector";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getWeekStartDate, getWeekDays, formatDateKey } from "@/lib/rotaUtils";
 import { format } from "date-fns";
 
@@ -111,7 +112,44 @@ export const MyShiftsWidget = () => {
   const [dayShifts, setDayShifts] = useState<DayShifts[]>([]);
   const [rotaExists, setRotaExists] = useState(true);
   const [primarySiteId, setPrimarySiteId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string>("me");
+  const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([]);
+  const [organisationId, setOrganisationId] = useState<string | null>(null);
+
+  // Fetch staff list once
+  useEffect(() => {
+    const fetchStaff = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("organisation_id")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (!profile?.organisation_id) return;
+      setOrganisationId(profile.organisation_id);
+      setCurrentUserId(session.user.id);
+
+      const { data: staff } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .eq("organisation_id", profile.organisation_id)
+        .eq("is_active", true)
+        .neq("id", session.user.id)
+        .order("first_name");
+
+      setStaffList(
+        (staff || []).map(s => ({
+          id: s.id,
+          name: `${s.first_name || ""} ${s.last_name || ""}`.trim() || "Unknown",
+        }))
+      );
+    };
+    fetchStaff();
+  }, []);
 
   const fetchShifts = useCallback(async () => {
     setLoading(true);
@@ -122,14 +160,13 @@ export const MyShiftsWidget = () => {
         return;
       }
 
-      const currentUserId = session.user.id;
-      setUserId(currentUserId);
+      const targetUserId = selectedUserId === "me" ? session.user.id : selectedUserId;
 
-      // Get user's profile
+      // Get target user's profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("primary_site_id, organisation_id")
-        .eq("id", currentUserId)
+        .eq("id", targetUserId)
         .maybeSingle();
 
       if (!profile?.organisation_id) {
@@ -138,7 +175,7 @@ export const MyShiftsWidget = () => {
         return;
       }
 
-      const organisationId = profile.organisation_id;
+      const orgId = profile.organisation_id;
       setPrimarySiteId(profile.primary_site_id);
 
       const weekStartKey = formatDateKey(weekStart);
@@ -147,7 +184,7 @@ export const MyShiftsWidget = () => {
       const { data: rotaWeeks } = await supabase
         .from("rota_weeks")
         .select("id, site_id, sites(name)")
-        .eq("organisation_id", organisationId)
+        .eq("organisation_id", orgId)
         .eq("week_start", weekStartKey);
 
       if (!rotaWeeks || rotaWeeks.length === 0) {
@@ -199,7 +236,7 @@ export const MyShiftsWidget = () => {
           facilities(name)
         `)
         .in("rota_week_id", rotaWeekIds)
-        .eq("user_id", currentUserId)
+        .eq("user_id", targetUserId)
         .in("shift_date", dateKeys);
 
       // Fetch colleague shifts (same facility, same dates)
@@ -222,7 +259,7 @@ export const MyShiftsWidget = () => {
             profiles(first_name, last_name)
           `)
           .in("rota_week_id", rotaWeekIds)
-          .neq("user_id", currentUserId)
+          .neq("user_id", targetUserId)
           .in("facility_id", facilityIds)
           .in("shift_date", dateKeys);
 
@@ -231,12 +268,12 @@ export const MyShiftsWidget = () => {
 
       // Fetch user's on-call assignments from rota_oncalls
       let onCallData: { oncall_date: string; oncall_slot: number; shift_period: string }[] = [];
-      if (organisationId) {
+      if (orgId) {
         const { data: onCalls } = await supabase
           .from("rota_oncalls")
           .select("oncall_date, oncall_slot, shift_period")
-          .eq("organisation_id", organisationId)
-          .eq("user_id", currentUserId)
+          .eq("organisation_id", orgId)
+          .eq("user_id", targetUserId)
           .in("oncall_date", dateKeys);
         
         onCallData = (onCalls || []).map(oc => ({
@@ -331,7 +368,7 @@ export const MyShiftsWidget = () => {
     } finally {
       setLoading(false);
     }
-  }, [weekStart]);
+  }, [weekStart, selectedUserId]);
 
   useEffect(() => {
     fetchShifts();
@@ -371,14 +408,33 @@ export const MyShiftsWidget = () => {
     }
   };
 
+  const selectedStaffName = selectedUserId === "me" 
+    ? null 
+    : staffList.find(s => s.id === selectedUserId)?.name;
+
   return (
     <Card className="mb-6 animate-fade-in">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          My Upcoming Shifts
-        </CardTitle>
-        <WeekSelector weekStart={weekStart} onWeekChange={setWeekStart} />
+      <CardHeader className="space-y-3 pb-4">
+        <div className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            {selectedUserId === "me" ? "My Upcoming Shifts" : `${selectedStaffName}'s Shifts`}
+          </CardTitle>
+          <WeekSelector weekStart={weekStart} onWeekChange={setWeekStart} />
+        </div>
+        <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Select staff member" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="me">My Shifts</SelectItem>
+            {staffList.map((staff) => (
+              <SelectItem key={staff.id} value={staff.id}>
+                {staff.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent>
         {loading ? (
