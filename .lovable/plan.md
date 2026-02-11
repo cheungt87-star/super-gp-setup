@@ -1,34 +1,54 @@
 
 
-## Add Due Date Filter to Dashboard Task Widgets
+## Day Status Pills, Publish Gate, and Published-Only Shifts
 
-Add a time-frame filter (1 day, 7 days, 30 days, 60 days, 90 days) to both the "Tasks Assigned to Me" and "Tasks Assigned to My Job Family" widgets, allowing users to scope visible tasks by how soon they are due.
+### 1. Day Status Pills on Each Tab
 
----
+Add a colour-coded status pill to each day tab showing:
+- **Not Started** (grey) -- no shifts exist for that day
+- **In Progress** (amber/orange) -- at least 1 shift exists but day not confirmed
+- **Day Completed** (green) -- "Confirm Day" has been selected (confirmation exists)
 
-### How It Will Work
+The pill will appear inside each tab trigger, below the date, before the existing confirmation icons (which will be removed since the pill replaces their purpose).
 
-- A row of small filter buttons (like toggle pills) will appear in each TaskWidget header, next to the task count badge
-- Filter options: **1d**, **7d**, **30d**, **60d**, **90d**
-- Default selection: **7d** (shows tasks due within the next 7 days, plus any overdue tasks)
-- Overdue tasks always remain visible regardless of the selected filter
-- The task count badge will update to reflect the filtered count
+### 2. "Copy from Previous Week" Pill Placement
+
+The status pill will sit to the left of any existing action pills in the day content area header. Since the tabs themselves show the status, this is cleanly integrated.
+
+### 3. Publish Button Gated by All Days Completed
+
+The "Publish" button (line 866-879) will be disabled unless every open (non-closed) day in the week has a confirmation status (i.e., all days are "Day Completed"). A tooltip will explain why it's disabled.
+
+### 4. "My Upcoming Shifts" Filters by Published Rotas Only
+
+In `MyShiftsWidget.tsx`, the query that fetches `rota_weeks` will add a filter: `.eq("status", "published")`. This ensures only published rotas appear in the dashboard widget.
 
 ---
 
 ### Technical Details
 
-**1. Update `TaskWidget` component** (`src/components/dashboard/TaskWidget.tsx`)
+**File: `src/components/rota/RotaScheduleTab.tsx`**
 
-- Add internal state for the selected filter (default: 7)
-- Define filter options: `[1, 7, 30, 60, 90]`
-- Filter the `tasks` array client-side: include tasks where `task.eta <= selectedDays` (due within N days) OR `task.isOverdue` (always show overdue)
-- Render a row of small toggle buttons in the CardHeader between the title and count badge
-- Update the count badge to show filtered task count
+1. **Compute day status** -- create a helper/memo that for each day returns `"not_started" | "in_progress" | "completed"`:
+   - `completed`: `getConfirmationStatus(dateKey)` returns a confirmation
+   - `in_progress`: `shiftsByDate[dateKey]?.length > 0` but no confirmation
+   - `not_started`: no shifts and no confirmation
 
-**2. No changes needed to Dashboard.tsx or data fetching**
+2. **Tab triggers (lines 1026-1046)** -- replace the CheckCircle2/AlertTriangle icons with a small coloured badge:
+   - Not Started: `bg-gray-100 text-gray-500` -- "Not Started"
+   - In Progress: `bg-amber-100 text-amber-600` -- "In Progress"  
+   - Completed: `bg-green-100 text-green-600` -- "Completed"
 
-- The Dashboard already fetches all active, non-completed tasks
-- Filtering is purely a UI/client-side concern within the widget
-- Both widgets independently manage their own filter state
+3. **Publish button (lines 866-879)** -- add `allDaysCompleted` boolean check:
+   ```
+   const allDaysCompleted = openDayDates.length > 0 && 
+     openDayDates.every(day => getConfirmationStatus(formatDateKey(day)));
+   ```
+   Disable the button when `!allDaysCompleted` and add a title/tooltip.
+
+4. **Preview dialog publish button** (line 1169) -- pass the same `allDaysCompleted` condition so publish is also gated there.
+
+**File: `src/components/dashboard/MyShiftsWidget.tsx`**
+
+5. **Filter rota_weeks by published status** (around line 155) -- add `.eq("status", "published")` to the rota_weeks query so only published rotas surface shifts in the dashboard widget.
 
