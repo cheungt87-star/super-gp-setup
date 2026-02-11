@@ -1056,7 +1056,7 @@ export const RotaScheduleTab = () => {
                           <span className="text-xs">{format(day, "do MMM")}</span>
                           <span className={cn(
                             "text-[10px] px-1.5 py-0.5 rounded-full font-medium mt-0.5",
-                            dayStatus === "not_started" && "bg-gray-100 text-gray-500",
+                            dayStatus === "not_started" && "bg-red-100 text-red-600",
                             dayStatus === "in_progress" && "bg-amber-100 text-amber-600",
                             dayStatus === "completed" && "bg-green-100 text-green-600",
                           )}>
