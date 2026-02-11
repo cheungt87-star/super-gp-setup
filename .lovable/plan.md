@@ -1,21 +1,31 @@
 
 
-## Color-Code Day Tabs by Status
+## Add Print Button to Full Rota Widget
 
-The status pills are rendering but are invisible because the active tab's teal background (`bg-primary`) overwhelms the small pill colors. The fix is to color-code the **entire tab background** based on day status, not just the small pill inside it.
+Add a "Print" button to the Full Rota header that calls `window.print()`, along with CSS `@media print` rules to ensure only the rota table prints cleanly.
 
 ### Changes
 
-**File: `src/components/rota/RotaScheduleTab.tsx`** (lines 1048-1066)
+**1. `src/components/dashboard/FullRotaWidget.tsx`**
+- Import the `Printer` icon from `lucide-react`
+- Add a `handlePrint` function that calls `window.print()`
+- Add a Print button next to the week navigation controls (with `print:hidden` class so it doesn't appear on the printout itself)
+- Add a print-specific title showing site name and week range (hidden on screen, visible in print)
 
-1. Replace the fixed `data-[state=active]:bg-primary` styling on `TabsTrigger` with dynamic classes based on `dayStatus`:
-   - **Not Started**: Red tones (`bg-red-500 text-white` when active, `bg-red-50 text-red-700` when inactive)
-   - **In Progress**: Amber tones (`bg-amber-500 text-white` when active, `bg-amber-50 text-amber-700` when inactive)
-   - **Completed**: Green tones (`bg-green-500 text-white` when active, `bg-green-50 text-green-700` when inactive)
+**2. `src/index.css`**
+- Add `@media print` styles:
+  - Hide everything except the Full Rota table (sidebar, header, other dashboard widgets)
+  - Remove card shadows/borders for clean printing
+  - Ensure the table fills the page width
+  - Force color printing for job title badges (`-webkit-print-color-adjust: exact; print-color-adjust: exact`)
+  - Hide interactive controls (site selector, week nav, print button) from the printout
+  - Add a visible header with site name and week range for the printed page
 
-2. Update the status pill inside the tab to use lighter/contrasting colors so it remains visible on the colored tab background (e.g., white/semi-transparent background on active tabs).
+### Technical Details
 
-3. Remove the hardcoded `data-[state=active]:bg-primary` and `data-[state=inactive]:text-muted-foreground` from the className, replacing them with the dynamic status-based colors.
-
-This will make each tab visually distinct at a glance -- red for days needing attention, amber for in-progress, and green for completed -- matching the screenshot reference where the completed tab has a green background with the pill inside.
+The approach uses a CSS class (e.g., `print-full-rota`) on the widget container. The `@media print` rules will:
+- Set `display: none` on `body > * :not(.print-full-rota)` patterns using a data attribute on the widget
+- Use `print:hidden` utility on buttons/selectors that shouldn't print
+- Use `print:block` on a hidden header element that shows site + week info on paper
+- Preserve table borders and badge colors with `print-color-adjust: exact`
 
