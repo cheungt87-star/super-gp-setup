@@ -762,6 +762,7 @@ export const RotaScheduleTab = () => {
     const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     const dayHours = openingHoursByDay[adjustedDay];
 
+    const dayOncalls = getOncallsForDate(formatDateKey(day));
     const violations = validateDay(
       day,
       shifts,
@@ -769,12 +770,13 @@ export const RotaScheduleTab = () => {
       dayHours,
       allStaff,
       selectedSiteId || "",
-      rotaRule?.require_oncall ?? true
+      rotaRule?.require_oncall ?? true,
+      dayOncalls
     );
 
     setConfirmViolations(violations);
     setConfirmingDate(day);
-  }, [shifts, clinicRooms, openingHoursByDay, allStaff, selectedSiteId, rotaRule]);
+  }, [shifts, clinicRooms, openingHoursByDay, allStaff, selectedSiteId, rotaRule, getOncallsForDate]);
 
   const handleDayConfirmed = async (overrides: DayOverride[]) => {
     if (!confirmingDate) return;

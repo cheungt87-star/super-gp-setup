@@ -14,6 +14,14 @@ export interface RuleViolation {
   message: string;
 }
 
+interface OncallRecord {
+  oncall_slot: number;
+  oncall_date: string;
+  shift_period: string;
+  user_id: string | null;
+  temp_staff_name: string | null;
+}
+
 interface ClinicRoom {
   id: string;
   name: string;
@@ -58,7 +66,8 @@ export function validateDay(
   openingHours: OpeningHour | undefined,
   allStaff: StaffMember[],
   currentSiteId: string,
-  requireOnCall: boolean
+  requireOnCall: boolean,
+  oncalls?: OncallRecord[]
 ): RuleViolation[] {
   const results: RuleViolation[] = [];
   const dateKey = formatDateKey(date);
@@ -71,14 +80,15 @@ export function validateDay(
 
   const dayShifts = shifts.filter((s) => s.shift_date === dateKey);
 
-  // Rule 1: Check all on-call slots are assigned (always mandatory)
+  // Rule 1: Check all on-call slots are assigned (using oncalls table data)
+  const dayOncalls = oncalls?.filter((o) => o.oncall_date === dateKey) || [];
   [1, 2, 3].forEach((slot) => {
-    const hasOnCallForSlot = dayShifts.some((s) => s.is_oncall && (s as any).oncall_slot === slot);
-    if (!hasOnCallForSlot) {
+    const hasOncallForSlot = dayOncalls.some((o) => o.oncall_slot === slot && (o.user_id || o.temp_staff_name));
+    if (!hasOncallForSlot) {
       const slotLabel = slot === 1 ? "On Call" : `On Call ${slot}`;
       results.push({
         type: "no_oncall",
-        severity: slot === 1 ? "error" : "warning", // First slot is critical, others are warnings
+        severity: slot === 1 ? "error" : "warning",
         day: dayLabel,
         dateKey,
         message: `${slotLabel} not assigned for ${dayLabel}`,
@@ -183,7 +193,8 @@ export function validateWeek(
   openingHoursByDay: Record<number, OpeningHour>,
   allStaff: StaffMember[],
   currentSiteId: string,
-  requireOnCall: boolean
+  requireOnCall: boolean,
+  oncalls?: OncallRecord[]
 ): RuleViolation[] {
   const results: RuleViolation[] = [];
 
@@ -199,7 +210,8 @@ export function validateWeek(
       dayHours,
       allStaff,
       currentSiteId,
-      requireOnCall
+      requireOnCall,
+      oncalls
     );
 
     results.push(...dayViolations);
