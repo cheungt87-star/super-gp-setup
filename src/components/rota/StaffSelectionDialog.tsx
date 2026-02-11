@@ -459,8 +459,8 @@ export const StaffSelectionDialog = ({
               </div>
             )}
 
-            {/* External Temp Staff Option - Now under staff list */}
-            {!isExternalTemp && filteredStaff.length > 0 && (
+            {/* External Temp Staff Option - Always visible */}
+            {!isExternalTemp && (
               <div 
                 className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-muted-foreground/30 cursor-pointer hover:bg-muted/30 transition-colors mt-3"
                 onClick={() => setIsExternalTemp(true)}
