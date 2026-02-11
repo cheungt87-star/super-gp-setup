@@ -1165,6 +1165,7 @@ export const RotaScheduleTab = () => {
         currentSiteId={selectedSiteId || ""}
         allStaff={allStaff}
         requireOnCall={rotaRule?.require_oncall ?? true}
+        oncalls={oncalls}
         onPublish={rotaWeek?.status === "draft" ? () => {
           updateWeekStatus("published");
           setShowPreview(false);

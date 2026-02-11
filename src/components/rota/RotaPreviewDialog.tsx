@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
+import type { RotaOncall } from "@/hooks/useRotaOncalls";
 import {
   Dialog,
   DialogContent,
@@ -64,6 +65,7 @@ interface RotaPreviewDialogProps {
   currentSiteId: string;
   allStaff: StaffMember[];
   requireOnCall: boolean;
+  oncalls?: RotaOncall[];
   onPublish?: () => void;
   saving?: boolean;
 }
@@ -78,10 +80,10 @@ export const RotaPreviewDialog = ({
   currentSiteId,
   allStaff,
   requireOnCall,
+  oncalls = [],
   onPublish,
   saving,
 }: RotaPreviewDialogProps) => {
-  // Run rules engine to detect violations using shared utility
   const violations = useMemo(() => {
     return validateWeek(
       weekDays,
@@ -224,24 +226,34 @@ export const RotaPreviewDialog = ({
         };
       });
 
-      const onCallShift = dayShifts.find((s) => s.is_oncall);
-      let onCallStaff = null;
-      if (onCallShift) {
-        const staff = allStaff.find((st) => st.id === onCallShift.user_id);
-        onCallStaff = staff
-          ? `${staff.first_name || ""} ${staff.last_name || ""}`.trim()
-          : "Unknown";
-      }
+      // Build on-call data from oncalls prop (3 slots, AM/PM each)
+      const oncallSlots = [
+        { slot: 1, label: "On Call Manager" },
+        { slot: 2, label: "On Duty Doctor 1" },
+        { slot: 3, label: "On Duty Doctor 2" },
+      ].map(({ slot, label }) => {
+        const slotOncalls = oncalls.filter(
+          (oc) => oc.oncall_date === dateKey && oc.oncall_slot === slot
+        );
+        const amOncall = slotOncalls.find((oc) => oc.shift_period === "am");
+        const pmOncall = slotOncalls.find((oc) => oc.shift_period === "pm");
+        return {
+          slot,
+          label,
+          am: amOncall?.user_name || null,
+          pm: pmOncall?.user_name || null,
+        };
+      });
 
       return {
         date: day,
         dateKey,
         dayLabel: format(day, "EEE d"),
         rooms: roomData,
-        onCall: onCallStaff,
+        oncallSlots,
       };
     });
-  }, [weekDays, openingHoursByDay, shifts, clinicRooms, allStaff, currentSiteId]);
+  }, [weekDays, openingHoursByDay, shifts, clinicRooms, allStaff, currentSiteId, oncalls]);
 
   const getViolationIcon = (type: RuleViolation["type"]) => {
     switch (type) {
@@ -298,28 +310,56 @@ export const RotaPreviewDialog = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {/* On-Call Row */}
-                    {requireOnCall && (
-                      <tr className="border-b bg-primary/5">
+                    {/* On-Call Rows - 3 slots with AM/PM */}
+                    {requireOnCall && [
+                      { slot: 1, label: "On Call Manager" },
+                      { slot: 2, label: "On Duty Doctor 1" },
+                      { slot: 3, label: "On Duty Doctor 2" },
+                    ].map(({ slot, label }) => (
+                      <tr key={`oncall-${slot}`} className="border-b bg-primary/5">
                         <td className="p-2 font-medium sticky left-0 bg-primary/5">
                           <div className="flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5" />
-                            On-Call
+                            <span className="text-xs">{label}</span>
                           </div>
                         </td>
-                        {weekSummary.map((day) => (
-                          <td key={day.dateKey} className="p-2 text-center">
-                            {day.onCall ? (
-                              <span className="text-xs">{day.onCall}</span>
-                            ) : (
-                              <Badge variant="destructive" className="text-xs">
-                                Missing
-                              </Badge>
-                            )}
-                          </td>
-                        ))}
+                        {weekSummary.map((day) => {
+                          const slotData = day.oncallSlots.find((s) => s.slot === slot);
+                          const amName = slotData?.am;
+                          const pmName = slotData?.pm;
+                          const hasAny = amName || pmName;
+
+                          return (
+                            <td key={day.dateKey} className="p-1">
+                              {!hasAny ? (
+                                <div className="text-center">
+                                  <Badge variant="destructive" className="text-xs">
+                                    Missing
+                                  </Badge>
+                                </div>
+                              ) : (
+                                <div className="space-y-1">
+                                  <div className={cn(
+                                    "text-xs p-1 rounded",
+                                    amName ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-600"
+                                  )}>
+                                    <span className="font-medium">AM:</span>
+                                    <span className="ml-1">{amName || "—"}</span>
+                                  </div>
+                                  <div className={cn(
+                                    "text-xs p-1 rounded",
+                                    pmName ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-600"
+                                  )}>
+                                    <span className="font-medium">PM:</span>
+                                    <span className="ml-1">{pmName || "—"}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
                       </tr>
-                    )}
+                    ))}
 
                     {/* Clinic Room Rows */}
                     {clinicRooms.map((room) => (
