@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList, User, Users } from "lucide-react";
 import { TaskWithDueDate } from "@/lib/taskUtils";
 import TaskRowItem from "./TaskRowItem";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 
 interface TaskWidgetProps {
   title: string;
@@ -35,23 +35,23 @@ const TaskWidget = ({ title, tasks, onTaskClick, variant }: TaskWidgetProps) => 
             {filteredTasks.length}
           </span>
         </div>
-        <ToggleGroup
-          type="single"
-          value={String(selectedDays)}
-          onValueChange={(v) => v && setSelectedDays(Number(v))}
-          size="sm"
-          className="justify-start"
-        >
+        <div className="flex items-center gap-1">
           {FILTER_OPTIONS.map((d) => (
-            <ToggleGroupItem
+            <button
               key={d}
-              value={String(d)}
-              className="text-xs px-2 h-7 rounded-full"
+              type="button"
+              onClick={() => setSelectedDays(d)}
+              className={cn(
+                "text-xs px-2 py-1 rounded-full transition-colors font-medium",
+                selectedDays === d
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
             >
               {d}d
-            </ToggleGroupItem>
+            </button>
           ))}
-        </ToggleGroup>
+        </div>
       </CardHeader>
       <CardContent className="space-y-2">
         {filteredTasks.length === 0 ? (
