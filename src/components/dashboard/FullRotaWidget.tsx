@@ -371,7 +371,7 @@ export function FullRotaWidget() {
   }
 
   return (
-    <Card className="mb-6 animate-fade-in print-full-rota" data-print-rota>
+    <Card className="mb-6 animate-fade-in print-full-rota card-gradient" data-print-rota>
       {/* Print-only header */}
       <div className="hidden print:block print:mb-4 print:text-center">
         <h1 className="text-xl font-bold">{selectedSiteName} — Full Rota</h1>

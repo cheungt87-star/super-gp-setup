@@ -414,7 +414,7 @@ export const MyShiftsWidget = () => {
     : staffList.find(s => s.id === selectedUserId)?.name;
 
   return (
-    <Card className="mb-6 animate-fade-in">
+    <Card className="mb-6 animate-fade-in card-gradient">
       <CardHeader className="space-y-3 pb-4">
         <div className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">

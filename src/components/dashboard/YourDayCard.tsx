@@ -190,7 +190,7 @@ export function YourDayCard({ todayTasks }: YourDayCardProps) {
   }
 
   return (
-    <Card className="mb-6 animate-fade-in">
+    <Card className="mb-6 animate-fade-in card-gradient">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg font-semibold">Your Day</CardTitle>
         <span className="text-sm text-muted-foreground">

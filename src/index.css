@@ -54,6 +54,8 @@
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+    --card-gradient-from: 210 60% 98%;
+    --card-gradient-to: 200 50% 95%;
   }
 
   .dark {
@@ -98,6 +100,8 @@
     --success-foreground: 0 0% 100%;
     --warning: 38 90% 55%;
     --warning-foreground: 0 0% 0%;
+    --card-gradient-from: 215 40% 16%;
+    --card-gradient-to: 210 35% 20%;
   }
 
   * {
@@ -116,6 +120,10 @@
   
   .gradient-subtle {
     @apply bg-gradient-to-b from-background to-muted/30;
+  }
+
+  .card-gradient {
+    background: linear-gradient(135deg, hsl(var(--card-gradient-from)), hsl(var(--card-gradient-to)));
   }
 }
 
