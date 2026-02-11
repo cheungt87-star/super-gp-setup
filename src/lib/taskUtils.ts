@@ -134,3 +134,62 @@ export function enrichTaskWithDueDate(task: WorkflowTaskWithDetails): TaskWithDu
     isToday
   };
 }
+
+/**
+ * Generate all future occurrences of a recurring task within a given number of days.
+ * Each occurrence gets a unique ID suffix to distinguish them in lists.
+ */
+export function expandTaskOccurrences(task: TaskWithDueDate, maxDays: number): TaskWithDueDate[] {
+  const occurrences: TaskWithDueDate[] = [];
+  const today = startOfDay(new Date());
+  const horizon = addDays(today, maxDays);
+  
+  // Always include the current (first) occurrence if it's within range or overdue
+  if (task.isOverdue || task.eta <= maxDays) {
+    occurrences.push(task);
+  }
+  
+  // Generate future occurrences beyond the current due date
+  let nextDate = getNextOccurrence(task.currentDueDate, task.recurrence_pattern, task.recurrence_interval_days);
+  let occIndex = 1;
+  
+  while (isBefore(nextDate, horizon) || isEqual(nextDate, horizon)) {
+    const { eta, isOverdue, isToday } = calculateEta(nextDate);
+    occurrences.push({
+      ...task,
+      id: `${task.id}-occ-${occIndex}`,
+      currentDueDate: nextDate,
+      eta,
+      isOverdue,
+      isToday
+    });
+    nextDate = getNextOccurrence(nextDate, task.recurrence_pattern, task.recurrence_interval_days);
+    occIndex++;
+    // Safety limit
+    if (occIndex > 365) break;
+  }
+  
+  return occurrences;
+}
+
+/**
+ * Public wrapper for getNextDueDate to use in occurrence expansion
+ */
+function getNextOccurrence(
+  currentDate: Date,
+  pattern: "daily" | "weekly" | "monthly" | "custom",
+  intervalDays: number | null
+): Date {
+  switch (pattern) {
+    case "daily":
+      return addDays(currentDate, 1);
+    case "weekly":
+      return addWeeks(currentDate, 1);
+    case "monthly":
+      return addMonths(currentDate, 1);
+    case "custom":
+      return addDays(currentDate, intervalDays || 1);
+    default:
+      return addDays(currentDate, 1);
+  }
+}

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList, User, Users } from "lucide-react";
-import { TaskWithDueDate } from "@/lib/taskUtils";
+import { TaskWithDueDate, expandTaskOccurrences } from "@/lib/taskUtils";
 import TaskRowItem from "./TaskRowItem";
 import { cn } from "@/lib/utils";
 
@@ -19,15 +19,15 @@ const TaskWidget = ({ title, tasks, onTaskClick, variant }: TaskWidgetProps) => 
   const [selectedDays, setSelectedDays] = useState<number>(7);
 
   const filteredTasks = useMemo(() => {
-    console.log(`[TaskWidget ${variant}] selectedDays=${selectedDays}, tasks count=${tasks.length}`);
-    const result = tasks.filter((t) => {
-      const passes = t.isOverdue || t.eta <= selectedDays;
-      console.log(`  Task "${t.name}" eta=${t.eta} isOverdue=${t.isOverdue} passes=${passes}`);
-      return passes;
+    // Expand each task into multiple occurrences within the filter window
+    const expanded = tasks.flatMap((t) => expandTaskOccurrences(t, selectedDays));
+    // Sort: overdue first, then by due date
+    return expanded.sort((a, b) => {
+      if (a.isOverdue && !b.isOverdue) return -1;
+      if (!a.isOverdue && b.isOverdue) return 1;
+      return a.currentDueDate.getTime() - b.currentDueDate.getTime();
     });
-    console.log(`  Filtered: ${result.length} tasks`);
-    return result;
-  }, [tasks, selectedDays, variant]);
+  }, [tasks, selectedDays]);
 
   return (
     <Card className="h-full">
