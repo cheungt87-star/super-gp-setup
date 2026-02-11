@@ -1,84 +1,34 @@
 
-# Make Shift Options More Visible in Staff Selection Dialog
 
-## Problem
-When selecting a staff member in the rota scheduler, the "Shift Options" section (Make Full Day, Custom Time) is positioned at the bottom of the dialog after the staff list, requiring users to scroll down to find it. This is not immediately discoverable.
+## Add Due Date Filter to Dashboard Task Widgets
 
-## Solution
-Restructure the dialog layout to use a **two-column approach** on wider screens:
-- **Left column**: Staff list (scrollable)
-- **Right column**: Selected staff summary + Shift Options (sticky, always visible)
+Add a time-frame filter (1 day, 7 days, 30 days, 60 days, 90 days) to both the "Tasks Assigned to Me" and "Tasks Assigned to My Job Family" widgets, allowing users to scope visible tasks by how soon they are due.
 
-On smaller screens, use a different approach: move the Shift Options into a **highlighted section at the top** that appears when a staff member is selected.
+---
 
-## Layout Changes
+### How It Will Work
 
-### Current Structure (problematic)
-```text
-┌─────────────────────────────────────┐
-│ Filters (Site, Job Family, Search)  │
-├─────────────────────────────────────┤
-│ Staff List (ScrollArea 420px)       │
-│   - Staff 1                         │
-│   - Staff 2                         │
-│   - Staff 3...                      │
-├─────────────────────────────────────┤
-│ Add Temp/Locum Option               │
-├─────────────────────────────────────┤
-│ Shift Options (HIDDEN - scroll!)    │  ← Problem
-├─────────────────────────────────────┤
-│ [Add Staff Button]                  │
-└─────────────────────────────────────┘
-```
+- A row of small filter buttons (like toggle pills) will appear in each TaskWidget header, next to the task count badge
+- Filter options: **1d**, **7d**, **30d**, **60d**, **90d**
+- Default selection: **7d** (shows tasks due within the next 7 days, plus any overdue tasks)
+- Overdue tasks always remain visible regardless of the selected filter
+- The task count badge will update to reflect the filtered count
 
-### New Structure (two-column on desktop)
-```text
-┌──────────────────────────────────────────────────────┐
-│ Filters (Site, Job Family, Job Title, Search)        │
-├────────────────────────────┬─────────────────────────┤
-│ Staff List (ScrollArea)    │ Selection Panel         │
-│   - Staff 1                │ ┌─────────────────────┐ │
-│   - Staff 2 ✓ (selected)   │ │ Selected: Staff 2   │ │
-│   - Staff 3...             │ │ Job Title Badge     │ │
-│                            │ ├─────────────────────┤ │
-│ Add Temp/Locum Option      │ │ SHIFT OPTIONS       │ │
-│                            │ │ ☐ Make Full Day     │ │
-│                            │ │ ☐ Custom Time       │ │
-│                            │ └─────────────────────┘ │
-│                            │ [Add Staff Button]      │
-├────────────────────────────┴─────────────────────────┤
-```
+---
 
-## Technical Implementation
+### Technical Details
 
-### File: `src/components/rota/StaffSelectionDialog.tsx`
+**1. Update `TaskWidget` component** (`src/components/dashboard/TaskWidget.tsx`)
 
-1. **Change the main content area to a two-column grid** (on sm: screens and up):
-   - Left column (2/3 width): Filters + Staff List + Temp option
-   - Right column (1/3 width): Selection summary + Shift Options + Add button
+- Add internal state for the selected filter (default: 7)
+- Define filter options: `[1, 7, 30, 60, 90]`
+- Filter the `tasks` array client-side: include tasks where `task.eta <= selectedDays` (due within N days) OR `task.isOverdue` (always show overdue)
+- Render a row of small toggle buttons in the CardHeader between the title and count badge
+- Update the count badge to show filtered task count
 
-2. **Move Shift Options into the right column** so they're always visible when a staff member is selected
+**2. No changes needed to Dashboard.tsx or data fetching**
 
-3. **Add a "Select a staff member" placeholder** in the right column when no one is selected
+- The Dashboard already fetches all active, non-completed tasks
+- Filtering is purely a UI/client-side concern within the widget
+- Both widgets independently manage their own filter state
 
-4. **Display selected staff info** at the top of the right column for confirmation
-
-5. **Keep mobile-friendly**: On small screens, stack vertically but show Shift Options immediately after staff selection, before the staff list continues
-
-### Specific Changes
-
-- Wrap the main content in a responsive grid: `grid grid-cols-1 sm:grid-cols-3 gap-4`
-- Left column (`sm:col-span-2`): Filters, Staff List ScrollArea, Temp option
-- Right column (`sm:col-span-1`): Sticky panel with:
-  - Selected staff summary (name, job title, hours)
-  - Shift Options section (always visible, not hidden)
-  - Add Staff button
-- Reduce ScrollArea height to account for the new layout
-- Add visual styling to make the right panel stand out (subtle background, border)
-
-## Benefits
-- Shift Options are immediately visible after selecting a staff member
-- No scrolling required to configure shift settings
-- Selected staff confirmation is always visible
-- Mobile users still get a usable layout
-- Clearer visual hierarchy and workflow
