@@ -77,6 +77,7 @@ interface ClinicRoomDayCellProps {
   amShiftEnd?: string;
   pmShiftStart?: string;
   pmShiftEnd?: string;
+  crossSiteShifts?: RotaShift[];
   onAddShift: (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string, oncallSlot?: number) => Promise<void>;
   onDeleteShift: (shiftId: string) => void;
   onEditShift: (shift: RotaShift) => void;
@@ -119,6 +120,7 @@ export const ClinicRoomDayCell = ({
   onCopyFromPreviousWeek,
   onClearAll,
   copyingFromPrevWeek = false,
+  crossSiteShifts = [],
 }: ClinicRoomDayCellProps) => {
   const [selectionDialog, setSelectionDialog] = useState<{
     open: boolean;
@@ -187,7 +189,7 @@ export const ClinicRoomDayCell = ({
     }
 
     // Check ALL regular shifts (not just same room) for time overlap - filter out external temps with no user_id
-    const conflictingUserIds = regularShifts
+    const conflictingFromCurrentSite = regularShifts
       .filter((shift) => {
         if (!shift.user_id) return false; // Skip external temps
         const shiftRange = getShiftTimeRange(shift);
@@ -196,7 +198,18 @@ export const ClinicRoomDayCell = ({
       .map((s) => s.user_id)
       .filter((id): id is string => id !== null);
 
-    return [...new Set(conflictingUserIds)];
+    // Also check cross-site shifts for time overlap
+    const conflictingFromOtherSites = (crossSiteShifts || [])
+      .filter((shift) => {
+        if (!shift.user_id) return false;
+        if (shift.is_oncall) return false;
+        const shiftRange = getShiftTimeRange(shift);
+        return doTimesOverlap(targetStart, targetEnd, shiftRange.start, shiftRange.end);
+      })
+      .map((s) => s.user_id)
+      .filter((id): id is string => id !== null);
+
+    return [...new Set([...conflictingFromCurrentSite, ...conflictingFromOtherSites])];
   };
 
   // Helper to determine if a custom shift falls in AM period
