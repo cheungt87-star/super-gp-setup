@@ -1049,16 +1049,21 @@ export const RotaScheduleTab = () => {
                       <TabsTrigger
                         key={index}
                         value={String(index)}
-                        className="flex-1 py-2.5 px-4 rounded-md transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-muted/60"
+                        className={cn(
+                          "flex-1 py-2.5 px-4 rounded-md transition-all shadow-sm",
+                          dayStatus === "not_started" && "data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=active]:shadow-md bg-red-50 text-red-700 hover:bg-red-100",
+                          dayStatus === "in_progress" && "data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md bg-amber-50 text-amber-700 hover:bg-amber-100",
+                          dayStatus === "completed" && "data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-md bg-green-50 text-green-700 hover:bg-green-100",
+                        )}
                       >
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="text-sm font-medium">{format(day, "EEE")}</span>
                           <span className="text-xs">{format(day, "do MMM")}</span>
                           <span className={cn(
                             "text-[10px] px-1.5 py-0.5 rounded-full font-medium mt-0.5",
-                            dayStatus === "not_started" && "bg-red-100 text-red-600",
-                            dayStatus === "in_progress" && "bg-amber-100 text-amber-600",
-                            dayStatus === "completed" && "bg-green-100 text-green-600",
+                            dayStatus === "not_started" && "bg-white/80 text-red-600 data-[state=active]:bg-white/30 data-[state=active]:text-white",
+                            dayStatus === "in_progress" && "bg-white/80 text-amber-600 data-[state=active]:bg-white/30 data-[state=active]:text-white",
+                            dayStatus === "completed" && "bg-white/80 text-green-600 data-[state=active]:bg-white/30 data-[state=active]:text-white",
                           )}>
                             {dayStatus === "not_started" ? "Not Started" : dayStatus === "in_progress" ? "In Progress" : "Completed"}
                           </span>
