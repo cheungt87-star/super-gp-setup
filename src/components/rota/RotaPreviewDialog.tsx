@@ -331,30 +331,22 @@ export const RotaPreviewDialog = ({
 
                           return (
                             <td key={day.dateKey} className="p-1">
-                              {!hasAny ? (
-                                <div className="text-center">
-                                  <Badge variant="destructive" className="text-xs">
-                                    Missing
-                                  </Badge>
+                              <div className="space-y-1">
+                                <div className={cn(
+                                  "text-xs p-1 rounded",
+                                  amName ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-600"
+                                )}>
+                                  <span className="font-medium">AM:</span>
+                                  <span className="ml-1">{amName || "Empty"}</span>
                                 </div>
-                              ) : (
-                                <div className="space-y-1">
-                                  <div className={cn(
-                                    "text-xs p-1 rounded",
-                                    amName ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-600"
-                                  )}>
-                                    <span className="font-medium">AM:</span>
-                                    <span className="ml-1">{amName || "—"}</span>
-                                  </div>
-                                  <div className={cn(
-                                    "text-xs p-1 rounded",
-                                    pmName ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-600"
-                                  )}>
-                                    <span className="font-medium">PM:</span>
-                                    <span className="ml-1">{pmName || "—"}</span>
-                                  </div>
+                                <div className={cn(
+                                  "text-xs p-1 rounded",
+                                  pmName ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-600"
+                                )}>
+                                  <span className="font-medium">PM:</span>
+                                  <span className="ml-1">{pmName || "Empty"}</span>
                                 </div>
-                              )}
+                              </div>
                             </td>
                           );
                         })}
