@@ -136,16 +136,29 @@ export const StaffSelectionDialog = ({
     return slots;
   };
 
-  // Generate valid time slots - unrestricted 06:00-23:30 range
-  const validTimeSlots = useMemo(() => {
+  // Generate valid start time slots based on shift type
+  const validStartTimeSlots = useMemo(() => {
+    const pmStart = pmShiftStart.slice(0, 5);
+    if (shiftType === "am") {
+      // AM: from 06:00 up to pmStart - 30min
+      const [h, m] = pmStart.split(":").map(Number);
+      const lastStartMin = h * 60 + m - 30;
+      const lastH = Math.floor(lastStartMin / 60).toString().padStart(2, "0");
+      const lastM = (lastStartMin % 60).toString().padStart(2, "0");
+      return generateTimeSlots("06:00", `${lastH}:${lastM}`, 30);
+    } else if (shiftType === "pm") {
+      // PM: from pmStart onwards
+      return generateTimeSlots(pmStart, "23:30", 30);
+    }
     return generateTimeSlots("06:00", "23:30", 30);
-  }, []);
+  }, [shiftType, pmShiftStart]);
 
   // Filter end time options to be after start time
   const validEndTimeSlots = useMemo(() => {
-    if (!customStart) return validTimeSlots;
-    return validTimeSlots.filter(time => time > customStart);
-  }, [customStart, validTimeSlots]);
+    const allSlots = generateTimeSlots("06:00", "23:30", 30);
+    if (!customStart) return allSlots;
+    return allSlots.filter(time => time > customStart);
+  }, [customStart]);
 
   // Detect if custom range spans the AM/PM boundary
   const spansBoundary = useMemo(() => {
@@ -624,7 +637,7 @@ export const StaffSelectionDialog = ({
                             </Label>
                           </div>
                           
-                          {useCustomTime && validTimeSlots.length > 0 && (
+                          {useCustomTime && validStartTimeSlots.length > 0 && (
                             <div className="grid grid-cols-2 gap-2 pl-6">
                               <div>
                                 <Label className="text-xs text-muted-foreground">Start</Label>
@@ -632,7 +645,7 @@ export const StaffSelectionDialog = ({
                                   setCustomStart(v);
                                   // Reset end time if it's now invalid
                                   if (customEnd && customEnd <= v) {
-                                    const nextSlots = validTimeSlots.filter(t => t > v);
+                                    const nextSlots = validStartTimeSlots.filter(t => t > v);
                                     setCustomEnd(nextSlots.length > 0 ? nextSlots[0] : "");
                                   }
                                 }}>
@@ -640,7 +653,7 @@ export const StaffSelectionDialog = ({
                                     <SelectValue placeholder="Select" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {validTimeSlots.slice(0, -1).map((time) => (
+                                    {validStartTimeSlots.slice(0, -1).map((time) => (
                                       <SelectItem key={time} value={time}>
                                         {time}
                                       </SelectItem>
