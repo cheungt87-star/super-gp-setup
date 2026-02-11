@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, startOfWeek } from "date-fns";
 import { TaskWithDueDate } from "@/lib/taskUtils";
+import { usePatientCapacity } from "@/hooks/usePatientCapacity";
+import { PatientCapacityCard } from "./PatientCapacityCard";
 
 interface OnCallSlotInfo {
   amName: string | null;
@@ -26,7 +28,9 @@ export function YourDayCard({ todayTasks }: YourDayCardProps) {
   const [loading, setLoading] = useState(true);
   const [slots, setSlots] = useState<Record<number, OnCallSlotInfo>>({});
   const [shift, setShift] = useState<ShiftInfo | null>(null);
+  const [primarySiteId, setPrimarySiteId] = useState<string | null>(null);
   const today = new Date();
+  const capacity = usePatientCapacity(primarySiteId);
 
   useEffect(() => {
     const fetchTodayData = async () => {
@@ -40,6 +44,7 @@ export function YourDayCard({ todayTasks }: YourDayCardProps) {
         .maybeSingle();
 
       if (!profile?.primary_site_id || !profile?.organisation_id) { setLoading(false); return; }
+      setPrimarySiteId(profile.primary_site_id);
 
       const todayStr = format(today, "yyyy-MM-dd");
       const weekStart = format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd");
@@ -263,6 +268,13 @@ export function YourDayCard({ todayTasks }: YourDayCardProps) {
             <p className="text-sm italic text-slate-400">No tasks due today</p>
           )}
         </div>
+        {/* Patient Capacity */}
+        <PatientCapacityCard
+          totalCapacity={capacity.totalCapacity}
+          amCapacity={capacity.amCapacity}
+          pmCapacity={capacity.pmCapacity}
+          loading={capacity.loading}
+        />
       </div>
     </div>
   );
