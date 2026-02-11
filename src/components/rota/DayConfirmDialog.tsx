@@ -161,14 +161,31 @@ export const DayConfirmDialog = ({
 
         <div className="flex-1 min-h-0 flex flex-col space-y-4">
           {/* Summary */}
-          <div className="flex items-center gap-2 text-sm flex-shrink-0">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            <span className="font-medium">
-              {errorCount + warningCount} issue{errorCount + warningCount !== 1 ? "s" : ""} found
-            </span>
-            {errorCount > 0 && (
-              <span className="text-destructive">({errorCount} error{errorCount !== 1 ? "s" : ""})</span>
-            )}
+          <div className="flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-2 text-sm">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <span className="font-medium">
+                {errorCount + warningCount} issue{errorCount + warningCount !== 1 ? "s" : ""} found
+              </span>
+              {errorCount > 0 && (
+                <span className="text-destructive">({errorCount} error{errorCount !== 1 ? "s" : ""})</span>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => {
+                const all: Record<number, OverrideState> = {};
+                violations.forEach((_, i) => {
+                  all[i] = { checked: true, reason: overrides[i]?.reason || "" };
+                });
+                setOverrides(all);
+              }}
+              disabled={allOverridden}
+            >
+              Override All
+            </Button>
           </div>
 
           {/* Violations List */}
