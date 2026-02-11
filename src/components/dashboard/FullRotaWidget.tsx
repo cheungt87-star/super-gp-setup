@@ -371,18 +371,15 @@ export function FullRotaWidget() {
   }
 
   return (
-    <Card className="mb-6 animate-fade-in print-full-rota" data-print-rota>
+    <div className="mb-8 rounded-2xl bg-[#F8FAFC] p-6 animate-fade-in print-full-rota" data-print-rota>
       {/* Print-only header */}
       <div className="hidden print:block print:mb-4 print:text-center">
         <h1 className="text-xl font-bold">{selectedSiteName} — Full Rota</h1>
         <p className="text-sm">{formatWeekRange(weekStart)}</p>
       </div>
-      <CardHeader className="pb-4 print:hidden">
+      <div className="pb-4 print:hidden">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Full Rota
-          </CardTitle>
+          <h2 className="text-3xl font-bold text-[#1E293B]">Full Rota</h2>
           
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             {/* Site Selector */}
@@ -416,9 +413,8 @@ export function FullRotaWidget() {
           </div>
           </div>
         </div>
-      </CardHeader>
-
-      <CardContent>
+      </div>
+      <div className="rounded-3xl bg-white p-6 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.08)]">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -535,7 +531,7 @@ export function FullRotaWidget() {
             </table>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
