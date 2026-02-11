@@ -414,17 +414,16 @@ export const MyShiftsWidget = () => {
     : staffList.find(s => s.id === selectedUserId)?.name;
 
   return (
-    <Card className="mb-6 animate-fade-in card-gradient">
-      <CardHeader className="space-y-3 pb-4">
-        <div className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            {selectedUserId === "me" ? "My Upcoming Shifts" : `${selectedStaffName}'s Shifts`}
-          </CardTitle>
-          <WeekSelector weekStart={weekStart} onWeekChange={setWeekStart} />
-        </div>
+    <div className="mb-8 rounded-2xl bg-[#F8FAFC] p-6 animate-fade-in">
+      <div className="flex flex-row items-center justify-between mb-4">
+        <h2 className="text-3xl font-bold text-[#1E293B]">
+          {selectedUserId === "me" ? "My Upcoming Shifts" : `${selectedStaffName}'s Shifts`}
+        </h2>
+        <WeekSelector weekStart={weekStart} onWeekChange={setWeekStart} />
+      </div>
+      <div className="mb-5">
         <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-          <SelectTrigger className="w-[220px]">
+          <SelectTrigger className="w-[220px] rounded-xl border-slate-200 bg-white shadow-sm">
             <SelectValue placeholder="Select staff member" />
           </SelectTrigger>
           <SelectContent>
@@ -436,8 +435,8 @@ export const MyShiftsWidget = () => {
             ))}
           </SelectContent>
         </Select>
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div className="rounded-3xl bg-white p-6 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.08)]">
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -542,7 +541,7 @@ export const MyShiftsWidget = () => {
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
