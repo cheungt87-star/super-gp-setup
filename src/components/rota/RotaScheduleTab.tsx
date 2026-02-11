@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Loader2, AlertCircle, Send, Eye, CheckCircle2, AlertTriangle, Clock, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -877,19 +878,31 @@ export const RotaScheduleTab = () => {
                     return s && s.status;
                   });
                 return (
-                  <Button
-                    size="sm"
-                    onClick={() => updateWeekStatus("published")}
-                    disabled={saving || !allDaysCompleted}
-                    title={!allDaysCompleted ? "All days must be confirmed before publishing" : undefined}
-                  >
-                    {saving ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="mr-2 h-4 w-4" />
-                    )}
-                    Publish
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-block">
+                          <Button
+                            size="sm"
+                            onClick={() => updateWeekStatus("published")}
+                            disabled={saving || !allDaysCompleted}
+                          >
+                            {saving ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Send className="mr-2 h-4 w-4" />
+                            )}
+                            Publish
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {!allDaysCompleted && (
+                        <TooltipContent>
+                          <p>Can only publish once all days confirmed</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 );
               })()}
             </div>
