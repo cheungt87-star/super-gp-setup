@@ -181,8 +181,23 @@ export const RotaPreviewDialog = ({
         
         const getStaffForSlot = (slotType: "am" | "pm") => {
           const slotShifts = roomShifts.filter(
-            (s) => s.shift_type === slotType || s.shift_type === "full_day"
-          );
+            (s) => s.shift_type === slotType || s.shift_type === "full_day" || s.shift_type === "custom"
+          ).filter((s) => {
+            // For custom shifts, check if they overlap with this slot's time range
+            if (s.shift_type === "custom" && s.custom_start_time && s.custom_end_time) {
+              const dayOfWeek = day.getDay();
+              const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+              const dayHours = openingHoursByDay[adjustedDay];
+              if (slotType === "am") {
+                const amEnd = dayHours?.am_close_time || "13:00";
+                return s.custom_start_time < amEnd;
+              } else {
+                const pmStart = dayHours?.pm_open_time || "13:00";
+                return s.custom_end_time > pmStart;
+              }
+            }
+            return true;
+          });
           return slotShifts.map((s) => {
             const staff = s.user_id ? allStaff.find((st) => st.id === s.user_id) : null;
             const name = s.is_temp_staff && s.temp_staff_name
@@ -193,6 +208,10 @@ export const RotaPreviewDialog = ({
               isTemp: s.is_temp_staff,
               tempConfirmed: s.temp_confirmed,
               isCrossSite: staff?.primary_site_id && staff.primary_site_id !== currentSiteId,
+              isCustom: s.shift_type === "custom",
+              customTime: s.shift_type === "custom" && s.custom_start_time && s.custom_end_time
+                ? `${s.custom_start_time.slice(0, 5)}-${s.custom_end_time.slice(0, 5)}`
+                : null,
             };
           });
         };
@@ -331,8 +350,13 @@ export const RotaPreviewDialog = ({
                                   ) : (
                                     <div className="flex flex-col gap-0.5 mt-0.5">
                                       {amStaff.map((s, i) => (
-                                        <div key={i} className="flex items-center gap-0.5">
+                                        <div key={i} className="flex items-center gap-0.5 flex-wrap">
                                           <span className="truncate">{s.name}</span>
+                                          {s.customTime && (
+                                            <Badge variant="outline" className="text-[10px] px-1 py-0 flex-shrink-0 bg-purple-50 text-purple-600 border-purple-200">
+                                              ⏱ {s.customTime}
+                                            </Badge>
+                                          )}
                                           {s.isTemp && (
                                             <Badge
                                               variant={s.tempConfirmed ? "secondary" : "destructive"}
@@ -369,8 +393,13 @@ export const RotaPreviewDialog = ({
                                   ) : (
                                     <div className="flex flex-col gap-0.5 mt-0.5">
                                       {pmStaff.map((s, i) => (
-                                        <div key={i} className="flex items-center gap-0.5">
+                                        <div key={i} className="flex items-center gap-0.5 flex-wrap">
                                           <span className="truncate">{s.name}</span>
+                                          {s.customTime && (
+                                            <Badge variant="outline" className="text-[10px] px-1 py-0 flex-shrink-0 bg-purple-50 text-purple-600 border-purple-200">
+                                              ⏱ {s.customTime}
+                                            </Badge>
+                                          )}
                                           {s.isTemp && (
                                             <Badge
                                               variant={s.tempConfirmed ? "secondary" : "destructive"}
