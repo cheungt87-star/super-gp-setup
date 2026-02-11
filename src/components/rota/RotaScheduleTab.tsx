@@ -422,6 +422,20 @@ export const RotaScheduleTab = () => {
   const handleAddShift = async (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string, oncallSlot?: number) => {
     // On-calls are now handled separately via handleAddOncall
     if (isOnCall) {
+      // Determine the PM boundary for this day
+      const dayDate = new Date(dateKey);
+      const dayOfWeekNum = dayDate.getDay();
+      const adjustedDayNum = dayOfWeekNum === 0 ? 6 : dayOfWeekNum - 1;
+      const dayH = openingHoursByDay[adjustedDayNum];
+      const pmBoundary = dayH?.pm_open_time?.slice(0, 5) || "13:00";
+
+      // If custom time spans the AM/PM boundary, create both AM and PM on-call entries
+      if (customStartTime && customEndTime && customStartTime < pmBoundary && customEndTime > pmBoundary) {
+        await handleAddOncall(dateKey, oncallSlot || 1, "am", userId, isTempStaff, tempConfirmed, tempStaffName);
+        await handleAddOncall(dateKey, oncallSlot || 1, "pm", userId, isTempStaff, tempConfirmed, tempStaffName);
+        return;
+      }
+
       const period = (shiftType === "am" || shiftType === "pm") ? shiftType as "am" | "pm" : "am";
       await handleAddOncall(dateKey, oncallSlot || 1, period, userId, isTempStaff, tempConfirmed, tempStaffName);
       return;
