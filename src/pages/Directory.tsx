@@ -311,14 +311,16 @@ export default function Directory() {
                         </a>
                       </div>
                     )}
-                    {user.phone && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="h-4 w-4" />
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="h-4 w-4" />
+                      {user.phone ? (
                         <a href={`tel:${user.phone}`} className="hover:text-foreground hover:underline">
                           {user.phone}
                         </a>
-                      </div>
-                    )}
+                      ) : (
+                        <span>—</span>
+                      )}
+                    </div>
                     {user.site_name && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <MapPin className="h-4 w-4" />
