@@ -412,6 +412,8 @@ export type Database = {
       rota_oncalls: {
         Row: {
           created_at: string
+          custom_end_time: string | null
+          custom_start_time: string | null
           id: string
           is_temp_staff: boolean
           oncall_date: string
@@ -425,6 +427,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_end_time?: string | null
+          custom_start_time?: string | null
           id?: string
           is_temp_staff?: boolean
           oncall_date: string
@@ -438,6 +442,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_end_time?: string | null
+          custom_start_time?: string | null
           id?: string
           is_temp_staff?: boolean
           oncall_date?: string
