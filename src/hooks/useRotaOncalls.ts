@@ -7,6 +7,7 @@ export interface RotaOncall {
   organisation_id: string;
   oncall_date: string;
   oncall_slot: number;
+  shift_period: "am" | "pm";
   user_id: string | null;
   user_name?: string;
   job_title_name?: string | null;
@@ -17,7 +18,7 @@ export interface RotaOncall {
 
 interface UseRotaOncallsProps {
   organisationId: string | null;
-  weekStart: string; // yyyy-MM-dd format
+  weekStart: string;
 }
 
 export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProps) {
@@ -30,7 +31,6 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
 
     setLoading(true);
     try {
-      // Calculate week end (7 days from week start)
       const startDate = new Date(weekStart);
       const dates: string[] = [];
       for (let i = 0; i < 7; i++) {
@@ -46,6 +46,7 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
           organisation_id,
           oncall_date,
           oncall_slot,
+          shift_period,
           user_id,
           is_temp_staff,
           temp_staff_name,
@@ -64,6 +65,7 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
         organisation_id: row.organisation_id,
         oncall_date: row.oncall_date,
         oncall_slot: row.oncall_slot,
+        shift_period: row.shift_period || "am",
         user_id: row.user_id,
         user_name: row.is_temp_staff && !row.user_id
           ? row.temp_staff_name
@@ -92,6 +94,7 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
     async (
       dateKey: string,
       slot: number,
+      shiftPeriod: "am" | "pm",
       userId: string | null,
       isTempStaff = false,
       tempConfirmed = false,
@@ -108,19 +111,19 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
               organisation_id: organisationId,
               oncall_date: dateKey,
               oncall_slot: slot,
+              shift_period: shiftPeriod,
               user_id: userId,
               is_temp_staff: isTempStaff,
               temp_confirmed: tempConfirmed,
               temp_staff_name: tempStaffName || null,
             },
-            { onConflict: "organisation_id,oncall_date,oncall_slot" }
+            { onConflict: "organisation_id,oncall_date,oncall_slot,shift_period" }
           )
           .select()
           .single();
 
         if (error) throw error;
 
-        // Refetch to get updated data with profile info
         await fetchOncalls();
         return data;
       } catch (error) {
@@ -139,22 +142,32 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
   );
 
   const deleteOncall = useCallback(
-    async (dateKey: string, slot: number) => {
+    async (dateKey: string, slot: number, shiftPeriod?: "am" | "pm") => {
       if (!organisationId) return false;
 
       setSaving(true);
       try {
-        const { error } = await supabase
+        let query = supabase
           .from("rota_oncalls")
           .delete()
           .eq("organisation_id", organisationId)
           .eq("oncall_date", dateKey)
           .eq("oncall_slot", slot);
 
+        if (shiftPeriod) {
+          query = query.eq("shift_period", shiftPeriod);
+        }
+
+        const { error } = await query;
+
         if (error) throw error;
 
         setOncalls((prev) =>
-          prev.filter((oc) => !(oc.oncall_date === dateKey && oc.oncall_slot === slot))
+          prev.filter((oc) => {
+            if (oc.oncall_date !== dateKey || oc.oncall_slot !== slot) return true;
+            if (shiftPeriod && oc.shift_period !== shiftPeriod) return true;
+            return false;
+          })
         );
         return true;
       } catch (error) {
@@ -205,7 +218,6 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
       const sourceOncalls = oncalls.filter((oc) => oc.oncall_date === sourceDateKey);
       if (sourceOncalls.length === 0) return 0;
 
-      // Delete existing oncalls for target day first
       await deleteOncallsForDay(targetDateKey);
 
       let copiedCount = 0;
@@ -213,6 +225,7 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
         const result = await addOncall(
           targetDateKey,
           oc.oncall_slot,
+          oc.shift_period,
           oc.user_id,
           oc.is_temp_staff,
           oc.temp_confirmed,
@@ -240,6 +253,15 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
     [oncalls]
   );
 
+  const getOncallForSlotPeriod = useCallback(
+    (dateKey: string, slot: number, period: "am" | "pm") => {
+      return oncalls.find(
+        (oc) => oc.oncall_date === dateKey && oc.oncall_slot === slot && oc.shift_period === period
+      ) || null;
+    },
+    [oncalls]
+  );
+
   return {
     oncalls,
     loading,
@@ -250,6 +272,7 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
     copyOncallsFromDay,
     getOncallsForDate,
     getOncallForSlot,
+    getOncallForSlotPeriod,
     refetch: fetchOncalls,
   };
 }

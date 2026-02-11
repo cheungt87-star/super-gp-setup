@@ -80,7 +80,7 @@ interface ClinicRoomDayCellProps {
   onAddShift: (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string, oncallSlot?: number) => Promise<void>;
   onDeleteShift: (shiftId: string) => void;
   onEditShift: (shift: RotaShift) => void;
-  onDeleteOncall: (dateKey: string, slot: number) => Promise<boolean | void>;
+  onDeleteOncall: (dateKey: string, slot: number, shiftPeriod?: "am" | "pm") => Promise<boolean | void>;
   onRepeatPreviousDay?: (dateKey: string, previousDateKey: string) => Promise<void>;
   onCopyToWholeWeek?: (dateKey: string) => Promise<void>;
   onCopyFromPreviousWeek?: () => Promise<void>;
@@ -159,8 +159,9 @@ export const ClinicRoomDayCell = ({
 
   // Get user IDs that conflict with a given shift type - checks ALL shifts site-wide
   const getConflictingUserIds = (targetShiftType: ShiftType | "oncall", facilityId?: string, customStart?: string, customEnd?: string, oncallSlot?: number): string[] => {
-    if (targetShiftType === "oncall") {
-      // For on-call, only exclude the user already assigned to this specific slot
+    if (targetShiftType === "oncall" || oncallSlot) {
+      // For on-call, no conflicts with room shifts - only exclude users already in that oncall slot+period
+      return [];
       const slotOncall = getOncallForSlot(oncallSlot || 1);
       return slotOncall?.user_id ? [slotOncall.user_id] : [];
     }
@@ -243,14 +244,12 @@ export const ClinicRoomDayCell = ({
 
   const handleSelectStaff = async (userId: string | null, makeFullDay?: boolean, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string) => {
     if (!selectionDialog) return;
-    const isOnCall = selectionDialog.shiftType === "oncall";
+    const isOnCall = !!selectionDialog.oncallSlot;
     const facilityId = isOnCall ? undefined : selectionDialog.facilityId;
     
     // Determine actual shift type
     let actualShiftType: ShiftType;
-    if (isOnCall) {
-      actualShiftType = "full_day";
-    } else if (customStartTime && customEndTime) {
+    if (customStartTime && customEndTime && !isOnCall) {
       actualShiftType = "custom";
     } else {
       actualShiftType = selectionDialog.shiftType as ShiftType;
@@ -260,9 +259,9 @@ export const ClinicRoomDayCell = ({
     await onAddShift(userId, dateKey, actualShiftType, isOnCall, facilityId, customStartTime, customEndTime, isTempStaff, tempConfirmed, tempStaffName, selectionDialog.oncallSlot);
     
     // If "Make Full Day" was checked, add the opposite shift too (works for both regular and temp staff)
-    if (makeFullDay && !isOnCall && (selectionDialog.shiftType === "am" || selectionDialog.shiftType === "pm")) {
+    if (makeFullDay && (selectionDialog.shiftType === "am" || selectionDialog.shiftType === "pm")) {
       const oppositeShiftType: ShiftType = selectionDialog.shiftType === "am" ? "pm" : "am";
-      await onAddShift(userId, dateKey, oppositeShiftType, false, facilityId, undefined, undefined, isTempStaff, tempConfirmed, tempStaffName);
+      await onAddShift(userId, dateKey, oppositeShiftType, isOnCall, facilityId, undefined, undefined, isTempStaff, tempConfirmed, tempStaffName, selectionDialog.oncallSlot);
     }
   };
 
@@ -403,57 +402,138 @@ export const ClinicRoomDayCell = ({
 
       {!isClosed && (
         <div className="p-4 space-y-4">
-          {/* On-Call Rows - 3 slots (always mandatory) */}
+          {/* On-Call Rows - 3 slots with AM/PM columns */}
           <div className="rounded-lg border overflow-hidden">
+            {/* On-Call Header */}
+            <div className="grid grid-cols-[1fr_1fr_1fr] bg-muted/50 border-b">
+              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                On-Call
+              </div>
+              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l">
+                <Sun className="h-4 w-4 text-amber-500" />
+                AM ({amShiftStart.slice(0, 5)} - {amShiftEnd.slice(0, 5)})
+              </div>
+              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l">
+                <Moon className="h-4 w-4 text-indigo-500" />
+                PM ({pmShiftStart.slice(0, 5)} - {pmShiftEnd.slice(0, 5)})
+              </div>
+            </div>
+
             {[1, 2, 3].map((slot) => {
-              const slotOncall = getOncallForSlot(slot);
               const slotLabels: Record<number, string> = {
                 1: "On Call Manager",
                 2: "On Duty Doctor 1",
                 3: "On Duty Doctor 2"
               };
               const slotLabel = slotLabels[slot];
+              const amOncall = oncalls.find((o) => o.oncall_slot === slot && o.shift_period === "am") || null;
+              const pmOncall = oncalls.find((o) => o.oncall_slot === slot && o.shift_period === "pm") || null;
               
               return (
                 <div 
                   key={slot} 
                   className={cn(
-                    "flex items-center justify-between px-3 py-2",
+                    "grid grid-cols-[1fr_1fr_1fr]",
                     slot !== 3 && "border-b"
                   )}
                 >
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{slotLabel}</span>
+                  {/* Slot Name */}
+                  <div className="px-4 py-3 flex items-start min-h-[60px]">
+                    <span className="font-medium text-sm">{slotLabel}</span>
                   </div>
-                  {slotOncall ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {slotOncall.user_name}
-                      </span>
-                      {slotOncall.job_title_name && (
-                        <Badge variant="outline" className={cn("text-[10px]", getJobTitleColors(slotOncall.job_title_name))}>{slotOncall.job_title_name}</Badge>
-                      )}
+
+                  {/* AM Column */}
+                  <div className="px-4 py-3 border-l space-y-2 min-h-[60px]">
+                    {amOncall ? (
+                      <div
+                        className={cn(
+                          "relative flex items-center justify-between gap-2 rounded-md px-3 py-2 min-h-[40px]",
+                          amOncall.is_temp_staff && !amOncall.temp_confirmed && "bg-destructive/10 border-2 border-destructive",
+                          amOncall.is_temp_staff && amOncall.temp_confirmed && "bg-amber-50 border border-amber-300",
+                          !amOncall.is_temp_staff && "bg-muted/50"
+                        )}
+                      >
+                        {amOncall.is_temp_staff && (
+                          <Badge 
+                            variant={!amOncall.temp_confirmed ? "destructive" : "outline"}
+                            className={cn(
+                              "absolute -top-2 -left-1 text-[9px] px-1 py-0",
+                              amOncall.temp_confirmed && "bg-amber-100 text-amber-700 border-amber-300"
+                            )}
+                          >
+                            {!amOncall.temp_confirmed ? "⚠️ TEMP" : "✓ Temp"}
+                          </Badge>
+                        )}
+                        <span className="text-sm font-medium truncate">{amOncall.user_name}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 hover:bg-destructive/20 shrink-0"
+                          onClick={() => onDeleteOncall(dateKey, slot, "am")}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 hover:bg-destructive/20"
-                        onClick={() => onDeleteOncall(dateKey, slot)}
+                        size="sm"
+                        className="w-full justify-start text-muted-foreground hover:text-foreground"
+                        disabled={loading}
+                        onClick={() => handleAddClick("", slotLabel, "am", slot)}
                       >
-                        <X className="h-4 w-4" />
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add AM
                       </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={loading}
-                      onClick={() => handleAddClick("", slotLabel, "oncall", slot)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add
-                    </Button>
-                  )}
+                    )}
+                  </div>
+
+                  {/* PM Column */}
+                  <div className="px-4 py-3 border-l space-y-2 min-h-[60px]">
+                    {pmOncall ? (
+                      <div
+                        className={cn(
+                          "relative flex items-center justify-between gap-2 rounded-md px-3 py-2 min-h-[40px]",
+                          pmOncall.is_temp_staff && !pmOncall.temp_confirmed && "bg-destructive/10 border-2 border-destructive",
+                          pmOncall.is_temp_staff && pmOncall.temp_confirmed && "bg-amber-50 border border-amber-300",
+                          !pmOncall.is_temp_staff && "bg-muted/50"
+                        )}
+                      >
+                        {pmOncall.is_temp_staff && (
+                          <Badge 
+                            variant={!pmOncall.temp_confirmed ? "destructive" : "outline"}
+                            className={cn(
+                              "absolute -top-2 -left-1 text-[9px] px-1 py-0",
+                              pmOncall.temp_confirmed && "bg-amber-100 text-amber-700 border-amber-300"
+                            )}
+                          >
+                            {!pmOncall.temp_confirmed ? "⚠️ TEMP" : "✓ Temp"}
+                          </Badge>
+                        )}
+                        <span className="text-sm font-medium truncate">{pmOncall.user_name}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 hover:bg-destructive/20 shrink-0"
+                          onClick={() => onDeleteOncall(dateKey, slot, "pm")}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start text-muted-foreground hover:text-foreground"
+                        disabled={loading}
+                        onClick={() => handleAddClick("", slotLabel, "pm", slot)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add PM
+                      </Button>
+                    )}
+                  </div>
                 </div>
               );
             })}

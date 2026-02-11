@@ -320,35 +320,26 @@ export const RotaScheduleTab = () => {
   const handleAddOncall = async (
     dateKey: string,
     slot: number,
+    shiftPeriod: "am" | "pm",
     userId: string | null,
     isTempStaff?: boolean,
     tempConfirmed?: boolean,
     tempStaffName?: string
   ) => {
-    const existingOncall = getOncallForSlot(dateKey, slot);
-    if (existingOncall) {
-      toast({
-        title: "On-call already assigned",
-        description: `Remove the current on-call assignment from slot ${slot} first`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const result = await addOncall(dateKey, slot, userId, isTempStaff || false, tempConfirmed || false, tempStaffName);
+    const result = await addOncall(dateKey, slot, shiftPeriod, userId, isTempStaff || false, tempConfirmed || false, tempStaffName);
     if (result) {
       const slotLabels: Record<number, string> = { 1: "On Call Manager", 2: "On Duty Doctor 1", 3: "On Duty Doctor 2" };
       const staffLabel = tempStaffName || "Staff member";
       toast({
         title: "On-call assigned",
-        description: `${staffLabel} assigned to ${slotLabels[slot]}`,
+        description: `${staffLabel} assigned to ${slotLabels[slot]} (${shiftPeriod.toUpperCase()})`,
       });
     }
   };
 
   // Handle deleting on-call
-  const handleDeleteOncall = async (dateKey: string, slot: number) => {
-    const success = await deleteOncall(dateKey, slot);
+  const handleDeleteOncall = async (dateKey: string, slot: number, shiftPeriod?: "am" | "pm") => {
+    const success = await deleteOncall(dateKey, slot, shiftPeriod);
     if (success) {
       toast({
         title: "On-call removed",
@@ -360,7 +351,8 @@ export const RotaScheduleTab = () => {
   const handleAddShift = async (userId: string | null, dateKey: string, shiftType: ShiftType, isOnCall: boolean, facilityId?: string, customStartTime?: string, customEndTime?: string, isTempStaff?: boolean, tempConfirmed?: boolean, tempStaffName?: string, oncallSlot?: number) => {
     // On-calls are now handled separately via handleAddOncall
     if (isOnCall) {
-      await handleAddOncall(dateKey, oncallSlot || 1, userId, isTempStaff, tempConfirmed, tempStaffName);
+      const period = (shiftType === "am" || shiftType === "pm") ? shiftType as "am" | "pm" : "am";
+      await handleAddOncall(dateKey, oncallSlot || 1, period, userId, isTempStaff, tempConfirmed, tempStaffName);
       return;
     }
 
@@ -624,8 +616,9 @@ export const RotaScheduleTab = () => {
         const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         if (openingHoursByDay[adjustedDay]?.is_closed) continue;
         
-        await deleteOncall(newDate, oc.oncall_slot);
-        const result = await addOncall(newDate, oc.oncall_slot, oc.user_id, oc.is_temp_staff, oc.temp_confirmed, oc.temp_staff_name);
+        const period = ((oc as any).shift_period === "am" || (oc as any).shift_period === "pm") ? (oc as any).shift_period as "am" | "pm" : "am";
+        await deleteOncall(newDate, oc.oncall_slot, period);
+        const result = await addOncall(newDate, oc.oncall_slot, period, oc.user_id, oc.is_temp_staff, oc.temp_confirmed, oc.temp_staff_name);
         if (result) oncallsCopied++;
       }
 
@@ -1023,7 +1016,7 @@ export const RotaScheduleTab = () => {
                         onAddShift={handleAddShift}
                         onDeleteShift={handleDeleteShift}
                         onEditShift={setEditingShift}
-                        onDeleteOncall={deleteOncall}
+                        onDeleteOncall={handleDeleteOncall}
                         onRepeatPreviousDay={handleRepeatPreviousDay}
                         onCopyToWholeWeek={handleCopyToWholeWeek}
                         onCopyFromPreviousWeek={handleCopyFromPreviousWeek}

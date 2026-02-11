@@ -33,6 +33,7 @@ interface ColleagueShift {
 interface OnCallAssignment {
   slot: number;
   slotLabel: string;
+  period: string;
 }
 
 interface DayShifts {
@@ -218,16 +219,20 @@ export const MyShiftsWidget = () => {
       }
 
       // Fetch user's on-call assignments from rota_oncalls
-      let onCallData: { oncall_date: string; oncall_slot: number }[] = [];
+      let onCallData: { oncall_date: string; oncall_slot: number; shift_period: string }[] = [];
       if (organisationId) {
         const { data: onCalls } = await supabase
           .from("rota_oncalls")
-          .select("oncall_date, oncall_slot")
+          .select("oncall_date, oncall_slot, shift_period")
           .eq("organisation_id", organisationId)
           .eq("user_id", currentUserId)
           .in("oncall_date", dateKeys);
         
-        onCallData = onCalls || [];
+        onCallData = (onCalls || []).map(oc => ({
+          oncall_date: oc.oncall_date,
+          oncall_slot: oc.oncall_slot,
+          shift_period: (oc as any).shift_period || "am",
+        }));
       }
 
       // Helper to get slot label
@@ -253,6 +258,7 @@ export const MyShiftsWidget = () => {
           .map(oc => ({
             slot: oc.oncall_slot,
             slotLabel: getSlotLabel(oc.oncall_slot),
+            period: oc.shift_period || "am",
           }))
           .sort((a, b) => a.slot - b.slot);
 
@@ -435,9 +441,9 @@ export const MyShiftsWidget = () => {
                       {day.onCallAssignments.length > 0 && (
                         <div className="flex flex-col gap-1 items-end shrink-0">
                           {day.onCallAssignments.map((oc) => (
-                            <Badge key={`oncall-${oc.slot}`} variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
+                            <Badge key={`oncall-${oc.slot}-${oc.period}`} variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
                               <Phone className="h-3 w-3 mr-1" />
-                              {oc.slotLabel}
+                              {oc.slotLabel} ({oc.period.toUpperCase()})
                             </Badge>
                           ))}
                         </div>
