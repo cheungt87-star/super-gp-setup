@@ -30,7 +30,7 @@ const TaskWidget = ({ title, tasks, onTaskClick, variant }: TaskWidgetProps) => 
   }, [tasks, selectedDays]);
 
   return (
-    <Card className="h-full">
+    <Card className="h-full card-gradient">
       <CardHeader className="pb-3 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
