@@ -242,6 +242,12 @@ export const RotaPreviewDialog = ({
           label,
           am: amOncall?.user_name || null,
           pm: pmOncall?.user_name || null,
+          amCustomTime: amOncall?.custom_start_time && amOncall?.custom_end_time
+            ? `${amOncall.custom_start_time.slice(0, 5)}-${amOncall.custom_end_time.slice(0, 5)}`
+            : null,
+          pmCustomTime: pmOncall?.custom_start_time && pmOncall?.custom_end_time
+            ? `${pmOncall.custom_start_time.slice(0, 5)}-${pmOncall.custom_end_time.slice(0, 5)}`
+            : null,
         };
       });
 
@@ -338,6 +344,11 @@ export const RotaPreviewDialog = ({
                                 )}>
                                   <span className="font-medium">AM:</span>
                                   <span className="ml-1">{amName || "Empty"}</span>
+                                  {slotData?.amCustomTime && (
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0 ml-1 bg-purple-50 text-purple-600 border-purple-200">
+                                      ⏱ {slotData.amCustomTime}
+                                    </Badge>
+                                  )}
                                 </div>
                                 <div className={cn(
                                   "text-xs p-1 rounded",
@@ -345,6 +356,11 @@ export const RotaPreviewDialog = ({
                                 )}>
                                   <span className="font-medium">PM:</span>
                                   <span className="ml-1">{pmName || "Empty"}</span>
+                                  {slotData?.pmCustomTime && (
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0 ml-1 bg-purple-50 text-purple-600 border-purple-200">
+                                      ⏱ {slotData.pmCustomTime}
+                                    </Badge>
+                                  )}
                                 </div>
                               </div>
                             </td>
