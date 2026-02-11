@@ -22,6 +22,7 @@ export interface RotaShift {
   is_temp_staff: boolean;
   temp_confirmed: boolean;
   temp_staff_name: string | null;
+  linked_shift_id: string | null;
   user_name?: string;
   job_title_name?: string;
   job_title_id?: string;
@@ -108,6 +109,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
       setShifts(
         (shiftsData || []).map((shift: any) => ({
           ...shift,
+          linked_shift_id: shift.linked_shift_id || null,
           user_name: shift.is_temp_staff && !shift.user_id && shift.temp_staff_name
             ? shift.temp_staff_name
             : shift.profiles
@@ -149,12 +151,75 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
     isTempStaff: boolean = false,
     tempConfirmed: boolean = false,
     tempStaffName?: string,
-    oncallSlot?: number
+    oncallSlot?: number,
+    pmBoundary?: string
   ) => {
     if (!rotaWeek || !organisationId) return null;
 
+    // Detect if custom time spans the PM boundary
+    const boundary = pmBoundary?.slice(0, 5) || "13:00";
+    const spans = shiftType === "custom" && customStartTime && customEndTime && 
+      customStartTime.slice(0, 5) < boundary && customEndTime.slice(0, 5) > boundary;
+
     setSaving(true);
     try {
+      if (spans && customStartTime && customEndTime) {
+        // Create AM half
+        const { data: amData, error: amError } = await supabase
+          .from("rota_shifts")
+          .insert({
+            rota_week_id: rotaWeek.id,
+            user_id: userId,
+            shift_date: shiftDate,
+            shift_type: "custom" as ShiftType,
+            custom_start_time: customStartTime,
+            custom_end_time: boundary,
+            is_oncall: isOncall,
+            oncall_slot: isOncall ? (oncallSlot || 1) : null,
+            organisation_id: organisationId,
+            facility_id: facilityId || null,
+            is_temp_staff: isTempStaff,
+            temp_confirmed: tempConfirmed,
+            temp_staff_name: tempStaffName || null,
+          })
+          .select()
+          .single();
+        if (amError) throw amError;
+
+        // Create PM half with linked_shift_id pointing to AM
+        const { data: pmData, error: pmError } = await supabase
+          .from("rota_shifts")
+          .insert({
+            rota_week_id: rotaWeek.id,
+            user_id: userId,
+            shift_date: shiftDate,
+            shift_type: "custom" as ShiftType,
+            custom_start_time: boundary,
+            custom_end_time: customEndTime,
+            is_oncall: isOncall,
+            oncall_slot: isOncall ? (oncallSlot || 1) : null,
+            organisation_id: organisationId,
+            facility_id: facilityId || null,
+            is_temp_staff: isTempStaff,
+            temp_confirmed: tempConfirmed,
+            temp_staff_name: tempStaffName || null,
+            linked_shift_id: amData.id,
+          })
+          .select()
+          .single();
+        if (pmError) throw pmError;
+
+        // Update AM half to link to PM
+        await supabase
+          .from("rota_shifts")
+          .update({ linked_shift_id: pmData.id })
+          .eq("id", amData.id);
+
+        await fetchSchedule(true);
+        return amData;
+      }
+
+      // Non-spanning: single insert (existing behavior)
       const { data, error } = await supabase
         .from("rota_shifts")
         .insert({
@@ -231,9 +296,17 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
   const deleteShift = async (shiftId: string) => {
     setSaving(true);
     try {
-      const { error } = await supabase.from("rota_shifts").delete().eq("id", shiftId);
+      // Find linked shift before deleting
+      const shiftToDelete = shifts.find(s => s.id === shiftId);
+      const linkedId = shiftToDelete?.linked_shift_id;
 
+      const { error } = await supabase.from("rota_shifts").delete().eq("id", shiftId);
       if (error) throw error;
+
+      // Also delete linked shift if exists
+      if (linkedId) {
+        await supabase.from("rota_shifts").delete().eq("id", linkedId);
+      }
 
       await fetchSchedule(true);
       return true;

@@ -66,6 +66,22 @@ export const calculateShiftHours = (
   return Math.max(0, (endMinutes - startMinutes) / 60);
 };
 
+export const doesSpanBreak = (
+  startTime: string,
+  endTime: string,
+  amEnd: string,
+  pmStart: string
+): boolean => {
+  const start = startTime.slice(0, 5);
+  const end = endTime.slice(0, 5);
+  const breakStart = amEnd.slice(0, 5);
+  const breakEnd = pmStart.slice(0, 5);
+  // Break exists only if there's a gap between AM end and PM start
+  if (breakStart >= breakEnd) return false;
+  // Shift spans break if it starts before break ends and ends after break starts
+  return start < breakEnd && end > breakStart;
+};
+
 export const getShiftTimeDisplay = (
   shiftType: string,
   customStartTime: string | null,
