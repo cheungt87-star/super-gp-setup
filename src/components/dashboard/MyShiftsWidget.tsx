@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Calendar, DoorOpen, Sun, Moon, Clock, Phone, Users } from "lucide-react";
+import { Loader2, Calendar, DoorOpen, Sun, Moon, Clock, Phone, Users, MapPin } from "lucide-react";
 import { WeekSelector } from "@/components/rota/WeekSelector";
 import { getWeekStartDate, getWeekDays, formatDateKey } from "@/lib/rotaUtils";
 import { format } from "date-fns";
@@ -43,6 +43,7 @@ interface DayShifts {
   onCallAssignments: OnCallAssignment[];
   shifts: {
     id: string;
+    siteName: string | null;
     facilityName: string | null;
     shiftType: string;
     timeDisplay: string;
@@ -124,34 +125,32 @@ export const MyShiftsWidget = () => {
       const currentUserId = session.user.id;
       setUserId(currentUserId);
 
-      // Get user's primary site and organisation
+      // Get user's profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("primary_site_id, organisation_id")
         .eq("id", currentUserId)
         .maybeSingle();
 
-      if (!profile?.primary_site_id) {
+      if (!profile?.organisation_id) {
         setLoading(false);
         setRotaExists(false);
         return;
       }
 
-      const siteId = profile.primary_site_id;
       const organisationId = profile.organisation_id;
-      setPrimarySiteId(siteId);
+      setPrimarySiteId(profile.primary_site_id);
 
       const weekStartKey = formatDateKey(weekStart);
 
-      // Check if rota exists for this week
-      const { data: rotaWeek } = await supabase
+      // Fetch all rota weeks for the organisation this week (across all sites)
+      const { data: rotaWeeks } = await supabase
         .from("rota_weeks")
-        .select("id")
-        .eq("site_id", siteId)
-        .eq("week_start", weekStartKey)
-        .maybeSingle();
+        .select("id, site_id, sites(name)")
+        .eq("organisation_id", organisationId)
+        .eq("week_start", weekStartKey);
 
-      if (!rotaWeek) {
+      if (!rotaWeeks || rotaWeeks.length === 0) {
         setRotaExists(false);
         setDayShifts([]);
         setLoading(false);
@@ -159,16 +158,27 @@ export const MyShiftsWidget = () => {
       }
 
       setRotaExists(true);
+      const rotaWeekIds = rotaWeeks.map(rw => rw.id);
+      const siteIds = [...new Set(rotaWeeks.map(rw => rw.site_id))];
 
-      // Fetch opening hours for the site
+      // Build a map from rota_week_id to site name
+      const rotaWeekSiteMap = new Map<string, string>();
+      rotaWeeks.forEach(rw => {
+        rotaWeekSiteMap.set(rw.id, (rw.sites as any)?.name || "Unknown Site");
+      });
+
+      // Fetch opening hours for all relevant sites
       const { data: openingHoursData } = await supabase
         .from("site_opening_hours")
-        .select("day_of_week, is_closed, am_open_time, am_close_time, pm_open_time, pm_close_time")
-        .eq("site_id", siteId);
+        .select("site_id, day_of_week, is_closed, am_open_time, am_close_time, pm_open_time, pm_close_time")
+        .in("site_id", siteIds);
 
-      const openingHoursMap = new Map<number, OpeningHours>();
+      const siteOpeningHoursMap = new Map<string, Map<number, OpeningHours>>();
       (openingHoursData || []).forEach(oh => {
-        openingHoursMap.set(oh.day_of_week, oh);
+        if (!siteOpeningHoursMap.has(oh.site_id)) {
+          siteOpeningHoursMap.set(oh.site_id, new Map());
+        }
+        siteOpeningHoursMap.get(oh.site_id)!.set(oh.day_of_week, oh);
       });
 
       // Fetch user's shifts for this week
@@ -185,9 +195,10 @@ export const MyShiftsWidget = () => {
           custom_end_time,
           is_oncall,
           facility_id,
+          rota_week_id,
           facilities(name)
         `)
-        .eq("rota_week_id", rotaWeek.id)
+        .in("rota_week_id", rotaWeekIds)
         .eq("user_id", currentUserId)
         .in("shift_date", dateKeys);
 
@@ -210,7 +221,7 @@ export const MyShiftsWidget = () => {
             user_id,
             profiles(first_name, last_name)
           `)
-          .eq("rota_week_id", rotaWeek.id)
+          .in("rota_week_id", rotaWeekIds)
           .neq("user_id", currentUserId)
           .in("facility_id", facilityIds)
           .in("shift_date", dateKeys);
@@ -249,8 +260,12 @@ export const MyShiftsWidget = () => {
       const result: DayShifts[] = weekDays.map((date, index) => {
         const dateKey = formatDateKey(date);
         const dayOfWeek = index; // 0 = Monday
-        const openingHours = openingHoursMap.get(dayOfWeek);
-        const isClosed = openingHours?.is_closed ?? false;
+
+        // Use primary site's opening hours for isClosed status
+        const primarySiteHours = profile.primary_site_id
+          ? siteOpeningHoursMap.get(profile.primary_site_id)?.get(dayOfWeek)
+          : null;
+        const isClosed = primarySiteHours?.is_closed ?? false;
 
         // Get on-call assignments for this day
         const dayOnCalls = onCallData
@@ -265,7 +280,14 @@ export const MyShiftsWidget = () => {
         const shiftsForDay = (myShifts || [])
           .filter(s => s.shift_date === dateKey)
           .map(shift => {
-            // Find colleagues in same facility on same date with overlapping shifts
+            // Get site info from rota_week mapping
+            const shiftRotaWeek = rotaWeeks.find(rw => rw.id === shift.rota_week_id);
+            const shiftSiteId = shiftRotaWeek?.site_id;
+            const siteOpeningHours = shiftSiteId
+              ? siteOpeningHoursMap.get(shiftSiteId)?.get(dayOfWeek) || null
+              : null;
+
+            // Find colleagues in same facility on same date
             const facilityColleagues = colleagueShifts
               .filter(c => 
                 c.facility_id === shift.facility_id && 
@@ -280,13 +302,14 @@ export const MyShiftsWidget = () => {
 
             return {
               id: shift.id,
+              siteName: shift.rota_week_id ? rotaWeekSiteMap.get(shift.rota_week_id) || null : null,
               facilityName: (shift.facilities as any)?.name || null,
               shiftType: shift.shift_type,
               timeDisplay: getShiftTimeDisplay(
                 shift.shift_type,
                 shift.custom_start_time,
                 shift.custom_end_time,
-                openingHours || null
+                siteOpeningHours
               ),
               isOnCall: shift.is_oncall,
               colleagues: facilityColleagues,
@@ -388,7 +411,7 @@ export const MyShiftsWidget = () => {
 
                 {/* Shift content */}
                 <div className="flex-1">
-                  {day.isClosed ? (
+                  {day.isClosed && day.shifts.length === 0 && day.onCallAssignments.length === 0 ? (
                     <Badge variant="secondary" className="bg-muted text-muted-foreground">
                       Closed
                     </Badge>
@@ -409,6 +432,13 @@ export const MyShiftsWidget = () => {
                                   <Phone className="h-3 w-3 mr-1" />
                                   On-Call
                                 </Badge>
+                              )}
+                              {/* Site name */}
+                              {shift.siteName && (
+                                <div className="flex items-center gap-1 text-sm">
+                                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span className="text-muted-foreground">{shift.siteName}</span>
+                                </div>
                               )}
                               {/* Facility/Room name if assigned */}
                               {shift.facilityName && (
