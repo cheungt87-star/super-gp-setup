@@ -861,6 +861,7 @@ export type Database = {
           address: string | null
           address_line_1: string | null
           address_line_2: string | null
+          am_capacity_per_room: number
           city: string | null
           county: string | null
           created_at: string
@@ -871,6 +872,7 @@ export type Database = {
           organisation_id: string | null
           phone: string | null
           phone_ext: string | null
+          pm_capacity_per_room: number
           postcode: string | null
           site_manager_id: string | null
           updated_at: string
@@ -879,6 +881,7 @@ export type Database = {
           address?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
+          am_capacity_per_room?: number
           city?: string | null
           county?: string | null
           created_at?: string
@@ -889,6 +892,7 @@ export type Database = {
           organisation_id?: string | null
           phone?: string | null
           phone_ext?: string | null
+          pm_capacity_per_room?: number
           postcode?: string | null
           site_manager_id?: string | null
           updated_at?: string
@@ -897,6 +901,7 @@ export type Database = {
           address?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
+          am_capacity_per_room?: number
           city?: string | null
           county?: string | null
           created_at?: string
@@ -907,6 +912,7 @@ export type Database = {
           organisation_id?: string | null
           phone?: string | null
           phone_ext?: string | null
+          pm_capacity_per_room?: number
           postcode?: string | null
           site_manager_id?: string | null
           updated_at?: string

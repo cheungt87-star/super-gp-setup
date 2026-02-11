@@ -40,6 +40,8 @@ const siteSchema = z.object({
   phone: z.string().max(20).optional().or(z.literal("")),
   phone_ext: z.string().max(10).optional().or(z.literal("")),
   site_manager_id: z.string().uuid().optional().nullable(),
+  am_capacity_per_room: z.coerce.number().int().min(0).default(0),
+  pm_capacity_per_room: z.coerce.number().int().min(0).default(0),
 });
 
 export type SiteFormData = z.infer<typeof siteSchema>;
@@ -62,6 +64,8 @@ interface Site {
   phone: string | null;
   phone_ext: string | null;
   site_manager_id: string | null;
+  am_capacity_per_room?: number;
+  pm_capacity_per_room?: number;
 }
 
 interface SiteFormProps {
@@ -100,6 +104,8 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
       phone: "",
       phone_ext: "",
       site_manager_id: null,
+      am_capacity_per_room: 0,
+      pm_capacity_per_room: 0,
     },
   });
 
@@ -116,6 +122,8 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
         phone: site.phone || "",
         phone_ext: site.phone_ext || "",
         site_manager_id: site.site_manager_id,
+        am_capacity_per_room: site.am_capacity_per_room ?? 0,
+        pm_capacity_per_room: site.pm_capacity_per_room ?? 0,
       });
       setHours(openingHours.length > 0 ? openingHours : DEFAULT_HOURS);
     } else {
@@ -130,6 +138,8 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
         phone: "",
         phone_ext: "",
         site_manager_id: null,
+        am_capacity_per_room: 0,
+        pm_capacity_per_room: 0,
       });
       setHours(DEFAULT_HOURS);
     }
@@ -323,6 +333,35 @@ export const SiteForm = ({ open, onOpenChange, site, users, openingHours, onSave
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="am_capacity_per_room"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>AM Patients per Room</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} placeholder="0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="pm_capacity_per_room"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>PM Patients per Room</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} placeholder="0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <OpeningHoursForm hours={hours} onChange={setHours} />
 

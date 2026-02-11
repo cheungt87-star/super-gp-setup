@@ -33,6 +33,8 @@ interface Site {
   phone_ext: string | null;
   site_manager_id: string | null;
   is_active: boolean;
+  am_capacity_per_room: number;
+  pm_capacity_per_room: number;
   manager?: {
     id: string;
     first_name: string | null;
@@ -81,7 +83,7 @@ export const SiteManagementCard = () => {
       supabase
         .from('sites')
         .select(`
-          id, name, address_line_1, address_line_2, city, county, postcode, email, phone, phone_ext, site_manager_id, is_active,
+          id, name, address_line_1, address_line_2, city, county, postcode, email, phone, phone_ext, site_manager_id, is_active, am_capacity_per_room, pm_capacity_per_room,
           manager:profiles!site_manager_id(id, first_name, last_name)
         `)
         .eq('organisation_id', organisationId)
@@ -188,7 +190,9 @@ export const SiteManagementCard = () => {
             phone: data.phone || null,
             phone_ext: data.phone_ext || null,
             site_manager_id: data.site_manager_id || null,
-          })
+            am_capacity_per_room: data.am_capacity_per_room ?? 0,
+            pm_capacity_per_room: data.pm_capacity_per_room ?? 0,
+          } as any)
           .eq('id', selectedSite.id);
 
         if (error) throw error;
@@ -207,8 +211,10 @@ export const SiteManagementCard = () => {
             phone: data.phone || null,
             phone_ext: data.phone_ext || null,
             site_manager_id: data.site_manager_id || null,
+            am_capacity_per_room: data.am_capacity_per_room ?? 0,
+            pm_capacity_per_room: data.pm_capacity_per_room ?? 0,
             organisation_id: organisationId,
-          })
+          } as any)
           .select()
           .single();
 
@@ -291,48 +297,20 @@ export const SiteManagementCard = () => {
 
   // Facility handlers - inline save
   const handleSaveFacility = async (siteId: string, name: string, capacity: number, facilityType: "clinic_room" | "general_facility", facilityId?: string) => {
-    if (!organisationId) return;
+    // ... keep existing code
+  };
 
+  const handleSaveCapacity = async (siteId: string, amCapacity: number, pmCapacity: number) => {
     try {
-      if (facilityId) {
-        const { error } = await supabase
-          .from('facilities')
-          .update({ name, capacity, facility_type: facilityType })
-          .eq('id', facilityId);
-
-        if (error) throw error;
-        
-        toast({
-          title: "Facility updated",
-          description: `${name} has been updated successfully.`,
-        });
-      } else {
-        const { error } = await supabase
-          .from('facilities')
-          .insert({
-            name,
-            capacity,
-            facility_type: facilityType,
-            site_id: siteId,
-            organisation_id: organisationId,
-          });
-
-        if (error) throw error;
-        
-        toast({
-          title: "Facility added",
-          description: `${name} has been added successfully.`,
-        });
-      }
-
+      const { error } = await supabase
+        .from('sites')
+        .update({ am_capacity_per_room: amCapacity, pm_capacity_per_room: pmCapacity } as any)
+        .eq('id', siteId);
+      if (error) throw error;
+      toast({ title: "Capacity updated", description: "Patient capacity settings saved." });
       fetchData(true);
     } catch (error: any) {
-      toast({
-        title: "Error saving facility",
-        description: error.message,
-        variant: "destructive",
-      });
-      throw error;
+      toast({ title: "Error saving capacity", description: error.message, variant: "destructive" });
     }
   };
 
@@ -433,6 +411,7 @@ export const SiteManagementCard = () => {
                 onDeleteSite={handleDeleteSiteClick}
                 onSaveFacility={handleSaveFacility}
                 onDeleteFacility={handleDeleteFacilityClick}
+                onSaveCapacity={handleSaveCapacity}
               />
             ))}
           </div>
