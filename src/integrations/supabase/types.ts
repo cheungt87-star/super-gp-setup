@@ -417,6 +417,7 @@ export type Database = {
           oncall_date: string
           oncall_slot: number
           organisation_id: string
+          shift_period: string
           temp_confirmed: boolean
           temp_staff_name: string | null
           updated_at: string
@@ -429,6 +430,7 @@ export type Database = {
           oncall_date: string
           oncall_slot?: number
           organisation_id: string
+          shift_period?: string
           temp_confirmed?: boolean
           temp_staff_name?: string | null
           updated_at?: string
@@ -441,6 +443,7 @@ export type Database = {
           oncall_date?: string
           oncall_slot?: number
           organisation_id?: string
+          shift_period?: string
           temp_confirmed?: boolean
           temp_staff_name?: string | null
           updated_at?: string
