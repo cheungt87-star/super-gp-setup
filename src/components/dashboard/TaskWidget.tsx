@@ -18,10 +18,16 @@ const TaskWidget = ({ title, tasks, onTaskClick, variant }: TaskWidgetProps) => 
   const Icon = variant === "personal" ? User : Users;
   const [selectedDays, setSelectedDays] = useState<number>(7);
 
-  const filteredTasks = useMemo(
-    () => tasks.filter((t) => t.isOverdue || t.eta <= selectedDays),
-    [tasks, selectedDays]
-  );
+  const filteredTasks = useMemo(() => {
+    console.log(`[TaskWidget ${variant}] selectedDays=${selectedDays}, tasks count=${tasks.length}`);
+    const result = tasks.filter((t) => {
+      const passes = t.isOverdue || t.eta <= selectedDays;
+      console.log(`  Task "${t.name}" eta=${t.eta} isOverdue=${t.isOverdue} passes=${passes}`);
+      return passes;
+    });
+    console.log(`  Filtered: ${result.length} tasks`);
+    return result;
+  }, [tasks, selectedDays, variant]);
 
   return (
     <Card className="h-full">
