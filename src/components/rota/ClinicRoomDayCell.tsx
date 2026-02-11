@@ -259,8 +259,8 @@ export const ClinicRoomDayCell = ({
     // Add the primary shift (with oncallSlot for on-call shifts)
     await onAddShift(userId, dateKey, actualShiftType, isOnCall, facilityId, customStartTime, customEndTime, isTempStaff, tempConfirmed, tempStaffName, selectionDialog.oncallSlot);
     
-    // If "Make Full Day" was checked and we have a user (not external temp), add the opposite shift too
-    if (makeFullDay && userId && !isOnCall && (selectionDialog.shiftType === "am" || selectionDialog.shiftType === "pm")) {
+    // If "Make Full Day" was checked, add the opposite shift too (works for both regular and temp staff)
+    if (makeFullDay && !isOnCall && (selectionDialog.shiftType === "am" || selectionDialog.shiftType === "pm")) {
       const oppositeShiftType: ShiftType = selectionDialog.shiftType === "am" ? "pm" : "am";
       await onAddShift(userId, dateKey, oppositeShiftType, false, facilityId, undefined, undefined, isTempStaff, tempConfirmed, tempStaffName);
     }
