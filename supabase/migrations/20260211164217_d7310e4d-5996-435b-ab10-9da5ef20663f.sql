@@ -1,0 +1,1 @@
+ALTER TABLE rota_shifts ADD COLUMN linked_shift_id uuid REFERENCES rota_shifts(id) ON DELETE SET NULL;

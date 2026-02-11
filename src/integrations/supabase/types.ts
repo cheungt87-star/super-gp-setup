@@ -583,6 +583,7 @@ export type Database = {
           id: string
           is_oncall: boolean
           is_temp_staff: boolean
+          linked_shift_id: string | null
           notes: string | null
           oncall_slot: number | null
           organisation_id: string
@@ -602,6 +603,7 @@ export type Database = {
           id?: string
           is_oncall?: boolean
           is_temp_staff?: boolean
+          linked_shift_id?: string | null
           notes?: string | null
           oncall_slot?: number | null
           organisation_id: string
@@ -621,6 +623,7 @@ export type Database = {
           id?: string
           is_oncall?: boolean
           is_temp_staff?: boolean
+          linked_shift_id?: string | null
           notes?: string | null
           oncall_slot?: number | null
           organisation_id?: string
@@ -638,6 +641,13 @@ export type Database = {
             columns: ["facility_id"]
             isOneToOne: false
             referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rota_shifts_linked_shift_id_fkey"
+            columns: ["linked_shift_id"]
+            isOneToOne: false
+            referencedRelation: "rota_shifts"
             referencedColumns: ["id"]
           },
           {

@@ -305,6 +305,7 @@ export const RotaScheduleTab = () => {
           is_temp_staff: s.is_temp_staff,
           temp_confirmed: s.temp_confirmed,
           temp_staff_name: s.temp_staff_name,
+          linked_shift_id: s.linked_shift_id || null,
           user_name: s.profiles
             ? `${s.profiles.first_name || ""} ${s.profiles.last_name || ""}`.trim()
             : s.temp_staff_name || undefined,
@@ -490,7 +491,14 @@ export const RotaScheduleTab = () => {
       }
     }
 
-    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, false, facilityId, isTempStaff || false, tempConfirmed || false, tempStaffName);
+    // Get PM boundary for this day
+    const dayDate = new Date(dateKey);
+    const dayOfWeekNum = dayDate.getDay();
+    const adjustedDayNum = dayOfWeekNum === 0 ? 6 : dayOfWeekNum - 1;
+    const dayHoursForBoundary = openingHoursByDay[adjustedDayNum];
+    const pmBoundary = dayHoursForBoundary?.pm_open_time?.slice(0, 5) || "13:00";
+
+    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, false, facilityId, isTempStaff || false, tempConfirmed || false, tempStaffName, undefined, pmBoundary);
 
     if (result) {
       const shiftLabel = shiftType === "full_day" ? "Full Day" : shiftType.toUpperCase();
@@ -513,12 +521,50 @@ export const RotaScheduleTab = () => {
   }) => {
     if (!editingShift) return;
 
+    // Handle linked shifts: if the shift had a linked partner, delete both and re-add
+    if (editingShift.linked_shift_id && updates.shift_type === "custom" && updates.custom_start_time && updates.custom_end_time) {
+      // Get PM boundary for this shift's day
+      const shiftDay = new Date(editingShift.shift_date);
+      const dow = shiftDay.getDay();
+      const adj = dow === 0 ? 6 : dow - 1;
+      const dayH = openingHoursByDay[adj];
+      const pmBound = dayH?.pm_open_time?.slice(0, 5) || "13:00";
+
+      // Delete both halves
+      await deleteShift(editingShift.id);
+      
+      // Re-add as a new shift (addShift handles splitting automatically)
+      await addShift(
+        editingShift.user_id,
+        editingShift.shift_date,
+        "custom",
+        updates.custom_start_time,
+        updates.custom_end_time,
+        updates.is_oncall,
+        editingShift.facility_id || undefined,
+        updates.is_temp_staff,
+        updates.temp_confirmed,
+        editingShift.temp_staff_name || undefined,
+        undefined,
+        pmBound
+      );
+      
+      toast({ title: "Shift updated", description: "Shift details have been saved" });
+      setEditingShift(null);
+      return;
+    }
+
+    // For linked shifts changing to non-custom type, delete the linked half
+    if (editingShift.linked_shift_id && updates.shift_type !== "custom") {
+      const linkedId = editingShift.linked_shift_id;
+      // Unlink before updating
+      await supabase.from("rota_shifts").update({ linked_shift_id: null }).eq("id", editingShift.id);
+      await supabase.from("rota_shifts").delete().eq("id", linkedId);
+    }
+
     const success = await updateShift(editingShift.id, updates);
     if (success) {
-      toast({
-        title: "Shift updated",
-        description: "Shift details have been saved",
-      });
+      toast({ title: "Shift updated", description: "Shift details have been saved" });
     }
     setEditingShift(null);
   };
@@ -1181,6 +1227,7 @@ export const RotaScheduleTab = () => {
         open={!!editingShift}
         onOpenChange={(open) => !open && setEditingShift(null)}
         shift={editingShift}
+        allShifts={shifts}
         rotaRules={rotaRule}
         onSave={handleEditShift}
       />

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
+import { doesSpanBreak } from "@/lib/rotaUtils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2, Trash2 } from "lucide-react";
@@ -318,6 +319,17 @@ export const ClinicRoomDayCell = ({
             <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
               <Clock className="h-3 w-3 mr-0.5" />
               {shift.custom_start_time.slice(0, 5)}-{shift.custom_end_time.slice(0, 5)}
+            </Badge>
+          )}
+          {shift.linked_shift_id && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700">
+              Spans Break
+            </Badge>
+          )}
+          {!shift.linked_shift_id && isCustom && shift.custom_start_time && shift.custom_end_time &&
+            doesSpanBreak(shift.custom_start_time, shift.custom_end_time, amShiftEnd, pmShiftStart) && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700">
+              Spans Break
             </Badge>
           )}
         </div>

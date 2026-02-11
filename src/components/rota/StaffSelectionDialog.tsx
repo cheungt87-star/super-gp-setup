@@ -136,27 +136,32 @@ export const StaffSelectionDialog = ({
     return slots;
   };
 
-  // Determine the period constraints based on shift type
-  const periodConstraints = useMemo(() => {
-    if (shiftType === "am") {
-      return { min: amShiftStart.slice(0, 5), max: amShiftEnd.slice(0, 5), label: "AM" };
-    } else if (shiftType === "pm") {
-      return { min: pmShiftStart.slice(0, 5), max: pmShiftEnd.slice(0, 5), label: "PM" };
-    }
-    return null;
-  }, [shiftType, amShiftStart, amShiftEnd, pmShiftStart, pmShiftEnd]);
-
-  // Generate valid time slots based on period constraints
+  // Generate valid time slots - unrestricted 06:00-23:30 range
   const validTimeSlots = useMemo(() => {
-    if (!periodConstraints) return [];
-    return generateTimeSlots(periodConstraints.min, periodConstraints.max, 30);
-  }, [periodConstraints]);
+    return generateTimeSlots("06:00", "23:30", 30);
+  }, []);
 
   // Filter end time options to be after start time
   const validEndTimeSlots = useMemo(() => {
-    if (!customStart || !validTimeSlots.length) return validTimeSlots;
+    if (!customStart) return validTimeSlots;
     return validTimeSlots.filter(time => time > customStart);
   }, [customStart, validTimeSlots]);
+
+  // Detect if custom range spans the AM/PM boundary
+  const spansBoundary = useMemo(() => {
+    if (!useCustomTime || !customStart || !customEnd) return false;
+    const boundary = pmShiftStart.slice(0, 5);
+    return customStart < boundary && customEnd > boundary;
+  }, [useCustomTime, customStart, customEnd, pmShiftStart]);
+
+  // Detect if custom range spans the break period
+  const spansBreak = useMemo(() => {
+    if (!useCustomTime || !customStart || !customEnd) return false;
+    const amEndTime = amShiftEnd.slice(0, 5);
+    const pmStartTime = pmShiftStart.slice(0, 5);
+    if (amEndTime >= pmStartTime) return false;
+    return customStart < pmStartTime && customEnd > amEndTime;
+  }, [useCustomTime, customStart, customEnd, amShiftEnd, pmShiftStart]);
 
   // Reset filters when dialog opens/closes or site changes
   const handleOpenChange = (newOpen: boolean) => {
@@ -182,11 +187,9 @@ export const StaffSelectionDialog = ({
       setExternalTempName("");
       setSelectedStaffId(null);
       setSearchQuery("");
-      // Set default custom times to period boundaries
-      if (periodConstraints) {
-        setCustomStart(periodConstraints.min);
-        setCustomEnd(periodConstraints.max);
-      }
+      // Set default custom times
+      setCustomStart(amShiftStart.slice(0, 5));
+      setCustomEnd(pmShiftEnd.slice(0, 5));
     }
     onOpenChange(newOpen);
   };
@@ -621,7 +624,7 @@ export const StaffSelectionDialog = ({
                             </Label>
                           </div>
                           
-                          {useCustomTime && periodConstraints && validTimeSlots.length > 0 && (
+                          {useCustomTime && validTimeSlots.length > 0 && (
                             <div className="grid grid-cols-2 gap-2 pl-6">
                               <div>
                                 <Label className="text-xs text-muted-foreground">Start</Label>
@@ -661,8 +664,20 @@ export const StaffSelectionDialog = ({
                                 </Select>
                               </div>
                               <p className="col-span-2 text-xs text-muted-foreground">
-                                {periodConstraints.label}: {periodConstraints.min} - {periodConstraints.max}
+                                Time range: 06:00 - 23:30
                               </p>
+                              {spansBoundary && (
+                                <p className="col-span-2 text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  This will create entries in both AM and PM slots
+                                </p>
+                              )}
+                              {spansBreak && (
+                                <p className="col-span-2 text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Spans break period ({amShiftEnd.slice(0, 5)} - {pmShiftStart.slice(0, 5)})
+                                </p>
+                              )}
                             </div>
                           )}
                         </div>

@@ -9,11 +9,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { doesSpanBreak } from "@/lib/rotaUtils";
 import type { Database } from "@/integrations/supabase/types";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
 
@@ -23,6 +26,7 @@ interface EditShiftDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shift: RotaShift | null;
+  allShifts?: RotaShift[]; // All shifts for finding linked shift data
   rotaRules: {
     am_shift_start: string;
     am_shift_end: string;
@@ -44,6 +48,7 @@ export const EditShiftDialog = ({
   open,
   onOpenChange,
   shift,
+  allShifts = [],
   rotaRules,
   onSave,
 }: EditShiftDialogProps) => {
@@ -55,49 +60,67 @@ export const EditShiftDialog = ({
   const [isTempStaff, setIsTempStaff] = useState(false);
   const [tempConfirmed, setTempConfirmed] = useState(false);
 
-  // Determine original period (AM or PM) based on shift data
-  const originalPeriod = useMemo(() => {
-    if (!shift) return null;
-    if (shift.shift_type === "am") return "am";
-    if (shift.shift_type === "pm") return "pm";
-    if (shift.shift_type === "custom" && shift.custom_start_time) {
-      // Determine period based on start time
-      const startHour = parseInt(shift.custom_start_time.slice(0, 2));
-      return startHour < 13 ? "am" : "pm";
+  // Generate time slots at 30-minute intervals
+  const generateTimeSlots = (): string[] => {
+    const slots: string[] = [];
+    let currentMinutes = 6 * 60; // 06:00
+    const endMinutes = 23 * 60 + 30; // 23:30
+    while (currentMinutes <= endMinutes) {
+      const hours = Math.floor(currentMinutes / 60);
+      const mins = currentMinutes % 60;
+      slots.push(`${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`);
+      currentMinutes += 30;
     }
-    return null;
-  }, [shift]);
+    return slots;
+  };
 
-  // Period constraints for custom time editing
-  const periodConstraints = useMemo(() => {
-    if (!rotaRules || !originalPeriod) return null;
-    if (originalPeriod === "am") {
-      return { 
-        min: rotaRules.am_shift_start.slice(0, 5), 
-        max: rotaRules.am_shift_end.slice(0, 5),
-        label: "AM"
-      };
-    } else if (originalPeriod === "pm") {
-      return { 
-        min: rotaRules.pm_shift_start.slice(0, 5), 
-        max: rotaRules.pm_shift_end.slice(0, 5),
-        label: "PM"
-      };
-    }
-    return null;
-  }, [rotaRules, originalPeriod]);
+  const timeSlots = useMemo(() => generateTimeSlots(), []);
+  const validEndSlots = useMemo(() => timeSlots.filter(t => t > customStart), [customStart, timeSlots]);
+
+  // For linked shifts, compute the combined range
+  const linkedShift = useMemo(() => {
+    if (!shift?.linked_shift_id) return null;
+    return allShifts.find(s => s.id === shift.linked_shift_id) || null;
+  }, [shift, allShifts]);
+
+  // Detect if current custom time spans the break
+  const showsSpansBreak = useMemo(() => {
+    if (shiftType !== "custom" || !customStart || !customEnd || !rotaRules) return false;
+    return doesSpanBreak(customStart, customEnd, rotaRules.am_shift_end, rotaRules.pm_shift_start);
+  }, [shiftType, customStart, customEnd, rotaRules]);
+
+  // Detect if spans the PM boundary
+  const spansBoundary = useMemo(() => {
+    if (shiftType !== "custom" || !customStart || !customEnd || !rotaRules) return false;
+    const boundary = rotaRules.pm_shift_start.slice(0, 5);
+    return customStart < boundary && customEnd > boundary;
+  }, [shiftType, customStart, customEnd, rotaRules]);
 
   useEffect(() => {
     if (shift) {
+      // For linked shifts, compute the combined range
+      const linked = shift.linked_shift_id ? allShifts.find(s => s.id === shift.linked_shift_id) : null;
+      if (linked && shift.shift_type === "custom") {
+        // Determine which is AM and which is PM
+        const shiftStart = shift.custom_start_time?.slice(0, 5) || "09:00";
+        const linkedStart = linked.custom_start_time?.slice(0, 5) || "09:00";
+        const combinedStart = shiftStart < linkedStart ? shiftStart : linkedStart;
+        const shiftEnd = shift.custom_end_time?.slice(0, 5) || "17:00";
+        const linkedEnd = linked.custom_end_time?.slice(0, 5) || "17:00";
+        const combinedEnd = shiftEnd > linkedEnd ? shiftEnd : linkedEnd;
+        setCustomStart(combinedStart);
+        setCustomEnd(combinedEnd);
+      } else {
+        setCustomStart(shift.custom_start_time?.slice(0, 5) || rotaRules?.am_shift_start.slice(0, 5) || "09:00");
+        setCustomEnd(shift.custom_end_time?.slice(0, 5) || rotaRules?.pm_shift_end.slice(0, 5) || "17:00");
+      }
       setShiftType(shift.shift_type);
-      setCustomStart(shift.custom_start_time?.slice(0, 5) || rotaRules?.am_shift_start.slice(0, 5) || "09:00");
-      setCustomEnd(shift.custom_end_time?.slice(0, 5) || rotaRules?.pm_shift_end.slice(0, 5) || "17:00");
       setIsOncall(shift.is_oncall);
       setNotes(shift.notes || "");
       setIsTempStaff(shift.is_temp_staff || false);
       setTempConfirmed(shift.temp_confirmed || false);
     }
-  }, [shift, rotaRules]);
+  }, [shift, rotaRules, allShifts]);
 
   const handleSave = () => {
     onSave({
@@ -163,29 +186,52 @@ export const EditShiftDialog = ({
 
           {shiftType === "custom" && (
             <div className="space-y-2 pl-6">
-              <div className="flex items-center gap-2">
-                <Input
-                  type="time"
-                  value={customStart}
-                  onChange={(e) => setCustomStart(e.target.value)}
-                  min={periodConstraints?.min}
-                  max={periodConstraints?.max}
-                  className="w-32"
-                />
-                <span className="text-muted-foreground">to</span>
-                <Input
-                  type="time"
-                  value={customEnd}
-                  onChange={(e) => setCustomEnd(e.target.value)}
-                  min={periodConstraints?.min}
-                  max={periodConstraints?.max}
-                  className="w-32"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Start</Label>
+                  <Select value={customStart} onValueChange={(v) => {
+                    setCustomStart(v);
+                    if (customEnd && customEnd <= v) {
+                      const next = timeSlots.filter(t => t > v);
+                      setCustomEnd(next.length > 0 ? next[0] : "");
+                    }
+                  }}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeSlots.slice(0, -1).map((time) => (
+                        <SelectItem key={time} value={time}>{time}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">End</Label>
+                  <Select value={customEnd} onValueChange={setCustomEnd}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {validEndSlots.map((time) => (
+                        <SelectItem key={time} value={time}>{time}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              {periodConstraints && (
-                <p className="text-xs text-muted-foreground">
-                  Must be within {periodConstraints.label} period: {periodConstraints.min} - {periodConstraints.max}
+              <p className="text-xs text-muted-foreground">Time range: 06:00 - 23:30</p>
+              {spansBoundary && (
+                <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  This will create entries in both AM and PM slots
                 </p>
+              )}
+              {showsSpansBreak && (
+                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Spans Break
+                </Badge>
               )}
               {!isTimeValid && (
                 <p className="text-xs text-destructive">
