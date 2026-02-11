@@ -1159,6 +1159,7 @@ export type Database = {
           job_title_name: string
           last_name: string
           phone: string
+          phone_ext: string
           primary_site_id: string
           registration_completed: boolean
           role: string
