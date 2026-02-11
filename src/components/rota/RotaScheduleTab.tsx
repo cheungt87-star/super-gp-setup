@@ -1052,20 +1052,21 @@ export const RotaScheduleTab = () => {
                         key={index}
                         value={String(index)}
                         className={cn(
-                          "flex-1 py-2.5 px-4 rounded-md transition-all shadow-sm",
-                          dayStatus === "not_started" && "data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=active]:shadow-md bg-red-50 text-red-700 hover:bg-red-100",
-                          dayStatus === "in_progress" && "data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md bg-amber-50 text-amber-700 hover:bg-amber-100",
-                          dayStatus === "completed" && "data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-md bg-green-50 text-green-700 hover:bg-green-100",
+                          "flex-1 py-2.5 px-4 rounded-md transition-all border",
+                          dayStatus === "not_started" && "bg-[#FEE2E2] text-[#991B1B] border-[#991B1B]",
+                          dayStatus === "in_progress" && "bg-[#FEF3C7] text-[#92400E] border-[#92400E]",
+                          dayStatus === "completed" && "bg-[#D1FAE5] text-[#065F46] border-[#065F46]",
+                          "data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=active]:shadow-md",
                         )}
                       >
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="text-sm font-medium">{format(day, "EEE")}</span>
                           <span className="text-xs">{format(day, "do MMM")}</span>
                           <span className={cn(
-                            "text-[10px] px-1.5 py-0.5 rounded-full font-medium mt-0.5",
-                            dayStatus === "not_started" && "bg-white/80 text-red-600 data-[state=active]:bg-white/30 data-[state=active]:text-white",
-                            dayStatus === "in_progress" && "bg-white/80 text-amber-600 data-[state=active]:bg-white/30 data-[state=active]:text-white",
-                            dayStatus === "completed" && "bg-white/80 text-green-600 data-[state=active]:bg-white/30 data-[state=active]:text-white",
+                            "text-[10px] px-1.5 py-0.5 rounded-full font-semibold mt-0.5",
+                            dayStatus === "not_started" && "bg-[#991B1B]/10 text-[#991B1B]",
+                            dayStatus === "in_progress" && "bg-[#92400E]/10 text-[#92400E]",
+                            dayStatus === "completed" && "bg-[#065F46]/10 text-[#065F46]",
                           )}>
                             {dayStatus === "not_started" ? "Not Started" : dayStatus === "in_progress" ? "In Progress" : "Completed"}
                           </span>
