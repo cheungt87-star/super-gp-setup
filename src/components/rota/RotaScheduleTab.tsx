@@ -1052,11 +1052,10 @@ export const RotaScheduleTab = () => {
                         key={index}
                         value={String(index)}
                         className={cn(
-                          "flex-1 py-2.5 px-4 rounded-md transition-all border",
-                          dayStatus === "not_started" && "bg-[#FEE2E2] text-[#991B1B] border-[#991B1B]",
-                          dayStatus === "in_progress" && "bg-[#FEF3C7] text-[#92400E] border-[#92400E]",
-                          dayStatus === "completed" && "bg-[#D1FAE5] text-[#065F46] border-[#065F46]",
-                          "data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=active]:shadow-md",
+                          "flex-1 py-2.5 px-4 rounded-md transition-all border-2",
+                          dayStatus === "not_started" && "bg-[#FEE2E2] text-[#991B1B] border-transparent data-[state=active]:border-[#991B1B]",
+                          dayStatus === "in_progress" && "bg-[#FEF3C7] text-[#92400E] border-transparent data-[state=active]:border-[#92400E]",
+                          dayStatus === "completed" && "bg-[#D1FAE5] text-[#065F46] border-transparent data-[state=active]:border-[#065F46]",
                         )}
                       >
                         <div className="flex flex-col items-center gap-0.5">
