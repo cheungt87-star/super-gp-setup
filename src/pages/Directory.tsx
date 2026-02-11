@@ -31,6 +31,7 @@ interface User {
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
+  phone_ext: string | null;
   job_title_id: string | null;
   job_title_name: string | null;
   primary_site_id: string | null;
@@ -320,6 +321,10 @@ export default function Directory() {
                       ) : (
                         <span>—</span>
                       )}
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span className="w-4 text-xs font-medium text-center">Ext</span>
+                      <span>{user.phone_ext || "—"}</span>
                     </div>
                     {user.site_name && (
                       <div className="flex items-center gap-2 text-muted-foreground">
