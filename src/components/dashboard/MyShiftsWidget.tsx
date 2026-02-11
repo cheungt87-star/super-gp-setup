@@ -185,7 +185,8 @@ export const MyShiftsWidget = () => {
         .from("rota_weeks")
         .select("id, site_id, sites(name)")
         .eq("organisation_id", orgId)
-        .eq("week_start", weekStartKey);
+        .eq("week_start", weekStartKey)
+        .eq("status", "published");
 
       if (!rotaWeeks || rotaWeeks.length === 0) {
         setRotaExists(false);
