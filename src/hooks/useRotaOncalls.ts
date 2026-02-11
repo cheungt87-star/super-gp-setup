@@ -14,6 +14,8 @@ export interface RotaOncall {
   is_temp_staff: boolean;
   temp_staff_name: string | null;
   temp_confirmed: boolean;
+  custom_start_time: string | null;
+  custom_end_time: string | null;
 }
 
 interface UseRotaOncallsProps {
@@ -51,6 +53,8 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
           is_temp_staff,
           temp_staff_name,
           temp_confirmed,
+          custom_start_time,
+          custom_end_time,
           profiles(first_name, last_name, job_titles(name))
         `)
         .eq("organisation_id", organisationId)
@@ -76,6 +80,8 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
         is_temp_staff: row.is_temp_staff,
         temp_staff_name: row.temp_staff_name,
         temp_confirmed: row.temp_confirmed,
+        custom_start_time: row.custom_start_time || null,
+        custom_end_time: row.custom_end_time || null,
       }));
 
       setOncalls(mappedOncalls);
@@ -98,7 +104,9 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
       userId: string | null,
       isTempStaff = false,
       tempConfirmed = false,
-      tempStaffName?: string
+      tempStaffName?: string,
+      customStartTime?: string,
+      customEndTime?: string
     ) => {
       if (!organisationId) return null;
 
@@ -116,6 +124,8 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
               is_temp_staff: isTempStaff,
               temp_confirmed: tempConfirmed,
               temp_staff_name: tempStaffName || null,
+              custom_start_time: customStartTime || null,
+              custom_end_time: customEndTime || null,
             },
             { onConflict: "organisation_id,oncall_date,oncall_slot,shift_period" }
           )

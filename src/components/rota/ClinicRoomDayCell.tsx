@@ -263,7 +263,7 @@ export const ClinicRoomDayCell = ({
     
     // Determine actual shift type
     let actualShiftType: ShiftType;
-    if (customStartTime && customEndTime && !isOnCall) {
+    if (customStartTime && customEndTime) {
       actualShiftType = "custom";
     } else {
       actualShiftType = selectionDialog.shiftType as ShiftType;
@@ -490,7 +490,15 @@ export const ClinicRoomDayCell = ({
                             {!amOncall.temp_confirmed ? "⚠️ TEMP" : "✓ Temp"}
                           </Badge>
                         )}
-                        <span className="text-sm font-medium truncate">{amOncall.user_name}</span>
+                        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                          <span className="text-sm font-medium truncate">{amOncall.user_name}</span>
+                          {amOncall.custom_start_time && amOncall.custom_end_time && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
+                              <Clock className="h-3 w-3 mr-0.5" />
+                              {amOncall.custom_start_time.slice(0, 5)}-{amOncall.custom_end_time.slice(0, 5)}
+                            </Badge>
+                          )}
+                        </div>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -536,7 +544,15 @@ export const ClinicRoomDayCell = ({
                             {!pmOncall.temp_confirmed ? "⚠️ TEMP" : "✓ Temp"}
                           </Badge>
                         )}
-                        <span className="text-sm font-medium truncate">{pmOncall.user_name}</span>
+                        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                          <span className="text-sm font-medium truncate">{pmOncall.user_name}</span>
+                          {pmOncall.custom_start_time && pmOncall.custom_end_time && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
+                              <Clock className="h-3 w-3 mr-0.5" />
+                              {pmOncall.custom_start_time.slice(0, 5)}-{pmOncall.custom_end_time.slice(0, 5)}
+                            </Badge>
+                          )}
+                        </div>
                         <Button
                           variant="ghost"
                           size="icon"

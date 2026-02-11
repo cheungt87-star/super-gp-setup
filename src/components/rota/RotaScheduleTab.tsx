@@ -395,9 +395,11 @@ export const RotaScheduleTab = () => {
     userId: string | null,
     isTempStaff?: boolean,
     tempConfirmed?: boolean,
-    tempStaffName?: string
+    tempStaffName?: string,
+    customStartTime?: string,
+    customEndTime?: string
   ) => {
-    const result = await addOncall(dateKey, slot, shiftPeriod, userId, isTempStaff || false, tempConfirmed || false, tempStaffName);
+    const result = await addOncall(dateKey, slot, shiftPeriod, userId, isTempStaff || false, tempConfirmed || false, tempStaffName, customStartTime, customEndTime);
     if (result) {
       const slotLabels: Record<number, string> = { 1: "On Call Manager", 2: "On Duty Doctor 1", 3: "On Duty Doctor 2" };
       const staffLabel = tempStaffName || "Staff member";
@@ -431,13 +433,14 @@ export const RotaScheduleTab = () => {
 
       // If custom time spans the AM/PM boundary, create both AM and PM on-call entries
       if (customStartTime && customEndTime && customStartTime < pmBoundary && customEndTime > pmBoundary) {
-        await handleAddOncall(dateKey, oncallSlot || 1, "am", userId, isTempStaff, tempConfirmed, tempStaffName);
-        await handleAddOncall(dateKey, oncallSlot || 1, "pm", userId, isTempStaff, tempConfirmed, tempStaffName);
+        await handleAddOncall(dateKey, oncallSlot || 1, "am", userId, isTempStaff, tempConfirmed, tempStaffName, customStartTime, pmBoundary);
+        await handleAddOncall(dateKey, oncallSlot || 1, "pm", userId, isTempStaff, tempConfirmed, tempStaffName, pmBoundary, customEndTime);
         return;
       }
 
+      // Single-period on-call with custom time
       const period = (shiftType === "am" || shiftType === "pm") ? shiftType as "am" | "pm" : "am";
-      await handleAddOncall(dateKey, oncallSlot || 1, period, userId, isTempStaff, tempConfirmed, tempStaffName);
+      await handleAddOncall(dateKey, oncallSlot || 1, period, userId, isTempStaff, tempConfirmed, tempStaffName, customStartTime, customEndTime);
       return;
     }
 
