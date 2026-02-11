@@ -8,6 +8,7 @@ import TaskWidget from "@/components/dashboard/TaskWidget";
 import TaskDetailSheet from "@/components/dashboard/TaskDetailSheet";
 import { MyShiftsWidget } from "@/components/dashboard/MyShiftsWidget";
 import { FullRotaWidget } from "@/components/dashboard/FullRotaWidget";
+import { PatientCapacityWidget } from "@/components/dashboard/PatientCapacityWidget";
 import { YourDayCard } from "@/components/dashboard/YourDayCard";
 import { WorkflowTaskWithDetails, TaskWithDueDate, enrichTaskWithDueDate } from "@/lib/taskUtils";
 import { format, subDays, addDays } from "date-fns";
@@ -308,6 +309,9 @@ const Dashboard = () => {
 
       {/* Full Rota View */}
       <FullRotaWidget />
+
+      {/* Patient Capacity Overview */}
+      <PatientCapacityWidget />
 
       {/* Task Widgets */}
       <div className="grid gap-6 md:grid-cols-2 animate-fade-in">
