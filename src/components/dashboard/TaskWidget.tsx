@@ -1,7 +1,9 @@
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList, User, Users } from "lucide-react";
 import { TaskWithDueDate } from "@/lib/taskUtils";
 import TaskRowItem from "./TaskRowItem";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface TaskWidgetProps {
   title: string;
@@ -10,28 +12,55 @@ interface TaskWidgetProps {
   variant: "personal" | "jobfamily";
 }
 
+const FILTER_OPTIONS = [1, 7, 30, 60, 90] as const;
+
 const TaskWidget = ({ title, tasks, onTaskClick, variant }: TaskWidgetProps) => {
   const Icon = variant === "personal" ? User : Users;
-  
+  const [selectedDays, setSelectedDays] = useState<number>(7);
+
+  const filteredTasks = useMemo(
+    () => tasks.filter((t) => t.isOverdue || t.eta <= selectedDays),
+    [tasks, selectedDays]
+  );
+
   return (
     <Card className="h-full">
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      <CardHeader className="pb-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          </div>
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+            {filteredTasks.length}
+          </span>
         </div>
-        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-          {tasks.length}
-        </span>
+        <ToggleGroup
+          type="single"
+          value={String(selectedDays)}
+          onValueChange={(v) => v && setSelectedDays(Number(v))}
+          size="sm"
+          className="justify-start"
+        >
+          {FILTER_OPTIONS.map((d) => (
+            <ToggleGroupItem
+              key={d}
+              value={String(d)}
+              className="text-xs px-2 h-7 rounded-full"
+            >
+              {d}d
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </CardHeader>
       <CardContent className="space-y-2">
-        {tasks.length === 0 ? (
+        {filteredTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <ClipboardList className="h-8 w-8 text-muted-foreground/50 mb-2" />
             <p className="text-sm text-muted-foreground">No tasks</p>
           </div>
         ) : (
-          tasks.map((task) => (
+          filteredTasks.map((task) => (
             <TaskRowItem
               key={task.id}
               task={task}
