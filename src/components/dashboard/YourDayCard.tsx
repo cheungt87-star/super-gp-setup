@@ -183,7 +183,7 @@ export function YourDayCard({ todayTasks }: YourDayCardProps) {
         <span className="text-muted-foreground font-medium">AM</span>
         {info.amName ? (
           <span className="font-medium text-right">
-            {info.amName}{info.amPhoneExt ? <span className="text-muted-foreground ml-1">(x{info.amPhoneExt})</span> : null}
+            {info.amName} <span className="text-muted-foreground ml-1">EXT {info.amPhoneExt || "—"}</span>
           </span>
         ) : (
           <span className="text-muted-foreground italic">Not assigned</span>
@@ -193,7 +193,7 @@ export function YourDayCard({ todayTasks }: YourDayCardProps) {
         <span className="text-muted-foreground font-medium">PM</span>
         {info.pmName ? (
           <span className="font-medium text-right">
-            {info.pmName}{info.pmPhoneExt ? <span className="text-muted-foreground ml-1">(x{info.pmPhoneExt})</span> : null}
+            {info.pmName} <span className="text-muted-foreground ml-1">EXT {info.pmPhoneExt || "—"}</span>
           </span>
         ) : (
           <span className="text-muted-foreground italic">Not assigned</span>
