@@ -1,54 +1,21 @@
 
 
-## Day Status Pills, Publish Gate, and Published-Only Shifts
+## Color-Code Day Tabs by Status
 
-### 1. Day Status Pills on Each Tab
+The status pills are rendering but are invisible because the active tab's teal background (`bg-primary`) overwhelms the small pill colors. The fix is to color-code the **entire tab background** based on day status, not just the small pill inside it.
 
-Add a colour-coded status pill to each day tab showing:
-- **Not Started** (grey) -- no shifts exist for that day
-- **In Progress** (amber/orange) -- at least 1 shift exists but day not confirmed
-- **Day Completed** (green) -- "Confirm Day" has been selected (confirmation exists)
+### Changes
 
-The pill will appear inside each tab trigger, below the date, before the existing confirmation icons (which will be removed since the pill replaces their purpose).
+**File: `src/components/rota/RotaScheduleTab.tsx`** (lines 1048-1066)
 
-### 2. "Copy from Previous Week" Pill Placement
+1. Replace the fixed `data-[state=active]:bg-primary` styling on `TabsTrigger` with dynamic classes based on `dayStatus`:
+   - **Not Started**: Red tones (`bg-red-500 text-white` when active, `bg-red-50 text-red-700` when inactive)
+   - **In Progress**: Amber tones (`bg-amber-500 text-white` when active, `bg-amber-50 text-amber-700` when inactive)
+   - **Completed**: Green tones (`bg-green-500 text-white` when active, `bg-green-50 text-green-700` when inactive)
 
-The status pill will sit to the left of any existing action pills in the day content area header. Since the tabs themselves show the status, this is cleanly integrated.
+2. Update the status pill inside the tab to use lighter/contrasting colors so it remains visible on the colored tab background (e.g., white/semi-transparent background on active tabs).
 
-### 3. Publish Button Gated by All Days Completed
+3. Remove the hardcoded `data-[state=active]:bg-primary` and `data-[state=inactive]:text-muted-foreground` from the className, replacing them with the dynamic status-based colors.
 
-The "Publish" button (line 866-879) will be disabled unless every open (non-closed) day in the week has a confirmation status (i.e., all days are "Day Completed"). A tooltip will explain why it's disabled.
-
-### 4. "My Upcoming Shifts" Filters by Published Rotas Only
-
-In `MyShiftsWidget.tsx`, the query that fetches `rota_weeks` will add a filter: `.eq("status", "published")`. This ensures only published rotas appear in the dashboard widget.
-
----
-
-### Technical Details
-
-**File: `src/components/rota/RotaScheduleTab.tsx`**
-
-1. **Compute day status** -- create a helper/memo that for each day returns `"not_started" | "in_progress" | "completed"`:
-   - `completed`: `getConfirmationStatus(dateKey)` returns a confirmation
-   - `in_progress`: `shiftsByDate[dateKey]?.length > 0` but no confirmation
-   - `not_started`: no shifts and no confirmation
-
-2. **Tab triggers (lines 1026-1046)** -- replace the CheckCircle2/AlertTriangle icons with a small coloured badge:
-   - Not Started: `bg-gray-100 text-gray-500` -- "Not Started"
-   - In Progress: `bg-amber-100 text-amber-600` -- "In Progress"  
-   - Completed: `bg-green-100 text-green-600` -- "Completed"
-
-3. **Publish button (lines 866-879)** -- add `allDaysCompleted` boolean check:
-   ```
-   const allDaysCompleted = openDayDates.length > 0 && 
-     openDayDates.every(day => getConfirmationStatus(formatDateKey(day)));
-   ```
-   Disable the button when `!allDaysCompleted` and add a title/tooltip.
-
-4. **Preview dialog publish button** (line 1169) -- pass the same `allDaysCompleted` condition so publish is also gated there.
-
-**File: `src/components/dashboard/MyShiftsWidget.tsx`**
-
-5. **Filter rota_weeks by published status** (around line 155) -- add `.eq("status", "published")` to the rota_weeks query so only published rotas surface shifts in the dashboard widget.
+This will make each tab visually distinct at a glance -- red for days needing attention, amber for in-progress, and green for completed -- matching the screenshot reference where the completed tab has a green background with the pill inside.
 
