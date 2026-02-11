@@ -623,8 +623,7 @@ const Auth = () => {
                       placeholder="07700 900000"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      readOnly={isCsvUser && !!phone}
-                      className={isCsvUser && !!phone ? "bg-muted" : ""}
+                      
                     />
                   </div>
                   <div className="space-y-2 w-20">
