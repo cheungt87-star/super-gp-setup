@@ -85,6 +85,13 @@ export const RotaPreviewDialog = ({
   saving,
 }: RotaPreviewDialogProps) => {
   const violations = useMemo(() => {
+    const oncallRecords = oncalls.map((oc) => ({
+      oncall_slot: oc.oncall_slot,
+      oncall_date: oc.oncall_date,
+      shift_period: oc.shift_period,
+      user_id: oc.user_id,
+      temp_staff_name: oc.temp_staff_name,
+    }));
     return validateWeek(
       weekDays,
       shifts,
@@ -92,9 +99,10 @@ export const RotaPreviewDialog = ({
       openingHoursByDay,
       allStaff,
       currentSiteId,
-      requireOnCall
+      requireOnCall,
+      oncallRecords
     );
-  }, [shifts, clinicRooms, weekDays, openingHoursByDay, currentSiteId, allStaff, requireOnCall]);
+  }, [shifts, clinicRooms, weekDays, openingHoursByDay, currentSiteId, allStaff, requireOnCall, oncalls]);
 
   // State for panels
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(true);
