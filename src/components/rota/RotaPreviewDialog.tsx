@@ -317,7 +317,7 @@ export const RotaPreviewDialog = ({
                   </thead>
                   <tbody>
                     {/* On-Call Rows - 3 slots with AM/PM */}
-                    {requireOnCall && [
+                    {[
                       { slot: 1, label: "On Call Manager" },
                       { slot: 2, label: "On Duty Doctor 1" },
                       { slot: 3, label: "On Duty Doctor 2" },
