@@ -12,7 +12,7 @@ import { ArrowLeft, Loader2, Building2, AlertTriangle, Eye, EyeOff, Check } from
 import { Link } from "react-router-dom";
 import { InvitationCodeForm } from "@/components/auth/InvitationCodeForm";
 
-type AuthMode = "login" | "invite" | "org-setup" | "org-confirm" | "register" | "verify" | "error";
+type AuthMode = "login" | "invite" | "org-setup" | "org-confirm" | "register" | "verify" | "forgot-password" | "reset-sent" | "error";
 
 interface InvitationValidationResult {
   code: string;
@@ -135,6 +135,20 @@ const Auth = () => {
     };
     fetchOptions();
   }, [mode, isFirstUser, organisationIdFromCode]);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setMode("reset-sent");
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -513,6 +527,58 @@ const Auth = () => {
               </div>
             </CardContent>
           </Card>
+        ) : mode === "forgot-password" ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Reset your password</CardTitle>
+              <CardDescription>Enter your email and we'll send you a reset link.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Email</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="you@clinic.nhs.uk"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send reset link
+                </Button>
+              </form>
+              <div className="mt-6 text-center text-sm">
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => setMode("login")}
+                >
+                  ← Back to sign in
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : mode === "reset-sent" ? (
+          <Card>
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Check className="h-6 w-6 text-primary" />
+              </div>
+              <CardTitle>Check your email</CardTitle>
+              <CardDescription>
+                We've sent a password reset link to <strong>{email}</strong>. It may take a few minutes to arrive.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <Button className="w-full" onClick={() => setMode("login")}>
+                Back to sign in
+              </Button>
+            </CardContent>
+          </Card>
         ) : mode === "login" ? (
           <Card>
             <CardHeader>
@@ -533,7 +599,16 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => setMode("forgot-password")}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <Input
                     id="password"
                     type="password"
