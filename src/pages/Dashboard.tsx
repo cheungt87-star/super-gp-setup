@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganisation } from "@/contexts/OrganisationContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Copy, Check, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ interface InviteCodeInfo {
 }
 
 const Dashboard = () => {
+  const { organisationName } = useOrganisation();
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("");
   const [inviteCode, setInviteCode] = useState<InviteCodeInfo | null>(null);
@@ -262,7 +264,10 @@ const Dashboard = () => {
     <div className="container py-12">
       <div className="mb-8 animate-fade-in flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Welcome, {userName}!</h1>
+          <h1 className="text-3xl font-bold mb-1">Welcome, {userName}!</h1>
+          {organisationName && (
+            <p className="text-sm font-medium text-muted-foreground mb-1">{organisationName}</p>
+          )}
           <p className="text-muted-foreground">Here's an overview of your clinic setup.</p>
         </div>
         {isAdmin && inviteCode && (
