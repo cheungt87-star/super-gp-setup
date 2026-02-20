@@ -134,17 +134,23 @@
     margin: 10mm;
   }
 
+  /* Hide everything by default */
   body * {
     visibility: hidden;
+    display: none !important;
   }
 
+  /* Force the rota and all its contents visible */
   .print-full-rota,
   .print-full-rota * {
     visibility: visible !important;
+    display: revert !important;
   }
 
+  /* Ensure ancestor chain is displayed so rota is reachable */
   .print-full-rota {
-    position: absolute;
+    display: block !important;
+    position: fixed;
     left: 0;
     top: 0;
     width: 100%;
@@ -154,6 +160,7 @@
     padding: 0 !important;
     background: white !important;
     border-radius: 0 !important;
+    z-index: 99999;
   }
 
   .print-full-rota .rounded-3xl {
