@@ -50,6 +50,30 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
   const [refetching, setRefetching] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Reset day confirmation and revert published status when a shift is modified
+  const resetDayOnEdit = useCallback(async (shiftDate: string) => {
+    if (!rotaWeek) return;
+    try {
+      // Delete confirmation for this day
+      await supabase
+        .from("rota_day_confirmations")
+        .delete()
+        .eq("rota_week_id", rotaWeek.id)
+        .eq("shift_date", shiftDate);
+
+      // If published, revert to draft
+      if (rotaWeek.status === "published") {
+        await supabase
+          .from("rota_weeks")
+          .update({ status: "draft" as RotaStatus })
+          .eq("id", rotaWeek.id);
+        setRotaWeek({ ...rotaWeek, status: "draft" as RotaStatus });
+      }
+    } catch (error) {
+      console.error("Error resetting day confirmation:", error);
+    }
+  }, [rotaWeek]);
+
   const fetchSchedule = useCallback(async (silent: boolean = false) => {
     if (!siteId || !organisationId || !weekStart) {
       setRotaWeek(null);
@@ -215,6 +239,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
           .update({ linked_shift_id: pmData.id })
           .eq("id", amData.id);
 
+        await resetDayOnEdit(shiftDate);
         await fetchSchedule(true);
         return amData;
       }
@@ -242,6 +267,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
 
       if (error) throw error;
 
+      await resetDayOnEdit(shiftDate);
       await fetchSchedule(true);
       return data;
     } catch (error: any) {
@@ -278,6 +304,12 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
 
       if (error) throw error;
 
+      // Find the shift date before it's gone from state
+      const shiftToUpdate = shifts.find(s => s.id === shiftId);
+      if (shiftToUpdate) {
+        await resetDayOnEdit(shiftToUpdate.shift_date);
+      }
+
       await fetchSchedule(true);
       return true;
     } catch (error: any) {
@@ -306,6 +338,10 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
       // Also delete linked shift if exists
       if (linkedId) {
         await supabase.from("rota_shifts").delete().eq("id", linkedId);
+      }
+
+      if (shiftToDelete) {
+        await resetDayOnEdit(shiftToDelete.shift_date);
       }
 
       await fetchSchedule(true);
@@ -367,6 +403,7 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
 
       if (error) throw error;
 
+      await resetDayOnEdit(shiftDate);
       await fetchSchedule(true);
       toast({
         title: "Day Cleared",
