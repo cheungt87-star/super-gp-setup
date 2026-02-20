@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, ChevronRight, Calendar, Clock, Printer } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Calendar, Printer } from "lucide-react";
 import { format, addDays, startOfWeek } from "date-fns";
 import { getJobTitleAbbreviation, getJobTitleColorByIndex } from "@/lib/jobTitleColors";
 import { cn } from "@/lib/utils";
@@ -522,10 +522,9 @@ export function FullRotaWidget() {
               <tbody>
                 {/* On-Call Rows - 3 slots */}
                 {[1, 2, 3].map((slot) => (
-                  <tr key={`oncall-${slot}`} className="bg-muted/10">
+                  <tr key={`oncall-${slot}`} className="bg-amber-50/60">
                     <td className="p-3 border border-border">
                       <div className="flex items-center gap-2 font-medium">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
                         <span>
                           {slot === 1 ? "On Call Manager" : slot === 2 ? "On Duty Doctor 1" : "On Duty Doctor 2"}
                         </span>
