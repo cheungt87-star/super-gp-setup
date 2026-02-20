@@ -134,22 +134,18 @@
     margin: 10mm;
   }
 
-  /* Hide everything by default */
+  /* Hide everything visually but keep in flow */
   body * {
     visibility: hidden;
-    display: none !important;
   }
 
-  /* Force the rota and all its contents visible */
+  /* Force rota and all its contents visible */
   .print-full-rota,
   .print-full-rota * {
     visibility: visible !important;
-    display: revert !important;
   }
 
-  /* Ensure ancestor chain is displayed so rota is reachable */
   .print-full-rota {
-    display: block !important;
     position: fixed;
     left: 0;
     top: 0;
