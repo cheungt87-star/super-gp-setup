@@ -316,12 +316,24 @@ const JobFamilyManagement = () => {
   const handleDeleteTitle = async () => {
     if (!deleteTitleId) return;
 
+    // First, unassign any profiles using this job title
+    const { error: unassignError } = await supabase
+      .from("profiles")
+      .update({ job_title_id: null })
+      .eq("job_title_id", deleteTitleId);
+
+    if (unassignError) {
+      toast({ title: "Error unassigning users", description: unassignError.message, variant: "destructive" });
+      setDeleteTitleId(null);
+      return;
+    }
+
     const { error } = await supabase.from("job_titles").delete().eq("id", deleteTitleId);
 
     if (error) {
       toast({ title: "Error deleting job title", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Job title deleted" });
+      toast({ title: "Job title deleted", description: "Any assigned users have been moved to unassigned." });
       fetchData();
     }
     setDeleteTitleId(null);
@@ -860,7 +872,7 @@ const JobFamilyManagement = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Job Title</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this job title?
+              This will permanently delete this job title. Any users currently assigned to it will be moved to unassigned.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
