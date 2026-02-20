@@ -41,9 +41,10 @@ interface UseRotaScheduleProps {
   siteId: string | null;
   organisationId: string | null;
   weekStart: string | null;
+  onShiftChanged?: () => void;
 }
 
-export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaScheduleProps) => {
+export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChanged }: UseRotaScheduleProps) => {
   const [rotaWeek, setRotaWeek] = useState<RotaWeek | null>(null);
   const [shifts, setShifts] = useState<RotaShift[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,10 +70,13 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart }: UseRotaSc
           .eq("id", rotaWeek.id);
         setRotaWeek({ ...rotaWeek, status: "draft" as RotaStatus });
       }
+
+      // Notify consumers to refetch their state
+      onShiftChanged?.();
     } catch (error) {
       console.error("Error resetting day confirmation:", error);
     }
-  }, [rotaWeek]);
+  }, [rotaWeek, onShiftChanged]);
 
   const fetchSchedule = useCallback(async (silent: boolean = false) => {
     if (!siteId || !organisationId || !weekStart) {
