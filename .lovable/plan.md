@@ -1,16 +1,17 @@
 
-
-# Fix: Rota Not Showing When Printing
+# Fix: Rota Duplicated Across 5 Printed Pages
 
 ## Problem
-The last CSS change added `display: none !important` to `body *`, which hides every element on the page — including the parent/ancestor containers that wrap `.print-full-rota` (sidebar layout, main content div, etc.). Since parents are hidden, the rota child can never appear regardless of its own display override.
+`visibility: hidden` on `body *` hides elements visually but they still take up physical space in the print layout, generating multiple pages. Since `.print-full-rota` uses `position: fixed`, it appears on every single page -- hence the same rota repeated 5 times.
 
 ## Solution
-Replace the broad `body *` hide rule with a more targeted approach that only hides non-rota content while keeping the ancestor chain intact.
+Collapse the body content so it occupies no space, while keeping the rota visible. Instead of hiding individual elements, we set the body itself to have no height/overflow, then position the rota as a fixed overlay.
 
-**File:** `src/index.css` (print media query, lines 130-187)
+## Technical Detail
 
-Replace the current print block with:
+**File:** `src/index.css` (print media query, lines 130-183)
+
+Replace the print block with:
 
 ```css
 @media print {
@@ -19,10 +20,11 @@ Replace the current print block with:
     margin: 10mm;
   }
 
-  /* Hide everything except the rota's ancestor chain */
-  body > *,
-  body * {
+  /* Collapse entire body so hidden content creates no pages */
+  body {
     visibility: hidden;
+    height: 0 !important;
+    overflow: hidden !important;
   }
 
   /* Force rota and all its contents visible */
@@ -45,9 +47,28 @@ Replace the current print block with:
     z-index: 99999;
   }
 
-  /* ... existing table/cell rules unchanged ... */
+  .print-full-rota .rounded-3xl {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .print-full-rota * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-full-rota table {
+    width: 100% !important;
+    font-size: 11px !important;
+    table-layout: fixed !important;
+  }
+
+  .print-full-rota td,
+  .print-full-rota th {
+    padding: 4px 6px !important;
+  }
 }
 ```
 
-Key change: Remove `display: none !important` from the `body *` rule. The `visibility: hidden` approach keeps elements in the flow but invisible, while `position: fixed` on `.print-full-rota` pulls it out of the flow and overlays it on page 1. This avoids blank pages (the rota is fixed, not in flow) while keeping the ancestor chain intact so the rota actually renders.
-
+The key change is targeting `body` directly with `height: 0 !important; overflow: hidden !important` instead of `body *` with `visibility: hidden`. This collapses all content into zero space so the browser generates only 1 page, and the fixed-position rota overlays that single page.
