@@ -1,21 +1,16 @@
 
-# Fix: Empty Pages When Printing Rota
+
+# Fix: Rota Not Showing When Printing
 
 ## Problem
-The current print CSS uses `visibility: hidden` to hide non-rota content. While this makes elements invisible, they still occupy space in the document layout, producing 4+ blank pages.
+The last CSS change added `display: none !important` to `body *`, which hides every element on the page — including the parent/ancestor containers that wrap `.print-full-rota` (sidebar layout, main content div, etc.). Since parents are hidden, the rota child can never appear regardless of its own display override.
 
 ## Solution
-Add `display: none` on all body children except the rota, and override with `display: block` on the rota container. This removes hidden elements from the flow entirely, eliminating blank pages.
+Replace the broad `body *` hide rule with a more targeted approach that only hides non-rota content while keeping the ancestor chain intact.
 
-## Technical Details
+**File:** `src/index.css` (print media query, lines 130-187)
 
-**File:** `src/index.css` (print media query, lines 130-180)
-
-Update the print block to:
-
-1. Hide all direct body children and the sidebar/layout wrappers with `display: none !important`
-2. Override the rota's ancestor chain to `display: block !important` so it remains visible
-3. Keep existing visibility rules as a fallback
+Replace the current print block with:
 
 ```css
 @media print {
@@ -24,31 +19,35 @@ Update the print block to:
     margin: 10mm;
   }
 
-  body > *:not(.print-full-rota) {
-    display: none !important;
-  }
-
+  /* Hide everything except the rota's ancestor chain */
+  body > *,
   body * {
     visibility: hidden;
   }
 
+  /* Force rota and all its contents visible */
   .print-full-rota,
   .print-full-rota * {
     visibility: visible !important;
-    display: revert !important;
   }
 
   .print-full-rota {
-    display: block !important;
-    position: absolute;
+    position: fixed;
     left: 0;
     top: 0;
     width: 100%;
-    /* ...existing reset styles... */
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    border-radius: 0 !important;
+    z-index: 99999;
   }
 
-  /* ...rest unchanged... */
+  /* ... existing table/cell rules unchanged ... */
 }
 ```
 
-Since `.print-full-rota` is nested inside layout wrappers (sidebar layout, main content area), we also need to ensure its parent elements are visible and displayed. A simpler approach: hide everything, then force the rota's ancestor chain visible using a broader selector that targets the rota's parent containers.
+Key change: Remove `display: none !important` from the `body *` rule. The `visibility: hidden` approach keeps elements in the flow but invisible, while `position: fixed` on `.print-full-rota` pulls it out of the flow and overlays it on page 1. This avoids blank pages (the rota is fixed, not in flow) while keeping the ancestor chain intact so the rota actually renders.
+
