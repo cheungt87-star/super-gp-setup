@@ -134,9 +134,11 @@
     margin: 10mm;
   }
 
-  /* Hide everything visually but keep in flow */
-  body * {
+  /* Collapse entire body so hidden content creates no pages */
+  body {
     visibility: hidden;
+    height: 0 !important;
+    overflow: hidden !important;
   }
 
   /* Force rota and all its contents visible */
