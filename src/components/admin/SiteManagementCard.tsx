@@ -297,7 +297,25 @@ export const SiteManagementCard = () => {
 
   // Facility handlers - inline save
   const handleSaveFacility = async (siteId: string, name: string, capacity: number, facilityType: "clinic_room" | "general_facility", facilityId?: string) => {
-    // ... keep existing code
+    try {
+      if (facilityId) {
+        const { error } = await supabase
+          .from('facilities')
+          .update({ name, capacity, facility_type: facilityType })
+          .eq('id', facilityId);
+        if (error) throw error;
+        toast({ title: "Facility updated", description: `${name} has been updated.` });
+      } else {
+        const { error } = await supabase
+          .from('facilities')
+          .insert({ site_id: siteId, name, capacity, facility_type: facilityType, organisation_id: organisationId });
+        if (error) throw error;
+        toast({ title: "Facility added", description: `${name} has been added.` });
+      }
+      fetchData(true);
+    } catch (error: any) {
+      toast({ title: "Error saving facility", description: error.message, variant: "destructive" });
+    }
   };
 
   const handleSaveCapacity = async (siteId: string, amCapacity: number, pmCapacity: number) => {
