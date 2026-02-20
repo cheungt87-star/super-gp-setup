@@ -1,39 +1,80 @@
 
 
-# Redesign: Invitation Code as Inline Pill
+# Fix: Print Layout for Full Rota
 
-## What Changes
+## Problem
+The printed rota table is centered on the page with excess whitespace, rounded container styling still visible, and doesn't fill the page width properly.
 
-Replace the full-width invitation code card with a compact pill positioned to the right of the "Welcome, {name}!" header row.
+## Changes
 
-## Layout
+**File:** `src/index.css` (lines 130-169)
 
-```text
-Welcome, Tak!                              [ Invite your colleagues to join  ORG-THETA1  📋 ]
-Here's an overview of your clinic setup.
+Update the print media query:
+
+1. Add `@page { size: landscape; margin: 10mm; }` to force landscape orientation and tight margins
+2. Remove the rounded container background/shadow/padding on `.print-full-rota > .rounded-3xl` wrapper so the table sits flush
+3. Set `text-align: left` on the print header block
+4. Ensure the table stretches to full width with `table-layout: fixed`
+
+**File:** `src/components/dashboard/FullRotaWidget.tsx`
+
+5. Update the print-only header from `print:text-center` to `print:text-left` (line ~241)
+
+## Technical Detail
+
+Updated print CSS block:
+```css
+@media print {
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .print-full-rota,
+  .print-full-rota * {
+    visibility: visible !important;
+  }
+
+  .print-full-rota {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    border-radius: 0 !important;
+  }
+
+  .print-full-rota .rounded-3xl {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .print-full-rota * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-full-rota table {
+    width: 100% !important;
+    font-size: 11px !important;
+    table-layout: fixed !important;
+  }
+
+  .print-full-rota td,
+  .print-full-rota th {
+    padding: 4px 6px !important;
+  }
+}
 ```
 
-## Technical Details
-
-**File:** `src/pages/Dashboard.tsx`
-
-1. **Remove** the standalone `Card` block for the invitation code (lines 270-308)
-2. **Modify** the welcome header section (lines 263-267) to use `flex justify-between items-start` layout
-3. **Add** a compact pill inline with the header (admin-only, same `isAdmin && inviteCode` condition):
-   - Styled as a rounded-full pill with subtle border and background
-   - Contains: label text "Invite your colleagues to join", the code in monospace, and a copy icon button
-   - Copy behaviour remains the same (click copies code, icon switches to checkmark)
-
-**Rough JSX structure for the pill:**
-```tsx
-<div className="flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-2 text-sm">
-  <span className="text-muted-foreground whitespace-nowrap">Invite your colleagues to join</span>
-  <code className="font-mono font-semibold tracking-wider">{inviteCode.code}</code>
-  <button onClick={handleCopy}>
-    {copied ? <Check /> : <Copy />}
-  </button>
-</div>
-```
-
-The pill will be hidden on very small screens or allowed to wrap naturally below the heading on mobile using responsive flex classes.
+And in `FullRotaWidget.tsx`, change the print header to left-aligned.
 
