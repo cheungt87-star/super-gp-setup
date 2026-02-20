@@ -349,9 +349,10 @@ export function FullRotaWidget() {
     const rotaEl = document.querySelector('.print-full-rota');
     if (!rotaEl) return;
 
-    // Find the table inside the rota
     const tableEl = rotaEl.querySelector('table');
     if (!tableEl) return;
+
+    const keyEl = rotaEl.querySelector('.rota-key-legend');
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -373,14 +374,19 @@ export function FullRotaWidget() {
   tbody { display: table-row-group; }
   tr { page-break-inside: avoid; }
   th, td { border: 1px solid #e2e8f0; padding: 5px 8px; text-align: left; vertical-align: top; }
-  th { background: #f8fafc; font-weight: 600; text-align: center; }
+  th { background: #334155; color: #fff; font-weight: 600; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   td:first-child, th:first-child { text-align: left; }
+  td:first-child { background: #f1f5f9; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  tr.oncall-row { background: #fffbeb; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .text-destructive { color: #ef4444; }
   .text-green-700 { color: #15803d; }
   span[class*="rounded-full"] {
     display: inline-block; font-size: 9px; padding: 1px 6px; border-radius: 9999px; border: 1px solid #e2e8f0;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
+  .rota-key-legend { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .rota-key-legend .key-label { font-size: 10px; font-weight: 600; color: #64748b; margin-right: 4px; }
+  .rota-key-legend .key-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #64748b; }
 </style>
 </head>
 <body>
@@ -389,6 +395,7 @@ export function FullRotaWidget() {
     <p>${formatWeekRange(weekStart)}</p>
   </div>
   ${tableEl.outerHTML}
+  ${keyEl ? keyEl.outerHTML : ''}
 </body>
 </html>`);
 
@@ -522,7 +529,7 @@ export function FullRotaWidget() {
               <tbody>
                 {/* On-Call Rows - 3 slots */}
                 {[1, 2, 3].map((slot) => (
-                  <tr key={`oncall-${slot}`} className="bg-amber-50/60">
+                  <tr key={`oncall-${slot}`} className="bg-amber-50/60 oncall-row">
                     <td className="p-3 border border-border bg-slate-100 font-semibold">
                       <div className="flex items-center gap-2 font-medium">
                         <span>
@@ -599,7 +606,7 @@ export function FullRotaWidget() {
             </table>
           </div>
           {jobTitleColorMap.size > 0 && (
-            <div className="mt-4 pt-3 border-t border-border">
+            <div className="rota-key-legend mt-4 pt-3 border-t border-border">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-medium text-muted-foreground mr-1">Key:</span>
                 {Array.from(jobTitleColorMap.entries()).map(([title, info]) => (
