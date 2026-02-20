@@ -53,25 +53,33 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
 
   // Reset day confirmation and revert published status when a shift is modified
   const resetDayOnEdit = useCallback(async (shiftDate: string) => {
-    if (!rotaWeek) return;
+    if (!rotaWeek) {
+      console.log("[resetDayOnEdit] No rotaWeek, skipping");
+      return;
+    }
+    console.log("[resetDayOnEdit] Called for date:", shiftDate, "week status:", rotaWeek.status);
     try {
       // Delete confirmation for this day
-      await supabase
+      const { error: delError, count } = await supabase
         .from("rota_day_confirmations")
         .delete()
         .eq("rota_week_id", rotaWeek.id)
         .eq("shift_date", shiftDate);
 
+      console.log("[resetDayOnEdit] Delete confirmation result:", { delError, count });
+
       // If published, revert to draft
       if (rotaWeek.status === "published") {
-        await supabase
+        const { error: updateError } = await supabase
           .from("rota_weeks")
           .update({ status: "draft" as RotaStatus })
           .eq("id", rotaWeek.id);
+        console.log("[resetDayOnEdit] Revert to draft result:", { updateError });
         setRotaWeek({ ...rotaWeek, status: "draft" as RotaStatus });
       }
 
       // Notify consumers to refetch their state
+      console.log("[resetDayOnEdit] Calling onShiftChanged:", !!onShiftChanged);
       onShiftChanged?.();
     } catch (error) {
       console.error("Error resetting day confirmation:", error);
