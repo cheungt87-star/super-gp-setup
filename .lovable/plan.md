@@ -1,27 +1,25 @@
 
 
-# Allow Job Title Deletion by Unassigning Users First
+# Fix: Facility Add/Edit Not Working
 
 ## Problem
-Deleting a job title fails because the `profiles` table has a foreign key (`profiles_job_title_id_fkey`) referencing `job_titles.id`. If any user profiles are assigned that job title, the database blocks the deletion.
+
+The `handleSaveFacility` function in `SiteManagementCard.tsx` (line 299-301) has been emptied -- it contains only `// ... keep existing code` instead of actual implementation. This means when you click "Add facility", nothing happens and the form gets stuck in a disabled/saving state.
 
 ## Solution
-Before deleting the job title, set `job_title_id = null` on all profiles that reference it. This effectively moves those users to "unassigned" status, then proceeds with the deletion.
+
+Restore the `handleSaveFacility` function with the correct implementation that either inserts a new facility or updates an existing one in Supabase.
 
 ## Changes
 
-### `src/pages/admin/JobFamilyManagement.tsx` -- Update `handleDeleteTitle`
+### `src/components/admin/SiteManagementCard.tsx` -- Restore `handleSaveFacility`
 
-Add a step before the delete call:
+Replace the empty function body (lines 299-301) with the full implementation:
 
-1. Run `supabase.from("profiles").update({ job_title_id: null }).eq("job_title_id", deleteTitleId)` to unassign all users from this job title
-2. If the update fails, show an error toast and abort
-3. If successful, proceed with the existing `supabase.from("job_titles").delete().eq("id", deleteTitleId)` call
-4. Update the success toast to mention that affected users were unassigned, e.g. "Job title deleted. Any assigned users have been moved to unassigned."
+1. If `facilityId` is provided, update the existing facility (`name`, `capacity`, `facility_type`) using `.update().eq('id', facilityId)`
+2. If no `facilityId`, insert a new facility with `site_id`, `name`, `capacity`, `facility_type`, and `organisation_id`
+3. Show success/error toast
+4. Call `fetchData(true)` to refresh the list
 
-### Update delete confirmation dialog text
-
-Change the dialog description (around line 860) to inform the user: *"This will permanently delete this job title. Any users currently assigned to it will be moved to unassigned."*
-
-No database changes are needed.
+No database changes are needed -- the `facilities` table and RLS policies are already correctly configured.
 
