@@ -1,41 +1,39 @@
 
 
-# Fix: Invitation Code Card Query
+# Redesign: Invitation Code as Inline Pill
 
-## Problem
-The current query uses `.is("email", null)` to find the shareable code, which is unreliable. The `invitation_codes` table has a `type` column (set automatically by the `set_invitation_type` trigger) that cleanly distinguishes:
-- `type = 'general'` -- shareable ORG-XXXX codes for staff sign-up
-- `type = 'onboarding'` -- setup codes used to create the org
+## What Changes
 
-## Change
+Replace the full-width invitation code card with a compact pill positioned to the right of the "Welcome, {name}!" header row.
 
-**File:** `src/pages/Dashboard.tsx` (lines 188-194)
+## Layout
 
-Replace the current query filter:
-
-```ts
-// Before
-.is("email", null)
-
-// After
-.eq("type", "general")
+```text
+Welcome, Tak!                              [ Invite your colleagues to join  ORG-THETA1  📋 ]
+Here's an overview of your clinic setup.
 ```
 
-Full updated query:
-```ts
-const { data: codeData } = await supabase
-  .from("invitation_codes")
-  .select("code, used_count, max_uses")
-  .eq("organisation_id", profile.organisation_id)
-  .eq("type", "general")
-  .eq("is_active", true)
-  .maybeSingle();
+## Technical Details
+
+**File:** `src/pages/Dashboard.tsx`
+
+1. **Remove** the standalone `Card` block for the invitation code (lines 270-308)
+2. **Modify** the welcome header section (lines 263-267) to use `flex justify-between items-start` layout
+3. **Add** a compact pill inline with the header (admin-only, same `isAdmin && inviteCode` condition):
+   - Styled as a rounded-full pill with subtle border and background
+   - Contains: label text "Invite your colleagues to join", the code in monospace, and a copy icon button
+   - Copy behaviour remains the same (click copies code, icon switches to checkmark)
+
+**Rough JSX structure for the pill:**
+```tsx
+<div className="flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-2 text-sm">
+  <span className="text-muted-foreground whitespace-nowrap">Invite your colleagues to join</span>
+  <code className="font-mono font-semibold tracking-wider">{inviteCode.code}</code>
+  <button onClick={handleCopy}>
+    {copied ? <Check /> : <Copy />}
+  </button>
+</div>
 ```
 
-Additionally, redesign the card UI to be full-width and visually prominent as previously discussed -- large centred monospace code block, prominent "Copy Code" button with animation, and usage counter.
-
-## No other changes needed
-- The `type` column is already populated by the `set_invitation_type` trigger (codes starting with `ORG` get `type = 'general'`)
-- The `organisation_id` comes from the user's profile (already fetched)
-- No database migration required
+The pill will be hidden on very small screens or allowed to wrap naturally below the heading on mobile using responsive flex classes.
 
