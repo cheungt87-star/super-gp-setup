@@ -442,7 +442,7 @@ export function FullRotaWidget() {
                       key={day.dateKey} 
                       className="text-center p-3 border border-border bg-muted/30 font-medium min-w-[100px]"
                     >
-                      {format(day.date, "EEE d")}
+                      {format(day.date, "EEE do MMM")}
                     </th>
                   ))}
                 </tr>
