@@ -39,7 +39,7 @@ export const FacilityList = ({
   const [editType, setEditType] = useState<FacilityType>("general_facility");
   const [newName, setNewName] = useState("");
   const [newCapacity, setNewCapacity] = useState(0);
-  const [newType, setNewType] = useState<FacilityType>("general_facility");
+  const [newType, setNewType] = useState<FacilityType>("clinic_room");
   const [isSaving, setIsSaving] = useState(false);
   const addInputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -92,7 +92,7 @@ export const FacilityList = ({
       await onSave(newName.trim(), newCapacity, newType);
       setNewName("");
       setNewCapacity(0);
-      setNewType("general_facility");
+      setNewType("clinic_room");
       onCancelAdd?.();
     } finally {
       setIsSaving(false);
