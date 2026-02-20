@@ -506,13 +506,13 @@ export function FullRotaWidget() {
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr>
-                  <th className="text-left p-3 border border-border bg-muted/30 font-medium min-w-[120px]">
+                  <th className="text-left p-3 border border-border bg-slate-700 text-white font-semibold min-w-[120px]">
                     Room
                   </th>
                   {openDays.map(day => (
                     <th 
                       key={day.dateKey} 
-                      className="text-center p-3 border border-border bg-muted/30 font-medium min-w-[100px]"
+                      className="text-center p-3 border border-border bg-slate-700 text-white font-semibold min-w-[100px]"
                     >
                       {format(day.date, "EEE do MMM")}
                     </th>
@@ -523,7 +523,7 @@ export function FullRotaWidget() {
                 {/* On-Call Rows - 3 slots */}
                 {[1, 2, 3].map((slot) => (
                   <tr key={`oncall-${slot}`} className="bg-amber-50/60">
-                    <td className="p-3 border border-border">
+                    <td className="p-3 border border-border bg-slate-100 font-semibold">
                       <div className="flex items-center gap-2 font-medium">
                         <span>
                           {slot === 1 ? "On Call Manager" : slot === 2 ? "On Duty Doctor 1" : "On Duty Doctor 2"}
@@ -548,7 +548,7 @@ export function FullRotaWidget() {
                 {/* Room Rows */}
                 {Array.from(facilities.entries()).map(([roomId, roomName]) => (
                   <tr key={roomId}>
-                    <td className="p-3 border border-border font-medium align-top">
+                    <td className="p-3 border border-border font-semibold align-top bg-slate-100">
                       {roomName}
                     </td>
                     {openDays.map(day => {
