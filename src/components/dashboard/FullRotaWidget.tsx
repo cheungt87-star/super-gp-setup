@@ -327,7 +327,58 @@ export function FullRotaWidget() {
   const selectedSiteName = sites.find(s => s.id === selectedSiteId)?.name || "";
 
   const handlePrint = () => {
-    window.print();
+    const rotaEl = document.querySelector('.print-full-rota');
+    if (!rotaEl) return;
+
+    // Find the table inside the rota
+    const tableEl = rotaEl.querySelector('table');
+    if (!tableEl) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${selectedSiteName} — Full Rota</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; color: #1e293b; }
+  .header { margin-bottom: 12px; }
+  .header h1 { font-size: 16px; font-weight: 700; }
+  .header p { font-size: 12px; color: #64748b; }
+  table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
+  thead { display: table-header-group; }
+  tbody { display: table-row-group; }
+  tr { page-break-inside: avoid; }
+  th, td { border: 1px solid #e2e8f0; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #f8fafc; font-weight: 600; text-align: center; }
+  td:first-child, th:first-child { text-align: left; }
+  .text-destructive { color: #ef4444; }
+  .text-green-700 { color: #15803d; }
+  span[class*="rounded-full"] {
+    display: inline-block; font-size: 9px; padding: 1px 6px; border-radius: 9999px; border: 1px solid #e2e8f0;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>${selectedSiteName} — Full Rota</h1>
+    <p>${formatWeekRange(weekStart)}</p>
+  </div>
+  ${tableEl.outerHTML}
+</body>
+</html>`);
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   // Get only open days for columns
