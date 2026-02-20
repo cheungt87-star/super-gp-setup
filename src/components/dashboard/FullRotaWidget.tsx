@@ -373,7 +373,7 @@ export function FullRotaWidget() {
   return (
     <div className="mb-8 rounded-2xl bg-[#F8FAFC] p-6 animate-fade-in print-full-rota" data-print-rota>
       {/* Print-only header */}
-      <div className="hidden print:block print:mb-4 print:text-center">
+      <div className="hidden print:block print:mb-4 print:text-left">
         <h1 className="text-xl font-bold">{selectedSiteName} — Full Rota</h1>
         <p className="text-sm">{formatWeekRange(weekStart)}</p>
       </div>

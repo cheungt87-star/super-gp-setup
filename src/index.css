@@ -129,7 +129,11 @@
 
 /* Print styles for Full Rota */
 @media print {
-  /* Hide everything except the rota widget */
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -148,18 +152,25 @@
     border: none !important;
     margin: 0 !important;
     padding: 0 !important;
+    background: white !important;
+    border-radius: 0 !important;
   }
 
-  /* Preserve colors in print */
+  .print-full-rota .rounded-3xl {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
   .print-full-rota * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Clean up table for print */
   .print-full-rota table {
     width: 100% !important;
     font-size: 11px !important;
+    table-layout: fixed !important;
   }
 
   .print-full-rota td,
