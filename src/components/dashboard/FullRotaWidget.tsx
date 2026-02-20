@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Loader2, ChevronLeft, ChevronRight, Calendar, Clock, Printer } from "lucide-react";
 import { format, addDays, startOfWeek } from "date-fns";
-import { getJobTitleColors } from "@/lib/jobTitleColors";
+import { getJobTitleAbbreviation, getJobTitleColorByIndex } from "@/lib/jobTitleColors";
 import { cn } from "@/lib/utils";
 
 interface Site {
@@ -57,6 +57,7 @@ export function FullRotaWidget() {
   const [schedule, setSchedule] = useState<DaySchedule[]>([]);
   const [facilities, setFacilities] = useState<Map<string, string>>(new Map());
   const [rotaExists, setRotaExists] = useState(true);
+  const [jobTitleColorMap, setJobTitleColorMap] = useState<Map<string, { abbreviation: string; colorClasses: string }>>(new Map());
 
   // Fetch sites on mount
   useEffect(() => {
@@ -286,6 +287,24 @@ export function FullRotaWidget() {
         });
       }
 
+      // Build job title color map from all shifts in this week
+      const allJobTitles = new Set<string>();
+      weekSchedule.forEach(day => {
+        day.onCallShifts.forEach(s => { if (s.job_title_name) allJobTitles.add(s.job_title_name); });
+        day.roomShifts.forEach(room => {
+          [...room.am, ...room.pm, ...room.fullDay].forEach(s => { if (s.job_title_name) allJobTitles.add(s.job_title_name); });
+        });
+      });
+      const sortedTitles = Array.from(allJobTitles).sort();
+      const colorMap = new Map<string, { abbreviation: string; colorClasses: string }>();
+      sortedTitles.forEach((title, index) => {
+        colorMap.set(title, {
+          abbreviation: getJobTitleAbbreviation(title),
+          colorClasses: getJobTitleColorByIndex(index),
+        });
+      });
+      setJobTitleColorMap(colorMap);
+
       setSchedule(weekSchedule);
     } catch (error) {
       console.error("Error fetching schedule:", error);
@@ -388,18 +407,19 @@ export function FullRotaWidget() {
   const formatStaffName = (shift: ShiftData) => {
     const name = shift.staff_name || "-";
     const isUnconfirmedTemp = shift.is_temp_staff && !shift.temp_confirmed;
+    const titleInfo = shift.job_title_name ? jobTitleColorMap.get(shift.job_title_name) : null;
     
     return (
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className={isUnconfirmedTemp ? "text-destructive" : ""}>
           {isUnconfirmedTemp && "⚠️ "}{name}
         </span>
-        {shift.job_title_name && (
+        {titleInfo && (
           <span className={cn(
-            "text-xs px-1.5 py-0.5 rounded-full border whitespace-nowrap",
-            getJobTitleColors(shift.job_title_name)
+            "text-xs px-1.5 py-0.5 rounded-full border whitespace-nowrap font-semibold",
+            titleInfo.colorClasses
           )}>
-            {shift.job_title_name}
+            {titleInfo.abbreviation}
           </span>
         )}
       </div>
@@ -481,6 +501,7 @@ export function FullRotaWidget() {
             <p className="text-sm">No open days this week</p>
           </div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
@@ -538,7 +559,6 @@ export function FullRotaWidget() {
                       return (
                         <td key={day.dateKey} className="p-3 border border-border align-top">
                           <div className="space-y-2">
-                            {/* AM Section */}
                             <div>
                               <span className="text-green-700 font-medium">AM:</span>
                               <div className="text-green-700">
@@ -549,7 +569,6 @@ export function FullRotaWidget() {
                                   : "-"}
                               </div>
                             </div>
-                            {/* PM Section */}
                             <div>
                               <span className="text-green-700 font-medium">PM:</span>
                               <div className="text-green-700">
@@ -567,7 +586,6 @@ export function FullRotaWidget() {
                   </tr>
                 ))}
 
-                {/* Empty state for no rooms */}
                 {facilities.size === 0 && (
                   <tr>
                     <td 
@@ -581,6 +599,25 @@ export function FullRotaWidget() {
               </tbody>
             </table>
           </div>
+          {jobTitleColorMap.size > 0 && (
+            <div className="mt-4 pt-3 border-t border-border">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-medium text-muted-foreground mr-1">Key:</span>
+                {Array.from(jobTitleColorMap.entries()).map(([title, info]) => (
+                  <div key={title} className="flex items-center gap-1">
+                    <span className={cn(
+                      "text-xs px-1.5 py-0.5 rounded-full border font-semibold",
+                      info.colorClasses
+                    )}>
+                      {info.abbreviation}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>
