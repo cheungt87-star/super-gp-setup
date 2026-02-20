@@ -130,35 +130,38 @@
 /* Print styles for Full Rota */
 @media print {
   @page {
-    size: landscape;
-    margin: 10mm;
+    size: A4 landscape;
+    margin: 12mm;
   }
 
-  /* Collapse entire body so hidden content creates no pages */
-  body {
-    visibility: hidden;
-    height: 0 !important;
-    overflow: hidden !important;
+  /* Hide everything except the rota */
+  body > *:not(:has(.print-full-rota)),
+  .print-full-rota .print\\:hidden,
+  [class*="print:hidden"] {
+    display: none !important;
   }
 
-  /* Force rota and all its contents visible */
-  .print-full-rota,
-  .print-full-rota * {
-    visibility: visible !important;
-  }
-
-  .print-full-rota {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    box-shadow: none !important;
+  /* Strip layout chrome around the rota */
+  body,
+  body > *,
+  body > * > *,
+  body > * > * > * {
+    margin: 0 !important;
+    padding: 0 !important;
     border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+
+  /* Rota container: static flow, no decoration */
+  .print-full-rota {
+    position: static !important;
+    width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
     border-radius: 0 !important;
-    z-index: 99999;
+    box-shadow: none !important;
   }
 
   .print-full-rota .rounded-3xl {
@@ -167,19 +170,30 @@
     padding: 0 !important;
   }
 
-  .print-full-rota * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
+  /* Table: natural flow with repeating headers */
   .print-full-rota table {
     width: 100% !important;
-    font-size: 11px !important;
+    font-size: 12px !important;
     table-layout: fixed !important;
+    page-break-inside: auto !important;
+  }
+
+  .print-full-rota thead {
+    display: table-header-group !important;
+  }
+
+  .print-full-rota tr {
+    page-break-inside: avoid !important;
   }
 
   .print-full-rota td,
   .print-full-rota th {
-    padding: 4px 6px !important;
+    padding: 5px 8px !important;
+  }
+
+  /* Preserve badge colors */
+  .print-full-rota * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
