@@ -54,7 +54,7 @@ export const FacilityForm = ({ open, onOpenChange, facility, siteName, onSave }:
     defaultValues: {
       name: "",
       capacity: 0,
-      facility_type: "general_facility",
+      facility_type: "clinic_room",
     },
   });
 
@@ -69,7 +69,7 @@ export const FacilityForm = ({ open, onOpenChange, facility, siteName, onSave }:
       form.reset({
         name: "",
         capacity: 0,
-        facility_type: "general_facility",
+        facility_type: "clinic_room",
       });
     }
   }, [facility, form]);
