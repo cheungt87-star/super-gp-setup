@@ -1,74 +1,46 @@
 
-# Fix: Rota Duplicated Across 5 Printed Pages
+# Fix: Blank Pages When Printing the Full Rota
 
-## Problem
-`visibility: hidden` on `body *` hides elements visually but they still take up physical space in the print layout, generating multiple pages. Since `.print-full-rota` uses `position: fixed`, it appears on every single page -- hence the same rota repeated 5 times.
+## Root Cause
 
-## Solution
-Collapse the body content so it occupies no space, while keeping the rota visible. Instead of hiding individual elements, we set the body itself to have no height/overflow, then position the rota as a fixed overlay.
+Every CSS-based approach so far has failed because the rota is deeply nested inside layout wrappers (`SidebarProvider > div.min-h-screen > SidebarInset > main > div.container`). Using `visibility: hidden` preserves layout space, and using `height: 0` on `body *` conflicts with needing ancestors to have proper dimensions for the rota to render. There is no clean way to hide everything except a deeply-nested element using pure CSS without side effects that create phantom pages.
 
-## Technical Detail
+## Solution: JavaScript-Based Print
 
-**File:** `src/index.css` (print media query, lines 130-183)
+Instead of fighting CSS, switch to a JavaScript approach. When the user clicks Print, we:
 
-Replace the print block with:
+1. Open a new browser window
+2. Write only the rota HTML (cloned) into it, with minimal inline styles
+3. Call `print()` on that window
+4. Close it after printing
 
-```css
-@media print {
-  @page {
-    size: landscape;
-    margin: 10mm;
-  }
+This completely isolates the rota from the page layout, guaranteeing no blank pages, no duplication, and proper multi-page table flow.
 
-  /* Collapse entire body so hidden content creates no pages */
-  body {
-    visibility: hidden;
-    height: 0 !important;
-    overflow: hidden !important;
-  }
+## Changes
 
-  /* Force rota and all its contents visible */
-  .print-full-rota,
-  .print-full-rota * {
-    visibility: visible !important;
-  }
+### 1. `src/components/dashboard/FullRotaWidget.tsx` -- Update `handlePrint`
 
-  .print-full-rota {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    box-shadow: none !important;
-    border: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: white !important;
-    border-radius: 0 !important;
-    z-index: 99999;
-  }
+Replace the current `window.print()` call with logic that:
+- Grabs the `.print-full-rota` element via ref
+- Clones its inner HTML
+- Opens a new window with a self-contained HTML document containing:
+  - `@page { size: A4 landscape; margin: 12mm; }`
+  - A print header (site name + week range)
+  - The table with basic styles (borders, font size, badge colors)
+  - `thead { display: table-header-group }` for repeating headers
+  - `tr { page-break-inside: avoid }`
+- Calls `window.print()` on the new window
+- Closes the popup after printing
 
-  .print-full-rota .rounded-3xl {
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-  }
+### 2. `src/index.css` -- Remove all `@media print` rules
 
-  .print-full-rota * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
+Delete the entire `@media print` block (lines 130-224). It is no longer needed since printing is handled in an isolated window.
 
-  .print-full-rota table {
-    width: 100% !important;
-    font-size: 11px !important;
-    table-layout: fixed !important;
-  }
+## End State
 
-  .print-full-rota td,
-  .print-full-rota th {
-    padding: 4px 6px !important;
-  }
-}
-```
-
-The key change is targeting `body` directly with `height: 0 !important; overflow: hidden !important` instead of `body *` with `visibility: hidden`. This collapses all content into zero space so the browser generates only 1 page, and the fixed-position rota overlays that single page.
+- Clicking Print opens a clean print dialog with only the rota
+- No blank pages
+- No duplication
+- Table headers repeat on each page
+- Multi-page tables flow naturally
+- No CSS hacks remain in the codebase
