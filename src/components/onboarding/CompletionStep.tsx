@@ -44,6 +44,7 @@ export const CompletionStep = ({ organisationId }: CompletionStepProps) => {
         organisation_id: organisationId,
         is_active: true,
         max_uses: 100,
+        type: "general" as const,
       });
 
     if (codeError) {
@@ -58,6 +59,7 @@ export const CompletionStep = ({ organisationId }: CompletionStepProps) => {
             organisation_id: organisationId,
             is_active: true,
             max_uses: 100,
+            type: "general" as const,
           });
         
         if (retryError) {

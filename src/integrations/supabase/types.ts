@@ -76,6 +76,8 @@ export type Database = {
           is_active: boolean
           max_uses: number
           organisation_id: string | null
+          organisation_name: string | null
+          type: Database["public"]["Enums"]["invitation_code_type"]
           updated_at: string
           used_count: number
         }
@@ -89,6 +91,8 @@ export type Database = {
           is_active?: boolean
           max_uses?: number
           organisation_id?: string | null
+          organisation_name?: string | null
+          type: Database["public"]["Enums"]["invitation_code_type"]
           updated_at?: string
           used_count?: number
         }
@@ -102,6 +106,8 @@ export type Database = {
           is_active?: boolean
           max_uses?: number
           organisation_id?: string | null
+          organisation_name?: string | null
+          type?: Database["public"]["Enums"]["invitation_code_type"]
           updated_at?: string
           used_count?: number
         }
@@ -1194,6 +1200,7 @@ export type Database = {
     }
     Enums: {
       app_role: "master" | "admin" | "manager" | "staff"
+      invitation_code_type: "onboarding" | "general"
       recurrence_pattern: "daily" | "weekly" | "monthly" | "custom"
       rota_status: "draft" | "published" | "archived"
       shift_type: "full_day" | "am" | "pm" | "custom"
@@ -1325,6 +1332,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["master", "admin", "manager", "staff"],
+      invitation_code_type: ["onboarding", "general"],
       recurrence_pattern: ["daily", "weekly", "monthly", "custom"],
       rota_status: ["draft", "published", "archived"],
       shift_type: ["full_day", "am", "pm", "custom"],

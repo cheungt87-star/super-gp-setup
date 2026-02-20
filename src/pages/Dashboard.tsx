@@ -189,7 +189,7 @@ const Dashboard = () => {
             .from("invitation_codes")
             .select("code, used_count, max_uses")
             .eq("organisation_id", profile.organisation_id)
-            .is("email", null)
+            .eq("type", "general")
             .eq("is_active", true)
             .maybeSingle();
 
@@ -271,35 +271,39 @@ const Dashboard = () => {
       {/* Invitation Code Card for Admins */}
       {isAdmin && inviteCode && (
         <Card className="mb-6 animate-fade-in border-primary/20 bg-primary/5">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <UserPlus className="h-5 w-5 text-primary" />
               <CardTitle className="text-base font-medium">Team Invitation Code</CardTitle>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCopy}
-              className="gap-2"
-            >
-              {copied ? (
-                <Check className="h-4 w-4 text-success" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-              {copied ? "Copied" : "Copy"}
-            </Button>
+            <CardDescription>
+              Share this code with team members so they can join your organisation.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-center rounded-xl bg-muted px-6 py-5">
+              <code className="text-2xl sm:text-3xl font-mono font-bold tracking-[0.25em] text-foreground">
+                {inviteCode.code}
+              </code>
+            </div>
             <div className="flex items-center justify-between">
-              <code className="text-xl font-mono font-bold tracking-wider">{inviteCode.code}</code>
               <span className="text-sm text-muted-foreground">
                 {inviteCode.usedCount} / {inviteCode.maxUses} uses
               </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopy}
+                className="gap-2"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-primary" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                {copied ? "Copied!" : "Copy Code"}
+              </Button>
             </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Share this code with team members so they can join your organisation.
-            </p>
           </CardContent>
         </Card>
       )}
