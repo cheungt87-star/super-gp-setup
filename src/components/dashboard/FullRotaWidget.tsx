@@ -28,6 +28,7 @@ interface ShiftData {
   shift_type: string;
   is_oncall: boolean;
   oncall_slot: number | null;
+  shift_period: string | null;
   is_temp_staff: boolean;
   temp_confirmed: boolean;
   temp_staff_name: string | null;
@@ -170,6 +171,7 @@ export function FullRotaWidget() {
         .select(`
           oncall_date,
           oncall_slot,
+          shift_period,
           user_id,
           is_temp_staff,
           temp_confirmed,
@@ -219,11 +221,12 @@ export function FullRotaWidget() {
         dayOncalls.forEach(oc => {
           const profileData = oc.profiles as { first_name: string | null; last_name: string | null; job_titles: { name: string } | null } | null;
           onCallShifts.push({
-            id: `oncall-${oc.oncall_date}-${oc.oncall_slot}`,
+            id: `oncall-${oc.oncall_date}-${oc.oncall_slot}-${(oc as any).shift_period}`,
             shift_date: oc.oncall_date,
             shift_type: "full_day",
             is_oncall: true,
             oncall_slot: oc.oncall_slot,
+            shift_period: (oc as any).shift_period || null,
             is_temp_staff: oc.is_temp_staff,
             temp_confirmed: oc.temp_confirmed,
             temp_staff_name: oc.temp_staff_name,
@@ -249,6 +252,7 @@ export function FullRotaWidget() {
             shift_type: shift.shift_type,
             is_oncall: false,
             oncall_slot: null,
+            shift_period: null,
             is_temp_staff: shift.is_temp_staff,
             temp_confirmed: shift.temp_confirmed,
             temp_staff_name: shift.temp_staff_name,
@@ -538,14 +542,34 @@ export function FullRotaWidget() {
                       </div>
                     </td>
                     {openDays.map(day => {
-                      const slotShifts = day.onCallShifts.filter(s => (s as any).oncall_slot === slot || (!s.hasOwnProperty('oncall_slot') && slot === 1));
+                      const slotShifts = day.onCallShifts.filter(s => s.oncall_slot === slot);
+                      const amShifts = slotShifts.filter(s => s.shift_period === "am");
+                      const pmShifts = slotShifts.filter(s => s.shift_period === "pm");
+                      const hasAny = amShifts.length > 0 || pmShifts.length > 0;
                       return (
-                        <td key={day.dateKey} className="p-3 border border-border text-center">
-                          <span className="text-green-700">
-                            {slotShifts.length > 0 
-                              ? slotShifts.map((s, i) => <div key={s.id}>{formatStaffName(s)}</div>)
-                              : "-"}
-                          </span>
+                        <td key={day.dateKey} className="p-3 border border-border align-top">
+                          {hasAny ? (
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-green-700 font-medium">AM:</span>
+                                <div className="text-green-700">
+                                  {amShifts.length > 0
+                                    ? amShifts.map(s => <div key={s.id}>{formatStaffName(s)}</div>)
+                                    : "-"}
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-green-700 font-medium">PM:</span>
+                                <div className="text-green-700">
+                                  {pmShifts.length > 0
+                                    ? pmShifts.map(s => <div key={s.id}>{formatStaffName(s)}</div>)
+                                    : "-"}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </td>
                       );
                     })}
