@@ -1,33 +1,31 @@
 
-
-# Fix: Print Layout for Full Rota
+# Fix: Empty Pages When Printing Rota
 
 ## Problem
-The printed rota table is centered on the page with excess whitespace, rounded container styling still visible, and doesn't fill the page width properly.
+The current print CSS uses `visibility: hidden` to hide non-rota content. While this makes elements invisible, they still occupy space in the document layout, producing 4+ blank pages.
 
-## Changes
+## Solution
+Add `display: none` on all body children except the rota, and override with `display: block` on the rota container. This removes hidden elements from the flow entirely, eliminating blank pages.
 
-**File:** `src/index.css` (lines 130-169)
+## Technical Details
 
-Update the print media query:
+**File:** `src/index.css` (print media query, lines 130-180)
 
-1. Add `@page { size: landscape; margin: 10mm; }` to force landscape orientation and tight margins
-2. Remove the rounded container background/shadow/padding on `.print-full-rota > .rounded-3xl` wrapper so the table sits flush
-3. Set `text-align: left` on the print header block
-4. Ensure the table stretches to full width with `table-layout: fixed`
+Update the print block to:
 
-**File:** `src/components/dashboard/FullRotaWidget.tsx`
+1. Hide all direct body children and the sidebar/layout wrappers with `display: none !important`
+2. Override the rota's ancestor chain to `display: block !important` so it remains visible
+3. Keep existing visibility rules as a fallback
 
-5. Update the print-only header from `print:text-center` to `print:text-left` (line ~241)
-
-## Technical Detail
-
-Updated print CSS block:
 ```css
 @media print {
   @page {
     size: landscape;
     margin: 10mm;
+  }
+
+  body > *:not(.print-full-rota) {
+    display: none !important;
   }
 
   body * {
@@ -37,44 +35,20 @@ Updated print CSS block:
   .print-full-rota,
   .print-full-rota * {
     visibility: visible !important;
+    display: revert !important;
   }
 
   .print-full-rota {
+    display: block !important;
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
-    box-shadow: none !important;
-    border: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: white !important;
-    border-radius: 0 !important;
+    /* ...existing reset styles... */
   }
 
-  .print-full-rota .rounded-3xl {
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-  }
-
-  .print-full-rota * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  .print-full-rota table {
-    width: 100% !important;
-    font-size: 11px !important;
-    table-layout: fixed !important;
-  }
-
-  .print-full-rota td,
-  .print-full-rota th {
-    padding: 4px 6px !important;
-  }
+  /* ...rest unchanged... */
 }
 ```
 
-And in `FullRotaWidget.tsx`, change the print header to left-aligned.
-
+Since `.print-full-rota` is nested inside layout wrappers (sidebar layout, main content area), we also need to ensure its parent elements are visible and displayed. A simpler approach: hide everything, then force the rota's ancestor chain visible using a broader selector that targets the rota's parent containers.
