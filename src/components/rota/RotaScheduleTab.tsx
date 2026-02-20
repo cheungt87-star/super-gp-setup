@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { format, subWeeks, addDays } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -106,11 +106,15 @@ export const RotaScheduleTab = () => {
     organisationId,
   });
 
+  // Ref to hold the confirmations refetch callback (avoids circular dep)
+  const confirmationsRefetchRef = useRef<(() => void) | null>(null);
+
   const { rotaWeek, shifts, loading: loadingSchedule, saving, addShift, updateShift, deleteShift, deleteShiftsForDay, updateWeekStatus } =
     useRotaSchedule({
       siteId: selectedSiteId,
       organisationId,
       weekStart: weekStartStr,
+      onShiftChanged: () => confirmationsRefetchRef.current?.(),
     });
 
   // Organization-wide on-calls hook
@@ -136,10 +140,14 @@ export const RotaScheduleTab = () => {
     confirmDay,
     resetDayConfirmation,
     getConfirmationStatus,
+    refetch: refetchConfirmations,
   } = useRotaDayConfirmations({
     rotaWeekId: rotaWeek?.id || null,
     organisationId,
   });
+
+  // Keep ref in sync so useRotaSchedule can trigger refetch
+  confirmationsRefetchRef.current = refetchConfirmations;
 
   // Fetch sites, all staff, and job titles
   useEffect(() => {
