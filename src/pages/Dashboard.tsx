@@ -260,53 +260,29 @@ const Dashboard = () => {
 
   return (
     <div className="container py-12">
-      <div className="mb-8 animate-fade-in">
-        <h1 className="text-3xl font-bold mb-2">Welcome, {userName}!</h1>
-        <p className="text-muted-foreground">Here's an overview of your clinic setup.</p>
+      <div className="mb-8 animate-fade-in flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Welcome, {userName}!</h1>
+          <p className="text-muted-foreground">Here's an overview of your clinic setup.</p>
+        </div>
+        {isAdmin && inviteCode && (
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-2 text-sm hover:bg-muted transition-colors shrink-0"
+          >
+            <span className="text-muted-foreground whitespace-nowrap">Invite your colleagues to join</span>
+            <code className="font-mono font-semibold tracking-wider text-foreground">{inviteCode.code}</code>
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-primary" />
+            ) : (
+              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* Your Day Headline Card */}
       <YourDayCard todayTasks={[...myTasks.filter(t => t.isToday), ...jobFamilyTasks.filter(t => t.isToday)]} />
-
-      {/* Invitation Code Card for Admins */}
-      {isAdmin && inviteCode && (
-        <Card className="mb-6 animate-fade-in border-primary/20 bg-primary/5">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-primary" />
-              <CardTitle className="text-base font-medium">Team Invitation Code</CardTitle>
-            </div>
-            <CardDescription>
-              Share this code with team members so they can join your organisation.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-center rounded-xl bg-muted px-6 py-5">
-              <code className="text-2xl sm:text-3xl font-mono font-bold tracking-[0.25em] text-foreground">
-                {inviteCode.code}
-              </code>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                {inviteCode.usedCount} / {inviteCode.maxUses} uses
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopy}
-                className="gap-2"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4 text-primary" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-                {copied ? "Copied!" : "Copy Code"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* My Upcoming Shifts */}
       <MyShiftsWidget />
