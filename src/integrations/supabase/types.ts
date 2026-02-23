@@ -254,6 +254,7 @@ export type Database = {
           job_title_id: string | null
           last_name: string | null
           organisation_id: string | null
+          organisation_name: string | null
           phone: string | null
           phone_ext: string | null
           primary_site_id: string | null
@@ -270,6 +271,7 @@ export type Database = {
           job_title_id?: string | null
           last_name?: string | null
           organisation_id?: string | null
+          organisation_name?: string | null
           phone?: string | null
           phone_ext?: string | null
           primary_site_id?: string | null
@@ -286,6 +288,7 @@ export type Database = {
           job_title_id?: string | null
           last_name?: string | null
           organisation_id?: string | null
+          organisation_name?: string | null
           phone?: string | null
           phone_ext?: string | null
           primary_site_id?: string | null
