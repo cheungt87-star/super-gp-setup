@@ -546,16 +546,20 @@ export const RotaScheduleTab = () => {
   }) => {
     if (!editingShift) return;
 
-    // Handle linked shifts: if the shift had a linked partner, delete both and re-add
-    if (editingShift.linked_shift_id && updates.shift_type === "custom" && updates.custom_start_time && updates.custom_end_time) {
-      // Get PM boundary for this shift's day
-      const shiftDay = new Date(editingShift.shift_date);
-      const dow = shiftDay.getDay();
-      const adj = dow === 0 ? 6 : dow - 1;
-      const dayH = openingHoursByDay[adj];
-      const pmBound = dayH?.pm_open_time?.slice(0, 5) || "13:00";
+    // Get PM boundary for this shift's day
+    const shiftDay = new Date(editingShift.shift_date);
+    const dow = shiftDay.getDay();
+    const adj = dow === 0 ? 6 : dow - 1;
+    const dayH = openingHoursByDay[adj];
+    const pmBound = dayH?.pm_open_time?.slice(0, 5) || "13:00";
 
-      // Delete both halves
+    // Detect if new custom range spans the PM boundary
+    const newSpans = updates.shift_type === "custom" && updates.custom_start_time && updates.custom_end_time &&
+      updates.custom_start_time.slice(0, 5) < pmBound && updates.custom_end_time.slice(0, 5) > pmBound;
+
+    // If the shift spans the boundary (whether previously linked or not), delete and re-add to trigger split
+    if (newSpans) {
+      // Delete existing shift (and linked half if any)
       await deleteShift(editingShift.id);
       
       // Re-add as a new shift (addShift handles splitting automatically)
@@ -583,6 +587,13 @@ export const RotaScheduleTab = () => {
     if (editingShift.linked_shift_id && updates.shift_type !== "custom") {
       const linkedId = editingShift.linked_shift_id;
       // Unlink before updating
+      await supabase.from("rota_shifts").update({ linked_shift_id: null }).eq("id", editingShift.id);
+      await supabase.from("rota_shifts").delete().eq("id", linkedId);
+    }
+
+    // For linked shifts changing to non-spanning custom, also clean up the linked half
+    if (editingShift.linked_shift_id && updates.shift_type === "custom" && !newSpans) {
+      const linkedId = editingShift.linked_shift_id;
       await supabase.from("rota_shifts").update({ linked_shift_id: null }).eq("id", editingShift.id);
       await supabase.from("rota_shifts").delete().eq("id", linkedId);
     }
