@@ -267,6 +267,27 @@ const WorkflowManagementCard = () => {
 
         if (error) throw error;
 
+        // Send email notification if individually assigned
+        if (assignee_id) {
+          const { data: assigneeProfile } = await supabase
+            .from("profiles")
+            .select("email, first_name")
+            .eq("id", assignee_id)
+            .single();
+
+          if (assigneeProfile?.email) {
+            supabase.functions.invoke("send-notification-email", {
+              body: {
+                type: "workflow_assigned",
+                organisation_id: organisationId,
+                recipient_email: assigneeProfile.email,
+                recipient_name: assigneeProfile.first_name || undefined,
+                task_name: data.name,
+              },
+            });
+          }
+        }
+
         toast({
           title: "Task created",
           description: `${data.name} has been created successfully.`,
