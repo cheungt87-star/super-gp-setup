@@ -966,7 +966,14 @@ export const RotaScheduleTab = () => {
                         <span className="inline-block">
                           <Button
                             size="sm"
-                            onClick={() => updateWeekStatus("published")}
+                            onClick={async () => {
+                              const ok = await updateWeekStatus("published");
+                              if (ok && organisationId) {
+                                supabase.functions.invoke("send-notification-email", {
+                                  body: { type: "rota_published", organisation_id: organisationId },
+                                });
+                              }
+                            }}
                             disabled={saving || !allDaysCompleted}
                           >
                             {saving ? (
@@ -1302,8 +1309,13 @@ export const RotaScheduleTab = () => {
               const s = getConfirmationStatus(formatDateKey(day));
               return s && s.status;
             });
-          return allCompleted ? () => {
-            updateWeekStatus("published");
+          return allCompleted ? async () => {
+            const ok = await updateWeekStatus("published");
+            if (ok && organisationId) {
+              supabase.functions.invoke("send-notification-email", {
+                body: { type: "rota_published", organisation_id: organisationId },
+              });
+            }
             setShowPreview(false);
           } : undefined;
         })() : undefined}
