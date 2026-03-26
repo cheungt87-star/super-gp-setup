@@ -1,52 +1,102 @@
 
 
-# Full Rota: Abbreviated Job Title Badges with Colour Key
+# Email Notifications via Resend
 
 ## Overview
 
-Replace full job title names with 2-letter abbreviations in the Full Rota table cells, and add a colour-coded key/legend below the table so users can look up what each abbreviation means.
+Set up four automated email notifications using Resend, delivered through Supabase Edge Functions. Emails are sent to users' profile email addresses.
 
-## Changes
+## Prerequisites
 
-### 1. Update `src/lib/jobTitleColors.ts` -- Dynamic colour assignment
+A **Resend API key** is needed. You will need to:
+1. Create an account at [resend.com](https://resend.com)
+2. Add and verify your sending domain in Resend's dashboard
+3. Generate an API key
+4. Provide it when prompted -- Lovable will store it securely as an Edge Function secret
 
-The current system only handles a few hardcoded job titles. Replace it with a dynamic approach:
+## Email Events
 
-- Add a new function `getJobTitleAbbreviation(name: string): string` that returns the first 2 letters uppercased (e.g. "Surgeon" -> "SU", "Receptionist" -> "RE", "GP Partner" -> "GP")
-- Add a new function `getJobTitleColorByIndex(index: number): string` that cycles through a palette of distinct colours (emerald, blue, purple, amber, teal, rose, indigo, cyan, orange, pink, etc.) so every unique job title gets a consistent, different colour
-- Keep the existing `getJobTitleColors` function for backward compatibility elsewhere in the app
+| Event | Trigger Point | Recipients | Subject |
+|---|---|---|---|
+| Rota Published | When admin clicks "Publish" | All users in the organisation | New rota published |
+| Workflow Assigned | When a new task is created with an assignee | The assignee | New workflow task assigned |
+| Workflow Due | Daily cron check | Assignees with tasks due today | Workflow task due today |
+| Workflow Overdue | Daily cron check | Assignees with overdue tasks | Overdue workflow task |
 
-### 2. Update `src/components/dashboard/FullRotaWidget.tsx`
+## Architecture
 
-**Collect unique job titles**: After building the schedule, gather all unique `job_title_name` values from the shifts into a sorted array. Assign each a stable colour index so the same title always gets the same colour.
+```text
+┌─────────────────────────┐
+│  Frontend (React)       │
+│  - Publish rota          │──► invoke("send-notification-email")
+│  - Create workflow task  │──► invoke("send-notification-email")
+└─────────────────────────┘
 
-**Update `formatStaffName`**: Replace the full job title badge with the 2-letter abbreviation badge using the dynamically assigned colour.
+┌─────────────────────────┐
+│  Edge Function:          │
+│  send-notification-email │──► Resend API
+│  (event-driven)          │
+└─────────────────────────┘
 
-Before:
+┌─────────────────────────┐
+│  Edge Function:          │
+│  check-task-deadlines    │──► Resend API
+│  (pg_cron daily @ 7am)   │
+└─────────────────────────┘
 ```
-Jane Smith [Receptionist]
-```
 
-After:
-```
-Jane Smith [RE]
-```
+## Implementation Plan
 
-**Add a Key/Legend section**: Below the table (inside the white card), render a flex-wrap row of badge items showing each abbreviation + full title, e.g.:
+### 1. Store Resend API key as a secret
 
-```
-Key: [SU] Surgeon  [RE] Receptionist  [GP] GP Partner  [NU] Nurse
-```
+Add `RESEND_API_KEY` as an Edge Function secret.
 
-Each badge uses its assigned colour. Only job titles that actually appear in the current week's data are shown.
+### 2. Create Edge Function: `send-notification-email`
 
-### 3. Abbreviation Logic
+Handles event-driven emails (rota published, workflow assigned). Accepts a JSON body with:
+- `type`: `"rota_published"` | `"workflow_assigned"`
+- `organisation_id`: to look up recipients
+- `task_name` (optional): for workflow emails
+- `recipient_email` (optional): for single-recipient emails
+- `recipient_name` (optional): for personalization
 
-- Take the job title name, uppercase it, return the first 2 characters
-- Special case: if the name contains a space and starts with a short word (e.g. "GP Partner"), use the first letter of each word instead ("GP")
-- This keeps abbreviations intuitive
+Logic:
+- For `rota_published`: queries all profiles in the organisation with non-null emails, sends each an email
+- For `workflow_assigned`: sends to the specified recipient
 
-### 4. Colour Palette
+Email template: Clean HTML with the app name, message, and a CTA button linking to the site URL.
 
-A palette of 10+ distinct Tailwind colour sets that cycle deterministically based on the sorted position of the job title name. This ensures every title gets a unique colour (up to the palette size), and colours are consistent within the same week view.
+### 3. Create Edge Function: `check-task-deadlines`
+
+Runs daily via pg_cron. Queries `workflow_tasks` joined with `profiles` to find:
+- Tasks with `assignee_id` set and due today (based on recurrence calculation)
+- Tasks with `assignee_id` set that are overdue
+
+Sends emails via Resend for each match. Includes the task name in overdue emails.
+
+### 4. Set up pg_cron job
+
+Schedule `check-task-deadlines` to run daily at 7:00 AM UTC.
+
+### 5. Update frontend trigger points
+
+**Rota publish** (`RotaScheduleTab.tsx`): After `updateWeekStatus("published")` succeeds, invoke `send-notification-email` with type `rota_published` and the organisation ID.
+
+**Workflow task creation** (`WorkflowManagementCard.tsx`): After a new task is inserted with an `assignee_id`, invoke `send-notification-email` with type `workflow_assigned`, the assignee's email/name, and the task name.
+
+### 6. Email template design
+
+All emails will use a consistent HTML template with:
+- App branding header
+- Clear message text
+- Task name (where applicable)
+- "Log in to view" CTA button pointing to the published app URL
+- Clean, mobile-friendly layout
+
+## Technical Details
+
+- Resend is called directly from Edge Functions using `fetch()` to `https://api.resend.com/emails`
+- The "from" address will use the verified domain in Resend (e.g. `notifications@yourdomain.com`)
+- Edge Functions use service role to query profiles for email addresses
+- Rate limiting is handled by batching in the cron function (small delays between sends)
 
