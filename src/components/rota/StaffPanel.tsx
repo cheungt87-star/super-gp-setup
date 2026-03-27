@@ -206,7 +206,7 @@ export const StaffPanel = ({
                 {s.job_title_name && (
                   <Badge
                     variant="outline"
-                    className={cn("text-[9px] px-1 py-0 leading-tight shrink-0 whitespace-nowrap", getJobTitleColors(s.job_title_name))}
+                    className={cn("text-[9px] px-1 py-0 leading-tight shrink-0 whitespace-nowrap ml-auto", getJobTitleColors(s.job_title_name))}
                   >
                     {s.job_title_name}
                   </Badge>
