@@ -530,9 +530,9 @@ export const ClinicRoomDayCell = ({
           {/* On-Call Rows - 3 slots with AM/PM columns */}
           <div className="rounded-lg border overflow-hidden">
             {/* On-Call Header */}
-            <div className="grid grid-cols-[1fr_1fr_1fr] bg-muted/50 border-b">
-              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
+            <div className="grid grid-cols-[160px_1fr_1fr] bg-primary/5 border-b">
+              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 bg-primary/10 text-primary border-r">
+                <Phone className="h-4 w-4" />
                 On-Call
               </div>
               <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l">
@@ -559,12 +559,12 @@ export const ClinicRoomDayCell = ({
                 <div 
                   key={slot} 
                   className={cn(
-                    "grid grid-cols-[1fr_1fr_1fr]",
+                    "grid grid-cols-[160px_1fr_1fr]",
                     slot !== 3 && "border-b"
                   )}
                 >
                   {/* Slot Name */}
-                  <div className="px-4 py-3 flex items-start min-h-[60px]">
+                  <div className="px-4 py-3 flex items-start min-h-[60px] bg-muted/30 border-r">
                     <span className="font-medium text-sm">{slotLabel}</span>
                   </div>
 
@@ -710,9 +710,9 @@ export const ClinicRoomDayCell = ({
           {clinicRooms.length > 0 ? (
             <div className="rounded-lg border overflow-hidden">
               {/* Table Header */}
-              <div className="grid grid-cols-[1fr_1fr_1fr] bg-muted/50 border-b">
-                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2">
-                  <DoorOpen className="h-4 w-4 text-muted-foreground" />
+              <div className="grid grid-cols-[160px_1fr_1fr] bg-primary/5 border-b">
+                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 bg-primary/10 text-primary border-r">
+                  <DoorOpen className="h-4 w-4" />
                   Room
                 </div>
                 <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l">
@@ -731,9 +731,9 @@ export const ClinicRoomDayCell = ({
                 const pmData = getShiftsForRoom(room.id, "pm");
 
                 return (
-                  <div key={room.id} className="grid grid-cols-[1fr_1fr_1fr] border-b last:border-b-0">
+                  <div key={room.id} className="grid grid-cols-[160px_1fr_1fr] border-b last:border-b-0">
                     {/* Room Name */}
-                    <div className="px-4 py-3 flex items-start min-h-[80px]">
+                    <div className="px-4 py-3 flex items-start min-h-[80px] bg-muted/30 border-r">
                       <div>
                         <span className="font-medium text-sm">{room.name}</span>
                         {room.capacity > 0 && (
