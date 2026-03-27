@@ -30,12 +30,17 @@ interface JobFamily {
   name: string;
 }
 
+interface Site {
+  id: string;
+  name: string;
+}
+
 interface StaffPanelProps {
   staff: StaffMember[];
   allStaff: StaffMember[];
   jobTitles: JobTitle[];
   jobFamilies: JobFamily[];
-  scheduledHours: Record<string, number>;
+  sites: Site[];
   assignedUserIds: string[];
   onOpenLocumDialog: () => void;
 }
@@ -45,11 +50,12 @@ export const StaffPanel = ({
   allStaff,
   jobTitles,
   jobFamilies,
-  scheduledHours,
+  sites,
   assignedUserIds,
   onOpenLocumDialog,
 }: StaffPanelProps) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [siteFilter, setSiteFilter] = useState<string>("all");
   const [jobFamilyFilter, setJobFamilyFilter] = useState<string>("all");
   const [jobTitleFilter, setJobTitleFilter] = useState<string>("all");
 
@@ -62,6 +68,10 @@ export const StaffPanel = ({
   // Filter staff based on all filters
   const filteredStaff = useMemo(() => {
     let result = staff;
+
+    if (siteFilter !== "all") {
+      result = result.filter((s) => s.primary_site_id === siteFilter);
+    }
 
     if (jobFamilyFilter !== "all") {
       const familyJobTitleIds = jobTitles
@@ -87,7 +97,7 @@ export const StaffPanel = ({
       const nameB = `${b.first_name || ""} ${b.last_name || ""}`.toLowerCase();
       return nameA.localeCompare(nameB);
     });
-  }, [staff, jobFamilyFilter, jobTitleFilter, searchQuery, jobTitles]);
+  }, [staff, siteFilter, jobFamilyFilter, jobTitleFilter, searchQuery, jobTitles]);
 
   const handleDragStart = (e: React.DragEvent, staffId: string) => {
     e.dataTransfer.setData("staffId", staffId);
@@ -102,6 +112,18 @@ export const StaffPanel = ({
 
         {/* Filters */}
         <div className="space-y-1.5">
+          <Select value={siteFilter} onValueChange={setSiteFilter}>
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Site" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Sites</SelectItem>
+              {sites.map((site) => (
+                <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={jobFamilyFilter} onValueChange={(v) => { setJobFamilyFilter(v); setJobTitleFilter("all"); }}>
             <SelectTrigger className="h-7 text-xs">
               <SelectValue placeholder="Job Family" />
@@ -144,8 +166,6 @@ export const StaffPanel = ({
           {filteredStaff.map((s) => {
             const name = `${s.first_name || ""} ${s.last_name || ""}`.trim() || "Unknown";
             const isAssigned = assignedUserIds.includes(s.id);
-            const hours = scheduledHours[s.id] || 0;
-            const contracted = s.contracted_hours || 0;
 
             return (
               <div
@@ -153,31 +173,22 @@ export const StaffPanel = ({
                 draggable={!isAssigned}
                 onDragStart={(e) => handleDragStart(e, s.id)}
                 className={cn(
-                  "flex items-start gap-2 rounded-md px-2 py-1.5 text-xs transition-colors border",
+                  "flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-colors border",
                   isAssigned
                     ? "opacity-40 cursor-not-allowed bg-muted/30 border-transparent"
                     : "cursor-grab active:cursor-grabbing hover:bg-accent/50 border-border/50"
                 )}
               >
-                <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 mt-0.5 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate leading-tight">{name}</p>
-                  <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                    {s.job_title_name && (
-                      <Badge
-                        variant="outline"
-                        className={cn("text-[9px] px-1 py-0 leading-tight", getJobTitleColors(s.job_title_name))}
-                      >
-                        {s.job_title_name}
-                      </Badge>
-                    )}
-                    {contracted > 0 && (
-                      <span className="text-[9px] text-muted-foreground">
-                        {hours}/{contracted}h
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                <span className="font-medium truncate">{name}</span>
+                {s.job_title_name && (
+                  <Badge
+                    variant="outline"
+                    className={cn("text-[9px] px-1 py-0 leading-tight shrink-0 whitespace-nowrap", getJobTitleColors(s.job_title_name))}
+                  >
+                    {s.job_title_name}
+                  </Badge>
+                )}
               </div>
             );
           })}
