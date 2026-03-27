@@ -1021,7 +1021,7 @@ export const RotaScheduleTab = () => {
             allStaff={allStaff}
             jobTitles={jobTitles}
             jobFamilies={jobFamilies}
-            scheduledHours={staffScheduledHours}
+            sites={sites}
             assignedUserIds={assignedUserIdsForSelectedDay}
             onOpenLocumDialog={() => setShowLocumDialog(true)}
           />
