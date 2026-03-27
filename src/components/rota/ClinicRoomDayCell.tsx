@@ -653,12 +653,17 @@ export const ClinicRoomDayCell = ({
                     </div>
 
                     {/* AM Column */}
-                    <div className="px-4 py-3 border-l space-y-2 min-h-[80px]">
-                      {/* Standard AM shifts */}
+                    <div
+                      className={cn(
+                        "px-4 py-3 border-l space-y-2 min-h-[80px] transition-colors",
+                        dragOverTarget === `${room.id}-am` && "bg-primary/10 border-2 border-dashed border-primary"
+                      )}
+                      onDragOver={(e) => handleDragOver(e, `${room.id}-am`)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, room.id, "am")}
+                    >
                       {amData.periodShifts.map((shift) => renderShiftCard(shift))}
-                      {/* Full day shifts */}
                       {amData.fullDayShifts.map((shift) => renderShiftCard(shift, true))}
-                      {/* Custom partial shifts */}
                       {amData.customShifts.map((shift) => renderShiftCard(shift, false, true))}
                       <Button
                         variant="ghost"
@@ -673,12 +678,17 @@ export const ClinicRoomDayCell = ({
                     </div>
 
                     {/* PM Column */}
-                    <div className="px-4 py-3 border-l space-y-2 min-h-[80px]">
-                      {/* Standard PM shifts */}
+                    <div
+                      className={cn(
+                        "px-4 py-3 border-l space-y-2 min-h-[80px] transition-colors",
+                        dragOverTarget === `${room.id}-pm` && "bg-primary/10 border-2 border-dashed border-primary"
+                      )}
+                      onDragOver={(e) => handleDragOver(e, `${room.id}-pm`)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, room.id, "pm")}
+                    >
                       {pmData.periodShifts.map((shift) => renderShiftCard(shift))}
-                      {/* Full day shifts */}
                       {pmData.fullDayShifts.map((shift) => renderShiftCard(shift, true))}
-                      {/* Custom partial shifts */}
                       {pmData.customShifts.map((shift) => renderShiftCard(shift, false, true))}
                       <Button
                         variant="ghost"
