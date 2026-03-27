@@ -98,6 +98,9 @@ export const RotaScheduleTab = () => {
   
   // Copy from previous week loading state
   const [copyingFromPrevWeek, setCopyingFromPrevWeek] = useState(false);
+  
+  // Locum dialog state (opened from StaffPanel)
+  const [showLocumDialog, setShowLocumDialog] = useState(false);
 
   const weekStartStr = formatDateKey(weekStart);
   const weekDays = getWeekDays(weekStart);
