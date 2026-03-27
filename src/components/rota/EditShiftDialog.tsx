@@ -11,8 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,7 +24,7 @@ interface EditShiftDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shift: RotaShift | null;
-  allShifts?: RotaShift[]; // All shifts for finding linked shift data
+  allShifts?: RotaShift[];
   rotaRules: {
     am_shift_start: string;
     am_shift_end: string;
@@ -55,16 +53,11 @@ export const EditShiftDialog = ({
   const [shiftType, setShiftType] = useState<ShiftType>("full_day");
   const [customStart, setCustomStart] = useState("09:00");
   const [customEnd, setCustomEnd] = useState("17:00");
-  const [isOncall, setIsOncall] = useState(false);
-  const [notes, setNotes] = useState("");
-  const [isTempStaff, setIsTempStaff] = useState(false);
-  const [tempConfirmed, setTempConfirmed] = useState(false);
 
-  // Generate time slots at 30-minute intervals
   const generateTimeSlots = (): string[] => {
     const slots: string[] = [];
-    let currentMinutes = 6 * 60; // 06:00
-    const endMinutes = 23 * 60 + 30; // 23:30
+    let currentMinutes = 6 * 60;
+    const endMinutes = 23 * 60 + 30;
     while (currentMinutes <= endMinutes) {
       const hours = Math.floor(currentMinutes / 60);
       const mins = currentMinutes % 60;
@@ -77,31 +70,38 @@ export const EditShiftDialog = ({
   const timeSlots = useMemo(() => generateTimeSlots(), []);
   const validEndSlots = useMemo(() => timeSlots.filter(t => t > customStart), [customStart, timeSlots]);
 
-  // For linked shifts, compute the combined range
-  const linkedShift = useMemo(() => {
-    if (!shift?.linked_shift_id) return null;
-    return allShifts.find(s => s.id === shift.linked_shift_id) || null;
-  }, [shift, allShifts]);
-
-  // Detect if current custom time spans the break
   const showsSpansBreak = useMemo(() => {
     if (shiftType !== "custom" || !customStart || !customEnd || !rotaRules) return false;
     return doesSpanBreak(customStart, customEnd, rotaRules.am_shift_end, rotaRules.pm_shift_start);
   }, [shiftType, customStart, customEnd, rotaRules]);
 
-  // Detect if spans the PM boundary
   const spansBoundary = useMemo(() => {
     if (shiftType !== "custom" || !customStart || !customEnd || !rotaRules) return false;
     const boundary = rotaRules.pm_shift_start.slice(0, 5);
     return customStart < boundary && customEnd > boundary;
   }, [shiftType, customStart, customEnd, rotaRules]);
 
+  // Current shift label for display
+  const currentShiftLabel = useMemo(() => {
+    if (!shift || !rotaRules) return "";
+    switch (shift.shift_type) {
+      case "am":
+        return `AM Shift (${rotaRules.am_shift_start.slice(0, 5)} - ${rotaRules.am_shift_end.slice(0, 5)})`;
+      case "pm":
+        return `PM Shift (${rotaRules.pm_shift_start.slice(0, 5)} - ${rotaRules.pm_shift_end.slice(0, 5)})`;
+      case "full_day":
+        return `Full Day (${rotaRules.am_shift_start.slice(0, 5)} - ${rotaRules.pm_shift_end.slice(0, 5)})`;
+      case "custom":
+        return `Custom (${shift.custom_start_time?.slice(0, 5) || "?"} - ${shift.custom_end_time?.slice(0, 5) || "?"})`;
+      default:
+        return "";
+    }
+  }, [shift, rotaRules]);
+
   useEffect(() => {
     if (shift) {
-      // For linked shifts, compute the combined range
       const linked = shift.linked_shift_id ? allShifts.find(s => s.id === shift.linked_shift_id) : null;
       if (linked && shift.shift_type === "custom") {
-        // Determine which is AM and which is PM
         const shiftStart = shift.custom_start_time?.slice(0, 5) || "09:00";
         const linkedStart = linked.custom_start_time?.slice(0, 5) || "09:00";
         const combinedStart = shiftStart < linkedStart ? shiftStart : linkedStart;
@@ -115,29 +115,28 @@ export const EditShiftDialog = ({
         setCustomEnd(shift.custom_end_time?.slice(0, 5) || rotaRules?.pm_shift_end.slice(0, 5) || "17:00");
       }
       setShiftType(shift.shift_type);
-      setIsOncall(shift.is_oncall);
-      setNotes(shift.notes || "");
-      setIsTempStaff(shift.is_temp_staff || false);
-      setTempConfirmed(shift.temp_confirmed || false);
     }
   }, [shift, rotaRules, allShifts]);
 
   const handleSave = () => {
+    if (!shift) return;
     onSave({
       shift_type: shiftType,
       custom_start_time: shiftType === "custom" ? customStart : null,
       custom_end_time: shiftType === "custom" ? customEnd : null,
-      is_oncall: isOncall,
-      notes: notes || null,
-      is_temp_staff: isTempStaff,
-      temp_confirmed: isTempStaff ? tempConfirmed : false,
+      is_oncall: shift.is_oncall,
+      notes: shift.notes || null,
+      is_temp_staff: shift.is_temp_staff || false,
+      temp_confirmed: shift.temp_confirmed || false,
     });
   };
 
-  // Validation
   const isTimeValid = shiftType !== "custom" || (customStart && customEnd && customStart < customEnd);
 
   if (!shift) return null;
+
+  // Context-aware options based on current shift type
+  const originalType = shift.shift_type;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -150,31 +149,54 @@ export const EditShiftDialog = ({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Current shift display */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Current shift:</span>
+            <Badge variant="outline" className="text-xs">
+              {currentShiftLabel}
+            </Badge>
+          </div>
+
           <div className="space-y-3">
-            <Label>Shift Type</Label>
+            <Label>Change to</Label>
             <RadioGroup
               value={shiftType}
               onValueChange={(v) => setShiftType(v as ShiftType)}
               className="grid gap-2"
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="full_day" id="edit_full_day" />
-                <Label htmlFor="edit_full_day" className="font-normal cursor-pointer">
-                  Full Day (per opening hours)
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="am" id="edit_am" />
-                <Label htmlFor="edit_am" className="font-normal cursor-pointer">
-                  AM Shift {rotaRules && `(${rotaRules.am_shift_start.slice(0, 5)} - ${rotaRules.am_shift_end.slice(0, 5)})`}
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="pm" id="edit_pm" />
-                <Label htmlFor="edit_pm" className="font-normal cursor-pointer">
-                  PM Shift {rotaRules && `(${rotaRules.pm_shift_start.slice(0, 5)} - ${rotaRules.pm_shift_end.slice(0, 5)})`}
-                </Label>
-              </div>
+              {/* Full Day - show when current is NOT full_day */}
+              {originalType !== "full_day" && (
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="full_day" id="edit_full_day" />
+                  <Label htmlFor="edit_full_day" className="font-normal cursor-pointer">
+                    Make Full Day
+                  </Label>
+                </div>
+              )}
+
+              {/* AM - show when current is NOT am */}
+              {originalType !== "am" && (
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="am" id="edit_am" />
+                  <Label htmlFor="edit_am" className="font-normal cursor-pointer">
+                    {originalType === "full_day" ? "Change to AM only" : "Move to AM"}{" "}
+                    {rotaRules && `(${rotaRules.am_shift_start.slice(0, 5)} - ${rotaRules.am_shift_end.slice(0, 5)})`}
+                  </Label>
+                </div>
+              )}
+
+              {/* PM - show when current is NOT pm */}
+              {originalType !== "pm" && (
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="pm" id="edit_pm" />
+                  <Label htmlFor="edit_pm" className="font-normal cursor-pointer">
+                    {originalType === "full_day" ? "Change to PM only" : "Move to PM"}{" "}
+                    {rotaRules && `(${rotaRules.pm_shift_start.slice(0, 5)} - ${rotaRules.pm_shift_end.slice(0, 5)})`}
+                  </Label>
+                </div>
+              )}
+
+              {/* Custom - always show */}
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="custom" id="edit_custom" />
                 <Label htmlFor="edit_custom" className="font-normal cursor-pointer">
@@ -240,58 +262,6 @@ export const EditShiftDialog = ({
               )}
             </div>
           )}
-
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <Label className="text-sm font-medium">On-Call</Label>
-              <p className="text-xs text-muted-foreground">
-                Mark this staff member as on-call for the day
-              </p>
-            </div>
-            <Switch checked={isOncall} onCheckedChange={setIsOncall} />
-          </div>
-
-          {/* Temp Staff Toggle */}
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <Label className="text-sm font-medium">Temp/Agency Staff</Label>
-              <p className="text-xs text-muted-foreground">
-                Mark if covered by locum or agency worker
-              </p>
-            </div>
-            <Switch 
-              checked={isTempStaff} 
-              onCheckedChange={(checked) => {
-                setIsTempStaff(checked);
-                if (!checked) setTempConfirmed(false);
-              }} 
-            />
-          </div>
-
-          {isTempStaff && (
-            <div className={cn(
-              "flex items-center justify-between rounded-lg border p-3",
-              !tempConfirmed ? "border-destructive bg-destructive/5" : "border-amber-200 bg-amber-50"
-            )}>
-              <div>
-                <Label className="text-sm font-medium">Booking Confirmed</Label>
-                <p className="text-xs text-muted-foreground">
-                  Has the temp booking been confirmed?
-                </p>
-              </div>
-              <Switch checked={tempConfirmed} onCheckedChange={setTempConfirmed} />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label>Notes</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any notes about this shift..."
-              rows={2}
-            />
-          </div>
         </div>
 
         <DialogFooter>
