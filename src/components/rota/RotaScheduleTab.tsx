@@ -625,7 +625,6 @@ export const RotaScheduleTab = () => {
     const fakeShift: RotaShift = {
       id: oncall.id,
       rota_week_id: "",
-      organisation_id: oncall.organisation_id,
       user_id: oncall.user_id,
       user_name: oncall.user_name || "",
       job_title_name: oncall.job_title_name || null,
@@ -634,6 +633,7 @@ export const RotaScheduleTab = () => {
       custom_start_time: oncall.custom_start_time,
       custom_end_time: oncall.custom_end_time,
       is_oncall: true,
+      oncall_slot: slot,
       facility_id: null,
       notes: null,
       linked_shift_id: null,
