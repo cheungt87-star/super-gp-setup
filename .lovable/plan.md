@@ -1,25 +1,27 @@
 
 
-# Slim First Column + Colored Headers
+# Right-Align Job Titles + Add Edit for On-Call Slots
 
-## Changes — `src/components/rota/ClinicRoomDayCell.tsx`
+## Changes
 
-### 1. Slim first column
-Change the 3-column grid from `grid-cols-[1fr_1fr_1fr]` to `grid-cols-[160px_1fr_1fr]` across all four grid instances:
-- On-Call header (line 533)
-- On-Call slot rows (line 562)
-- Clinic Rooms header (line 713)
-- Clinic Room rows (line 734)
+### 1. Right-align job titles in clinic room shift cards — `ClinicRoomDayCell.tsx`
 
-This gives the first column a fixed narrow width while AM/PM columns expand to fill remaining space.
+In `renderShiftCard` (line 397-422), change the layout from a wrapping flex to a row with the name on the left and badges pushed right:
+- Change `flex-wrap` to `flex-nowrap` on the inner div
+- Add `ml-auto` to the job title badge to push it right
+- Or restructure: name in a `flex-1 min-w-0` span, badges in a `ml-auto flex gap-1` group
 
-### 2. Colored header rows
-- **On-Call header** (line 533): Change `bg-muted/50` to a subtle teal tint — `bg-primary/5` with the first cell ("On-Call") getting `bg-primary/10 text-primary` for emphasis.
-- **Clinic Rooms header** (line 713): Same treatment — `bg-primary/5` background, first cell ("Room") with `bg-primary/10 text-primary`.
+### 2. Right-align job titles in on-call assigned cards — `ClinicRoomDayCell.tsx`
 
-### 3. Colored first column cells (row labels)
-- On-Call slot name cells (line 567): Add `bg-muted/30 border-r` to give the label column a subtle background distinct from the data cells.
-- Clinic Room name cells (line 736): Same `bg-muted/30 border-r` treatment.
+Same change for AM on-call (lines 601-613) and PM on-call (lines 668-680): restructure the inner `div` so name is left-aligned and job title badge is pushed right with `ml-auto`.
 
-This creates a visual hierarchy: colored header row at top, subtly shaded label column on left, white data cells for AM/PM.
+### 3. Add edit (pencil) button to on-call assigned cards — `ClinicRoomDayCell.tsx`
+
+**Props**: Add `onEditOncall: (oncall: any, slot: number, period: "am" | "pm") => void` to `ClinicRoomDayCellProps`.
+
+**UI**: In both AM (line 615-622) and PM (line 682-689) on-call cards, add a Pencil button before the X button, matching the clinic room shift card pattern. The pencil triggers `onEditOncall(amOncall, slot, "am")` / `onEditOncall(pmOncall, slot, "pm")`.
+
+### 4. Wire up `onEditOncall` in parent — `RotaScheduleTab.tsx`
+
+Create a handler that opens the `EditShiftDialog` (or a similar dialog) for on-call entries, converting the oncall data to the format the dialog expects. Pass it as `onEditOncall` prop to `ClinicRoomDayCell`.
 
