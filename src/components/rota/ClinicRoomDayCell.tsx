@@ -140,6 +140,8 @@ export const ClinicRoomDayCell = ({
     facilityId: string;
     period: "am" | "pm";
     confirmed: boolean;
+    isOncall?: boolean;
+    oncallSlot?: number;
   } | null>(null);
   const [locumName, setLocumName] = useState("");
 
@@ -175,20 +177,43 @@ export const ClinicRoomDayCell = ({
     }
   }, [dateKey, onAddShift]);
 
+  const handleOncallDrop = useCallback((e: React.DragEvent, slot: number, period: "am" | "pm") => {
+    e.preventDefault();
+    setDragOverTarget(null);
+
+    const locumType = e.dataTransfer.getData("locumType");
+    if (locumType) {
+      setLocumName("");
+      setLocumNameDialog({
+        open: true,
+        facilityId: "",
+        period,
+        confirmed: locumType === "confirmed",
+        isOncall: true,
+        oncallSlot: slot,
+      });
+      return;
+    }
+
+    const staffId = e.dataTransfer.getData("staffId");
+    if (staffId) {
+      onAddShift(staffId, dateKey, period as ShiftType, true, undefined, undefined, undefined, undefined, undefined, undefined, slot);
+    }
+  }, [dateKey, onAddShift]);
+
   const handleLocumNameConfirm = useCallback(() => {
     if (!locumNameDialog || !locumName.trim()) return;
-    onAddShift(
-      null,
-      dateKey,
-      locumNameDialog.period as ShiftType,
-      false,
-      locumNameDialog.facilityId,
-      undefined,
-      undefined,
-      true,
-      locumNameDialog.confirmed,
-      locumName.trim()
-    );
+    if (locumNameDialog.isOncall && locumNameDialog.oncallSlot) {
+      onAddShift(
+        null, dateKey, locumNameDialog.period as ShiftType, true, undefined, undefined, undefined,
+        true, locumNameDialog.confirmed, locumName.trim(), locumNameDialog.oncallSlot
+      );
+    } else {
+      onAddShift(
+        null, dateKey, locumNameDialog.period as ShiftType, false, locumNameDialog.facilityId,
+        undefined, undefined, true, locumNameDialog.confirmed, locumName.trim()
+      );
+    }
     setLocumNameDialog(null);
     setLocumName("");
   }, [locumNameDialog, locumName, dateKey, onAddShift]);
@@ -544,7 +569,15 @@ export const ClinicRoomDayCell = ({
                   </div>
 
                   {/* AM Column */}
-                  <div className="px-4 py-3 border-l space-y-2 min-h-[60px]">
+                  <div
+                    className={cn(
+                      "px-4 py-3 border-l space-y-2 min-h-[60px] transition-colors",
+                      dragOverTarget === `oncall-${slot}-am` && "bg-primary/10 border-2 border-dashed border-primary"
+                    )}
+                    onDragOver={(e) => handleDragOver(e, `oncall-${slot}-am`)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleOncallDrop(e, slot, "am")}
+                  >
                     {amOncall ? (
                       <div
                         className={cn(
@@ -598,7 +631,15 @@ export const ClinicRoomDayCell = ({
                   </div>
 
                   {/* PM Column */}
-                  <div className="px-4 py-3 border-l space-y-2 min-h-[60px]">
+                  <div
+                    className={cn(
+                      "px-4 py-3 border-l space-y-2 min-h-[60px] transition-colors",
+                      dragOverTarget === `oncall-${slot}-pm` && "bg-primary/10 border-2 border-dashed border-primary"
+                    )}
+                    onDragOver={(e) => handleDragOver(e, `oncall-${slot}-pm`)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleOncallDrop(e, slot, "pm")}
+                  >
                     {pmOncall ? (
                       <div
                         className={cn(
