@@ -19,6 +19,8 @@ import { ClinicRoomDayCell } from "./ClinicRoomDayCell";
 import { RotaPreviewDialog } from "./RotaPreviewDialog";
 import { EditShiftDialog } from "./EditShiftDialog";
 import { DayConfirmDialog } from "./DayConfirmDialog";
+import { StaffPanel } from "./StaffPanel";
+import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import { getWeekDays, getWeekStartDate, formatDateKey, calculateShiftHours } from "@/lib/rotaUtils";
 import { validateDay, RuleViolation } from "@/lib/rotaRulesEngine";
 import { toast } from "@/hooks/use-toast";
