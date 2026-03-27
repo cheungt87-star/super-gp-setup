@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
 import { doesSpanBreak } from "@/lib/rotaUtils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2, Trash2 } from "lucide-react";
+import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2, Trash2, Pencil } from "lucide-react";
 import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
 import type { RotaOncall } from "@/hooks/useRotaOncalls";
