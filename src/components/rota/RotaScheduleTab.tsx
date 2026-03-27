@@ -1014,7 +1014,7 @@ export const RotaScheduleTab = () => {
       </Card>
 
       {selectedSiteId && (
-        <div className="flex gap-0 border rounded-lg overflow-hidden bg-card">
+        <div className="flex gap-0 border rounded-lg bg-card">
           {/* Staff Panel */}
           <StaffPanel
             staff={staff}
@@ -1022,6 +1022,7 @@ export const RotaScheduleTab = () => {
             jobTitles={jobTitles}
             jobFamilies={jobFamilies}
             sites={sites}
+            currentSiteId={selectedSiteId}
             assignedUserIds={assignedUserIdsForSelectedDay}
           />
 
