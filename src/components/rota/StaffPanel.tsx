@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,10 @@ export const StaffPanel = ({
   const [siteFilter, setSiteFilter] = useState<string>(currentSiteId || "all");
   const [jobFamilyFilter, setJobFamilyFilter] = useState<string>("all");
   const [jobTitleFilter, setJobTitleFilter] = useState<string>("all");
+
+  useEffect(() => {
+    setSiteFilter(currentSiteId || "all");
+  }, [currentSiteId]);
 
   // Filter job titles based on selected job family
   const filteredJobTitles = useMemo(() => {
