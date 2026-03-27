@@ -631,7 +631,15 @@ export const ClinicRoomDayCell = ({
                   </div>
 
                   {/* PM Column */}
-                  <div className="px-4 py-3 border-l space-y-2 min-h-[60px]">
+                  <div
+                    className={cn(
+                      "px-4 py-3 border-l space-y-2 min-h-[60px] transition-colors",
+                      dragOverTarget === `oncall-${slot}-pm` && "bg-primary/10 border-2 border-dashed border-primary"
+                    )}
+                    onDragOver={(e) => handleDragOver(e, `oncall-${slot}-pm`)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleOncallDrop(e, slot, "pm")}
+                  >
                     {pmOncall ? (
                       <div
                         className={cn(
