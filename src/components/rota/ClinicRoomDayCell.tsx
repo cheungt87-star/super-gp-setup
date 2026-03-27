@@ -354,17 +354,30 @@ export const ClinicRoomDayCell = ({
             </Badge>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 hover:bg-destructive/20 shrink-0"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteShift(shift.id);
-          }}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 hover:bg-accent shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditShift(shift);
+            }}
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 hover:bg-destructive/20 shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteShift(shift.id);
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     );
   };
