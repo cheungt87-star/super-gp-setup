@@ -478,7 +478,7 @@ export const MyShiftsWidget = () => {
                       {/* Left side: Shifts */}
                       <div className="flex-1 space-y-2">
                         {day.shifts.length === 0 ? (
-                          <span className="text-sm text-muted-foreground italic">Not working</span>
+                          <span className="text-sm text-orange-500 italic">On-call only</span>
                         ) : (
                           day.shifts.map((shift) => (
                             <div key={shift.id} className="flex flex-wrap items-center gap-2">
