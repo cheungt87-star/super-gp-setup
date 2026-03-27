@@ -5,6 +5,8 @@ import { getJobTitleColors } from "@/lib/jobTitleColors";
 import { doesSpanBreak } from "@/lib/rotaUtils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2, Trash2, Pencil } from "lucide-react";
 import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
@@ -132,6 +134,14 @@ export const ClinicRoomDayCell = ({
   } | null>(null);
 
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+  
+  const [locumNameDialog, setLocumNameDialog] = useState<{
+    open: boolean;
+    facilityId: string;
+    period: "am" | "pm";
+    confirmed: boolean;
+  } | null>(null);
+  const [locumName, setLocumName] = useState("");
 
   const handleDragOver = useCallback((e: React.DragEvent, targetId: string) => {
     e.preventDefault();
@@ -146,11 +156,42 @@ export const ClinicRoomDayCell = ({
   const handleDrop = useCallback((e: React.DragEvent, facilityId: string, period: "am" | "pm") => {
     e.preventDefault();
     setDragOverTarget(null);
+    
+    const locumType = e.dataTransfer.getData("locumType");
+    if (locumType) {
+      setLocumName("");
+      setLocumNameDialog({
+        open: true,
+        facilityId,
+        period,
+        confirmed: locumType === "confirmed",
+      });
+      return;
+    }
+    
     const staffId = e.dataTransfer.getData("staffId");
     if (staffId) {
       onAddShift(staffId, dateKey, period as ShiftType, false, facilityId);
     }
   }, [dateKey, onAddShift]);
+
+  const handleLocumNameConfirm = useCallback(() => {
+    if (!locumNameDialog || !locumName.trim()) return;
+    onAddShift(
+      null,
+      dateKey,
+      locumNameDialog.period as ShiftType,
+      false,
+      locumNameDialog.facilityId,
+      undefined,
+      undefined,
+      true,
+      locumNameDialog.confirmed,
+      locumName.trim()
+    );
+    setLocumNameDialog(null);
+    setLocumName("");
+  }, [locumNameDialog, locumName, dateKey, onAddShift]);
 
   const isClosed = openingHours?.is_closed ?? true;
   const dateLabel = format(date, "EEEE, d MMMM");
