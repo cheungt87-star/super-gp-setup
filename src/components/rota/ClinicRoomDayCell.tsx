@@ -328,7 +328,7 @@ export const ClinicRoomDayCell = ({
           </Badge>
         )}
         
-        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap flex-1">
           <span className="text-sm truncate">{shift.user_name}</span>
           {shift.job_title_name && (
             <Badge variant="outline" className={cn("text-[10px] px-1 py-0 shrink-0", getJobTitleColors(shift.job_title_name))}>{shift.job_title_name}</Badge>
