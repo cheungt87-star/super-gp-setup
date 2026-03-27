@@ -49,7 +49,7 @@ const Rota = () => {
   }
 
   return (
-    <div className="container py-8">
+    <div className="px-4 py-8 w-full max-w-full">
       <div className="mb-8 animate-fade-in">
         <h1 className="text-3xl font-bold mb-2">Rota Manager</h1>
         <p className="text-muted-foreground">Manage staff schedules and shifts.</p>

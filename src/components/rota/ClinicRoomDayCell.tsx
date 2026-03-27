@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
 import { doesSpanBreak } from "@/lib/rotaUtils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2, Trash2 } from "lucide-react";
+import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2, Trash2, Pencil } from "lucide-react";
 import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
 import type { RotaOncall } from "@/hooks/useRotaOncalls";
@@ -130,6 +130,27 @@ export const ClinicRoomDayCell = ({
     shiftType: ShiftType | "oncall";
     oncallSlot?: number;
   } | null>(null);
+
+  const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+
+  const handleDragOver = useCallback((e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setDragOverTarget(targetId);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverTarget(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, facilityId: string, period: "am" | "pm") => {
+    e.preventDefault();
+    setDragOverTarget(null);
+    const staffId = e.dataTransfer.getData("staffId");
+    if (staffId) {
+      onAddShift(staffId, dateKey, period as ShiftType, false, facilityId);
+    }
+  }, [dateKey, onAddShift]);
 
   const isClosed = openingHours?.is_closed ?? true;
   const dateLabel = format(date, "EEEE, d MMMM");
@@ -307,7 +328,7 @@ export const ClinicRoomDayCell = ({
           </Badge>
         )}
         
-        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap flex-1">
           <span className="text-sm truncate">{shift.user_name}</span>
           {shift.job_title_name && (
             <Badge variant="outline" className={cn("text-[10px] px-1 py-0 shrink-0", getJobTitleColors(shift.job_title_name))}>{shift.job_title_name}</Badge>
@@ -333,17 +354,30 @@ export const ClinicRoomDayCell = ({
             </Badge>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 hover:bg-destructive/20 shrink-0"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteShift(shift.id);
-          }}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 hover:bg-accent shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditShift(shift);
+            }}
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 hover:bg-destructive/20 shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteShift(shift.id);
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     );
   };
@@ -619,12 +653,17 @@ export const ClinicRoomDayCell = ({
                     </div>
 
                     {/* AM Column */}
-                    <div className="px-4 py-3 border-l space-y-2 min-h-[80px]">
-                      {/* Standard AM shifts */}
+                    <div
+                      className={cn(
+                        "px-4 py-3 border-l space-y-2 min-h-[80px] transition-colors",
+                        dragOverTarget === `${room.id}-am` && "bg-primary/10 border-2 border-dashed border-primary"
+                      )}
+                      onDragOver={(e) => handleDragOver(e, `${room.id}-am`)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, room.id, "am")}
+                    >
                       {amData.periodShifts.map((shift) => renderShiftCard(shift))}
-                      {/* Full day shifts */}
                       {amData.fullDayShifts.map((shift) => renderShiftCard(shift, true))}
-                      {/* Custom partial shifts */}
                       {amData.customShifts.map((shift) => renderShiftCard(shift, false, true))}
                       <Button
                         variant="ghost"
@@ -639,12 +678,17 @@ export const ClinicRoomDayCell = ({
                     </div>
 
                     {/* PM Column */}
-                    <div className="px-4 py-3 border-l space-y-2 min-h-[80px]">
-                      {/* Standard PM shifts */}
+                    <div
+                      className={cn(
+                        "px-4 py-3 border-l space-y-2 min-h-[80px] transition-colors",
+                        dragOverTarget === `${room.id}-pm` && "bg-primary/10 border-2 border-dashed border-primary"
+                      )}
+                      onDragOver={(e) => handleDragOver(e, `${room.id}-pm`)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, room.id, "pm")}
+                    >
                       {pmData.periodShifts.map((shift) => renderShiftCard(shift))}
-                      {/* Full day shifts */}
                       {pmData.fullDayShifts.map((shift) => renderShiftCard(shift, true))}
-                      {/* Custom partial shifts */}
                       {pmData.customShifts.map((shift) => renderShiftCard(shift, false, true))}
                       <Button
                         variant="ghost"

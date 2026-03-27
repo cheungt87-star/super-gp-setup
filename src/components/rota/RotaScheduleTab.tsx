@@ -19,6 +19,8 @@ import { ClinicRoomDayCell } from "./ClinicRoomDayCell";
 import { RotaPreviewDialog } from "./RotaPreviewDialog";
 import { EditShiftDialog } from "./EditShiftDialog";
 import { DayConfirmDialog } from "./DayConfirmDialog";
+import { StaffPanel } from "./StaffPanel";
+import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import { getWeekDays, getWeekStartDate, formatDateKey, calculateShiftHours } from "@/lib/rotaUtils";
 import { validateDay, RuleViolation } from "@/lib/rotaRulesEngine";
 import { toast } from "@/hooks/use-toast";
@@ -96,6 +98,9 @@ export const RotaScheduleTab = () => {
   
   // Copy from previous week loading state
   const [copyingFromPrevWeek, setCopyingFromPrevWeek] = useState(false);
+  
+  // Locum dialog state (opened from StaffPanel)
+  const [showLocumDialog, setShowLocumDialog] = useState(false);
 
   const weekStartStr = formatDateKey(weekStart);
   const weekDays = getWeekDays(weekStart);
@@ -385,6 +390,15 @@ export const RotaScheduleTab = () => {
     });
     return grouped;
   }, [shifts, weekDays]);
+
+  // Get assigned user IDs for the currently selected day (for StaffPanel)
+  const assignedUserIdsForSelectedDay = useMemo(() => {
+    const selectedDay = weekDays[selectedDayIndex];
+    if (!selectedDay) return [];
+    const dateKey = formatDateKey(selectedDay);
+    const dayShifts = shiftsByDate[dateKey] || [];
+    return dayShifts.filter((s) => s.user_id).map((s) => s.user_id!);
+  }, [weekDays, selectedDayIndex, shiftsByDate]);
 
   // Get opening hours by day
   const openingHoursByDay = useMemo(() => {
@@ -1000,7 +1014,20 @@ export const RotaScheduleTab = () => {
       </Card>
 
       {selectedSiteId && (
-        <Card>
+        <div className="flex gap-0 border rounded-lg overflow-hidden bg-card">
+          {/* Staff Panel */}
+          <StaffPanel
+            staff={staff}
+            allStaff={allStaff}
+            jobTitles={jobTitles}
+            jobFamilies={jobFamilies}
+            scheduledHours={staffScheduledHours}
+            assignedUserIds={assignedUserIdsForSelectedDay}
+            onOpenLocumDialog={() => setShowLocumDialog(true)}
+          />
+
+          {/* Schedule Grid */}
+          <Card className="flex-1 border-0 rounded-none">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
@@ -1263,6 +1290,7 @@ export const RotaScheduleTab = () => {
             )}
           </CardContent>
         </Card>
+        </div>
       )}
 
       {/* Edit Shift Dialog */}
@@ -1321,6 +1349,65 @@ export const RotaScheduleTab = () => {
         })() : undefined}
         saving={saving}
       />
+
+      {/* Locum/Temp Dialog from StaffPanel */}
+      {showLocumDialog && selectedSiteId && (
+        <StaffSelectionDialog
+          open={showLocumDialog}
+          onOpenChange={(open) => !open && setShowLocumDialog(false)}
+          jobTitleId=""
+          jobTitleName="Add Locum / Temp"
+          shiftType="am"
+          dateLabel={format(weekDays[selectedDayIndex] || weekDays[0], "EEEE, d MMMM")}
+          dayOfWeek={format(weekDays[selectedDayIndex] || weekDays[0], "EEE").toLowerCase()}
+          availableStaff={staff}
+          allStaff={allStaff}
+          excludeUserIds={assignedUserIdsForSelectedDay}
+          scheduledHours={staffScheduledHours}
+          currentSiteId={selectedSiteId}
+          sites={sites}
+          jobTitles={jobTitles}
+          jobFamilies={jobFamilies}
+          amShiftStart={(() => {
+            const day = weekDays[selectedDayIndex] || weekDays[0];
+            const dw = day.getDay();
+            const adj = dw === 0 ? 6 : dw - 1;
+            return openingHoursByDay[adj]?.am_open_time || "09:00";
+          })()}
+          amShiftEnd={(() => {
+            const day = weekDays[selectedDayIndex] || weekDays[0];
+            const dw = day.getDay();
+            const adj = dw === 0 ? 6 : dw - 1;
+            return openingHoursByDay[adj]?.am_close_time || "13:00";
+          })()}
+          pmShiftStart={(() => {
+            const day = weekDays[selectedDayIndex] || weekDays[0];
+            const dw = day.getDay();
+            const adj = dw === 0 ? 6 : dw - 1;
+            return openingHoursByDay[adj]?.pm_open_time || "13:00";
+          })()}
+          pmShiftEnd={(() => {
+            const day = weekDays[selectedDayIndex] || weekDays[0];
+            const dw = day.getDay();
+            const adj = dw === 0 ? 6 : dw - 1;
+            return openingHoursByDay[adj]?.pm_close_time || "18:00";
+          })()}
+          onSelectStaff={async (userId, makeFullDay, customStartTime, customEndTime, isTempStaff, tempConfirmed, tempStaffName) => {
+            const selectedDay = weekDays[selectedDayIndex] || weekDays[0];
+            const dateKey = formatDateKey(selectedDay);
+            // For locum dialog, default to first clinic room if available
+            const facilityId = clinicRooms.length > 0 ? clinicRooms[0].id : undefined;
+            let shiftType: ShiftType = "am";
+            if (customStartTime && customEndTime) {
+              shiftType = "custom";
+            } else if (makeFullDay) {
+              shiftType = "full_day";
+            }
+            await handleAddShift(userId, dateKey, shiftType, false, facilityId, customStartTime, customEndTime, isTempStaff, tempConfirmed, tempStaffName);
+            setShowLocumDialog(false);
+          }}
+        />
+      )}
     </div>
   );
 };
