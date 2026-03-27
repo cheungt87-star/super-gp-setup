@@ -131,6 +131,27 @@ export const ClinicRoomDayCell = ({
     oncallSlot?: number;
   } | null>(null);
 
+  const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+
+  const handleDragOver = useCallback((e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setDragOverTarget(targetId);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverTarget(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, facilityId: string, period: "am" | "pm") => {
+    e.preventDefault();
+    setDragOverTarget(null);
+    const staffId = e.dataTransfer.getData("staffId");
+    if (staffId) {
+      onAddShift(staffId, dateKey, period as ShiftType, false, facilityId);
+    }
+  }, [dateKey, onAddShift]);
+
   const isClosed = openingHours?.is_closed ?? true;
   const dateLabel = format(date, "EEEE, d MMMM");
 
