@@ -1290,6 +1290,7 @@ export const RotaScheduleTab = () => {
             )}
           </CardContent>
         </Card>
+        </div>
       )}
 
       {/* Edit Shift Dialog */}
