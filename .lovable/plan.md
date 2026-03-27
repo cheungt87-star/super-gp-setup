@@ -1,41 +1,23 @@
 
 
-# Simplify Edit Shift Dialog
+# Fix Staff Panel: Site Filter + Sticky Scroll
 
-## Overview
+## Problems
 
-Strip the EditShiftDialog down to show the current shift slot and contextual edit options only. Remove On-Call toggle, Temp/Agency toggle, and Notes textarea.
+1. **Site filter not working**: `StaffPanel` receives `staff` which is already filtered to the selected site (line 234 in RotaScheduleTab). So filtering by a different site shows nothing. The panel should use `allStaff` (all org staff) as its base list.
 
-## Changes — `src/components/rota/EditShiftDialog.tsx`
+2. **Sticky scroll not working properly**: The panel has `sticky top-0 self-start h-screen` but it's inside a `div` with `overflow-hidden` (line 1017), which breaks sticky positioning. Need to remove `overflow-hidden` from the parent container.
 
-### 1. Remove unused UI sections
-- **Lines 244-252**: Remove On-Call toggle
-- **Lines 254-284**: Remove Temp/Agency Staff toggle and Booking Confirmed toggle
-- **Lines 286-294**: Remove Notes textarea
+## Changes
 
-### 2. Remove related state and logic
-- Remove `isOncall`, `notes`, `isTempStaff`, `tempConfirmed` state variables (lines 58-61)
-- Remove their initialization in the `useEffect` (lines 118-121)
-- In `handleSave`, hardcode: `is_oncall: shift.is_oncall` (preserve original), `notes: shift.notes || null`, `is_temp_staff: shift.is_temp_staff || false`, `temp_confirmed: shift.temp_confirmed || false`
+### 1. `src/components/rota/RotaScheduleTab.tsx` (line 1017, 1020)
+- Remove `overflow-hidden` from the parent flex container (change to just `overflow-visible` or remove it)
+- Pass `allStaff` instead of `staff` as the primary staff list to `StaffPanel`
 
-### 3. Add "Current Shift" display
-Above the radio group, add a small info line showing the current slot:
+### 2. `src/components/rota/StaffPanel.tsx` (line 66-67)
+- Use `allStaff` as the base list for filtering instead of `staff`
+- Default the site filter to the currently selected rota site (pass `currentSiteId` prop, initialize `siteFilter` to it)
 
-```text
-Current shift: AM Shift (08:00 - 13:00)
-```
-
-Derived from `shift.shift_type` — display as badge/label (e.g. "AM", "PM", "Full Day", or custom times).
-
-### 4. Context-aware radio options
-Instead of always showing all 4 options, show only the relevant ones based on the current `shift.shift_type`:
-- If current is **AM** → show: "Make Full Day", "Move to PM", "Custom Time"
-- If current is **PM** → show: "Make Full Day", "Move to AM", "Custom Time"
-- If current is **Full Day** → show: "Change to AM only", "Change to PM only", "Custom Time"
-- If current is **Custom** → show: "Make Full Day", "Change to AM", "Change to PM", "Custom Time"
-
-Keep the same `shiftType` state and `RadioGroup` — just conditionally render which `RadioGroupItem` entries appear.
-
-### 5. Remove unused imports
-Remove `Switch`, `Textarea` imports (no longer used in the dialog).
+### Props change
+- Add `currentSiteId?: string` prop to StaffPanel so the site filter defaults to the rota's selected site rather than "all"
 
