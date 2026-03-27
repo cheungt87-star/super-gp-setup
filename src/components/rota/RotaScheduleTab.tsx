@@ -391,6 +391,15 @@ export const RotaScheduleTab = () => {
     return grouped;
   }, [shifts, weekDays]);
 
+  // Get assigned user IDs for the currently selected day (for StaffPanel)
+  const assignedUserIdsForSelectedDay = useMemo(() => {
+    const selectedDay = weekDays[selectedDayIndex];
+    if (!selectedDay) return [];
+    const dateKey = formatDateKey(selectedDay);
+    const dayShifts = shiftsByDate[dateKey] || [];
+    return dayShifts.filter((s) => s.user_id).map((s) => s.user_id!);
+  }, [weekDays, selectedDayIndex, shiftsByDate]);
+
   // Get opening hours by day
   const openingHoursByDay = useMemo(() => {
     const byDay: Record<number, OpeningHour> = {};
