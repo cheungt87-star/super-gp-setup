@@ -1349,6 +1349,65 @@ export const RotaScheduleTab = () => {
         })() : undefined}
         saving={saving}
       />
+
+      {/* Locum/Temp Dialog from StaffPanel */}
+      {showLocumDialog && selectedSiteId && (
+        <StaffSelectionDialog
+          open={showLocumDialog}
+          onOpenChange={(open) => !open && setShowLocumDialog(false)}
+          jobTitleId=""
+          jobTitleName="Add Locum / Temp"
+          shiftType="am"
+          dateLabel={format(weekDays[selectedDayIndex] || weekDays[0], "EEEE, d MMMM")}
+          dayOfWeek={format(weekDays[selectedDayIndex] || weekDays[0], "EEE").toLowerCase()}
+          availableStaff={staff}
+          allStaff={allStaff}
+          excludeUserIds={assignedUserIdsForSelectedDay}
+          scheduledHours={staffScheduledHours}
+          currentSiteId={selectedSiteId}
+          sites={sites}
+          jobTitles={jobTitles}
+          jobFamilies={jobFamilies}
+          amShiftStart={(() => {
+            const day = weekDays[selectedDayIndex] || weekDays[0];
+            const dw = day.getDay();
+            const adj = dw === 0 ? 6 : dw - 1;
+            return openingHoursByDay[adj]?.am_open_time || "09:00";
+          })()}
+          amShiftEnd={(() => {
+            const day = weekDays[selectedDayIndex] || weekDays[0];
+            const dw = day.getDay();
+            const adj = dw === 0 ? 6 : dw - 1;
+            return openingHoursByDay[adj]?.am_close_time || "13:00";
+          })()}
+          pmShiftStart={(() => {
+            const day = weekDays[selectedDayIndex] || weekDays[0];
+            const dw = day.getDay();
+            const adj = dw === 0 ? 6 : dw - 1;
+            return openingHoursByDay[adj]?.pm_open_time || "13:00";
+          })()}
+          pmShiftEnd={(() => {
+            const day = weekDays[selectedDayIndex] || weekDays[0];
+            const dw = day.getDay();
+            const adj = dw === 0 ? 6 : dw - 1;
+            return openingHoursByDay[adj]?.pm_close_time || "18:00";
+          })()}
+          onSelectStaff={async (userId, makeFullDay, customStartTime, customEndTime, isTempStaff, tempConfirmed, tempStaffName) => {
+            const selectedDay = weekDays[selectedDayIndex] || weekDays[0];
+            const dateKey = formatDateKey(selectedDay);
+            // For locum dialog, default to first clinic room if available
+            const facilityId = clinicRooms.length > 0 ? clinicRooms[0].id : undefined;
+            let shiftType: ShiftType = "am";
+            if (customStartTime && customEndTime) {
+              shiftType = "custom";
+            } else if (makeFullDay) {
+              shiftType = "full_day";
+            }
+            await handleAddShift(userId, dateKey, shiftType, false, facilityId, customStartTime, customEndTime, isTempStaff, tempConfirmed, tempStaffName);
+            setShowLocumDialog(false);
+          }}
+        />
+      )}
     </div>
   );
 };
