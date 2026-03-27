@@ -87,6 +87,7 @@ export const RotaScheduleTab = () => {
 
   // Edit state
   const [editingShift, setEditingShift] = useState<RotaShift | null>(null);
+  const [editingOncall, setEditingOncall] = useState<{ oncall: RotaOncall; slot: number; period: "am" | "pm" } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   
   // Day confirmation state
