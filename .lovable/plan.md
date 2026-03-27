@@ -1,15 +1,41 @@
 
 
-# Staff Panel Refinements
+# Simplify Edit Shift Dialog
 
-## Changes
+## Overview
 
-### 1. Right-align job title badges — `StaffPanel.tsx`
-Add `ml-auto` to push the Badge to the right side of each staff pill row (line 207-212). This creates a clean `[Grip] [Name...] [Badge→]` layout.
+Strip the EditShiftDialog down to show the current shift slot and contextual edit options only. Remove On-Call toggle, Temp/Agency toggle, and Notes textarea.
 
-### 2. Show job titles on on-call assignments — `ClinicRoomDayCell.tsx`
-The `oncall` data already includes `job_title_name` (fetched in `useRotaOncalls.ts` line 79). Add a colored job title Badge next to `user_name` in both AM (line 602) and PM on-call cells — same style as the staff panel badges.
+## Changes — `src/components/rota/EditShiftDialog.tsx`
 
-### 3. Sticky staff panel — `StaffPanel.tsx`
-Change the root `<div>` (line 110) from `h-full` to `sticky top-0 self-start h-screen` so the panel sticks to the top of the viewport as the rota grid scrolls. The parent flex container in `RotaScheduleTab.tsx` already uses `flex` layout, so `sticky` + `self-start` will work correctly.
+### 1. Remove unused UI sections
+- **Lines 244-252**: Remove On-Call toggle
+- **Lines 254-284**: Remove Temp/Agency Staff toggle and Booking Confirmed toggle
+- **Lines 286-294**: Remove Notes textarea
+
+### 2. Remove related state and logic
+- Remove `isOncall`, `notes`, `isTempStaff`, `tempConfirmed` state variables (lines 58-61)
+- Remove their initialization in the `useEffect` (lines 118-121)
+- In `handleSave`, hardcode: `is_oncall: shift.is_oncall` (preserve original), `notes: shift.notes || null`, `is_temp_staff: shift.is_temp_staff || false`, `temp_confirmed: shift.temp_confirmed || false`
+
+### 3. Add "Current Shift" display
+Above the radio group, add a small info line showing the current slot:
+
+```text
+Current shift: AM Shift (08:00 - 13:00)
+```
+
+Derived from `shift.shift_type` — display as badge/label (e.g. "AM", "PM", "Full Day", or custom times).
+
+### 4. Context-aware radio options
+Instead of always showing all 4 options, show only the relevant ones based on the current `shift.shift_type`:
+- If current is **AM** → show: "Make Full Day", "Move to PM", "Custom Time"
+- If current is **PM** → show: "Make Full Day", "Move to AM", "Custom Time"
+- If current is **Full Day** → show: "Change to AM only", "Change to PM only", "Custom Time"
+- If current is **Custom** → show: "Make Full Day", "Change to AM", "Change to PM", "Custom Time"
+
+Keep the same `shiftType` state and `RadioGroup` — just conditionally render which `RadioGroupItem` entries appear.
+
+### 5. Remove unused imports
+Remove `Switch`, `Textarea` imports (no longer used in the dialog).
 
