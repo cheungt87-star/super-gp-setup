@@ -1014,7 +1014,20 @@ export const RotaScheduleTab = () => {
       </Card>
 
       {selectedSiteId && (
-        <Card>
+        <div className="flex gap-0 border rounded-lg overflow-hidden bg-card">
+          {/* Staff Panel */}
+          <StaffPanel
+            staff={staff}
+            allStaff={allStaff}
+            jobTitles={jobTitles}
+            jobFamilies={jobFamilies}
+            scheduledHours={staffScheduledHours}
+            assignedUserIds={assignedUserIdsForSelectedDay}
+            onOpenLocumDialog={() => setShowLocumDialog(true)}
+          />
+
+          {/* Schedule Grid */}
+          <Card className="flex-1 border-0 rounded-none">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
