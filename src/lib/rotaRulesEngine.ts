@@ -99,8 +99,8 @@ export function validateDay(
   // Rule 2: Rooms left empty (check AM and PM coverage)
   clinicRooms.forEach((room) => {
     const roomShifts = dayShifts.filter((s) => s.facility_id === room.id && !s.is_oncall);
-    const hasAM = roomShifts.some((s) => s.shift_type === "am" || s.shift_type === "full_day");
-    const hasPM = roomShifts.some((s) => s.shift_type === "pm" || s.shift_type === "full_day");
+    const hasAM = roomShifts.some((s) => s.shift_type === "am" || s.shift_type === "full_day" || s.shift_type === "custom");
+    const hasPM = roomShifts.some((s) => s.shift_type === "pm" || s.shift_type === "full_day" || s.shift_type === "custom");
 
     if (!hasAM) {
       results.push({
