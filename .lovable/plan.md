@@ -1,44 +1,27 @@
 
 
-# Locum Badges in Staff Panel
+# Fix: Enable Drag-and-Drop for On-Call Slots
 
-## Overview
+## Problem
 
-Replace the "Add Locum / Temp" button at the bottom of the Staff Panel with two fixed, always-available locum badges pinned to the top of the staff list. These badges are draggable and reusable (never greyed out). Dropping "Locum - Confirmed" or "Locum - Unconfirmed" onto a cell triggers a name-entry dialog before creating the shift.
+The on-call AM/PM cells (lines 547-650 in `ClinicRoomDayCell.tsx`) have no `onDragOver`/`onDrop` handlers. Only clinic room cells support drag-and-drop. Dragging a staff member or locum badge onto an on-call slot does nothing.
 
 ## Changes
 
-### 1. `src/components/rota/StaffPanel.tsx`
+### `src/components/rota/ClinicRoomDayCell.tsx`
 
-**Remove**: The bottom "Add Locum / Temp" button and `onOpenLocumDialog` prop.
+1. **New drop handler for on-call**: Add `handleOncallDrop(e, slot, period)` that:
+   - Checks for `locumType` in dataTransfer → opens locum name dialog with on-call context (store `oncallSlot` in the dialog state)
+   - Checks for `staffId` → calls `onAddShift(staffId, dateKey, period, true, undefined, undefined, undefined, undefined, undefined, undefined, slot)`
 
-**Add**: Two fixed locum badges above the staff list (between the filters section and the ScrollArea):
-- **Locum - Confirmed**: Green background (`bg-green-500 text-white`), draggable with `dataTransfer` set to `locum-confirmed`
-- **Locum - Unconfirmed**: Red background (`bg-red-500 text-white`), draggable with `dataTransfer` set to `locum-unconfirmed`
+2. **Extend locum name dialog state**: Add `oncallSlot?: number` and `isOncall?: boolean` fields to the `locumNameDialog` state object so we know whether the locum is being dropped on a room or an on-call slot.
 
-These badges:
-- Are always visible, never greyed out, never filtered out
-- Use a separate `dataTransfer` key (e.g. `locumType`) to distinguish from regular staff drags
-- Have the same grip icon + pill style as staff cards
+3. **Update `handleLocumNameConfirm`**: When `locumNameDialog.oncallSlot` is set, call `onAddShift` with `isOnCall: true` and the `oncallSlot` parameter instead of a `facilityId`.
 
-### 2. `src/components/rota/ClinicRoomDayCell.tsx`
-
-**Update `handleDrop`**: Check for `locumType` in `dataTransfer`. If present, show a name-entry dialog (small inline Dialog or prompt) before calling `onAddShift` with:
-- `userId: null`
-- `isTempStaff: true`
-- `tempConfirmed: true/false` (based on confirmed vs unconfirmed)
-- `tempStaffName: <entered name>`
-
-**Add**: A small `LocumNameDialog` (can be inline in the file or a separate component) — a simple Dialog with a text input for the locum's name and a confirm button. On submit, calls `onAddShift` with the locum parameters.
-
-### 3. Existing behaviour preserved
-
-- Once placed, locum shifts appear as normal shift cards with edit (pencil) and delete (X) icons — same as regular staff
-- The existing `StaffSelectionDialog` locum flow is no longer needed from the panel but remains available if triggered elsewhere
-
-## Technical Details
-
-- Drag data: regular staff uses `e.dataTransfer.setData("staffId", id)`. Locum badges use `e.dataTransfer.setData("locumType", "confirmed" | "unconfirmed")` — no `staffId` set
-- `handleDrop` in `ClinicRoomDayCell` checks for `locumType` first; if found, opens name dialog instead of directly adding shift
-- Locum badges are rendered in a dedicated section with a subtle separator, not inside the ScrollArea, so they stay pinned
+4. **Add drag handlers to on-call AM/PM cells**: On the empty-state containers (the `<div>` wrapping the "Add AM"/"Add PM" buttons, lines 547 and 601), add:
+   - `onDragOver={(e) => handleDragOver(e, \`oncall-${slot}-${period}\`)}`
+   - `onDragLeave={handleDragLeave}`
+   - `onDrop={(e) => handleOncallDrop(e, slot, period)}`
+   - Visual highlight when `dragOverTarget === \`oncall-${slot}-${period}\``
+   - Apply these handlers to the entire cell `<div>`, not just the empty state, so drops work even when a slot is already occupied (to allow replacement or the system can reject duplicates)
 
