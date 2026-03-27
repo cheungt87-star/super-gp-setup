@@ -85,6 +85,7 @@ interface ClinicRoomDayCellProps {
   onDeleteShift: (shiftId: string) => void;
   onEditShift: (shift: RotaShift) => void;
   onDeleteOncall: (dateKey: string, slot: number, shiftPeriod?: "am" | "pm") => Promise<boolean | void>;
+  onEditOncall?: (oncall: RotaOncall, slot: number, period: "am" | "pm") => void;
   onRepeatPreviousDay?: (dateKey: string, previousDateKey: string) => Promise<void>;
   onCopyToWholeWeek?: (dateKey: string) => Promise<void>;
   onCopyFromPreviousWeek?: () => Promise<void>;
@@ -118,6 +119,7 @@ export const ClinicRoomDayCell = ({
   onDeleteShift,
   onEditShift,
   onDeleteOncall,
+  onEditOncall,
   onRepeatPreviousDay,
   onCopyToWholeWeek,
   onCopyFromPreviousWeek,
