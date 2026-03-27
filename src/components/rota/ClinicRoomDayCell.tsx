@@ -530,7 +530,7 @@ export const ClinicRoomDayCell = ({
           {/* On-Call Rows - 3 slots with AM/PM columns */}
           <div className="rounded-lg border overflow-hidden">
             {/* On-Call Header */}
-            <div className="grid grid-cols-[160px_1fr_1fr] bg-primary/5 border-b">
+            <div className="grid grid-cols-[160px_1fr_1fr] items-center bg-primary/5 border-b">
               <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 bg-primary/10 text-primary border-r">
                 <Phone className="h-4 w-4" />
                 On-Call
@@ -710,7 +710,7 @@ export const ClinicRoomDayCell = ({
           {clinicRooms.length > 0 ? (
             <div className="rounded-lg border overflow-hidden">
               {/* Table Header */}
-              <div className="grid grid-cols-[160px_1fr_1fr] bg-primary/5 border-b">
+              <div className="grid grid-cols-[160px_1fr_1fr] items-center bg-primary/5 border-b">
                 <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 bg-primary/10 text-primary border-r">
                   <DoorOpen className="h-4 w-4" />
                   Room
