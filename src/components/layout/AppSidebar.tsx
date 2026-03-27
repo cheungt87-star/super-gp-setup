@@ -41,7 +41,7 @@ export function AppSidebar({ userRole }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar>
+    <Sidebar style={{ background: 'linear-gradient(135deg, hsla(259, 42%, 86%, 1) 0%, hsla(193, 37%, 85%, 1) 24%, hsla(0, 0%, 96%, 1) 100%)' }}>
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-2 py-2">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
