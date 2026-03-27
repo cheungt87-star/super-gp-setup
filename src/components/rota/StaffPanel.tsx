@@ -40,6 +40,7 @@ interface StaffPanelProps {
   jobTitles: JobTitle[];
   jobFamilies: JobFamily[];
   sites: Site[];
+  currentSiteId?: string;
   assignedUserIds: string[];
 }
 
@@ -49,10 +50,11 @@ export const StaffPanel = ({
   jobTitles,
   jobFamilies,
   sites,
+  currentSiteId,
   assignedUserIds,
 }: StaffPanelProps) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [siteFilter, setSiteFilter] = useState<string>("all");
+  const [siteFilter, setSiteFilter] = useState<string>(currentSiteId || "all");
   const [jobFamilyFilter, setJobFamilyFilter] = useState<string>("all");
   const [jobTitleFilter, setJobTitleFilter] = useState<string>("all");
 
@@ -64,7 +66,7 @@ export const StaffPanel = ({
 
   // Filter staff based on all filters
   const filteredStaff = useMemo(() => {
-    let result = staff;
+    let result = allStaff;
 
     if (siteFilter !== "all") {
       result = result.filter((s) => s.primary_site_id === siteFilter);
