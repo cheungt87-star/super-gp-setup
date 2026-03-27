@@ -1331,6 +1331,7 @@ export const RotaScheduleTab = () => {
                         onDeleteShift={handleDeleteShift}
                         onEditShift={setEditingShift}
                         onDeleteOncall={handleDeleteOncall}
+                        onEditOncall={handleEditOncall}
                         onRepeatPreviousDay={handleRepeatPreviousDay}
                         onCopyToWholeWeek={handleCopyToWholeWeek}
                         onCopyFromPreviousWeek={handleCopyFromPreviousWeek}
@@ -1358,11 +1359,16 @@ export const RotaScheduleTab = () => {
       {/* Edit Shift Dialog */}
       <EditShiftDialog
         open={!!editingShift}
-        onOpenChange={(open) => !open && setEditingShift(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingShift(null);
+            setEditingOncall(null);
+          }
+        }}
         shift={editingShift}
         allShifts={shifts}
         rotaRules={rotaRule}
-        onSave={handleEditShift}
+        onSave={editingOncall ? handleEditOncallSave : handleEditShift}
       />
 
       {/* Day Confirm Dialog */}
