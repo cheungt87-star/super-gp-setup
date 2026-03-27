@@ -1023,7 +1023,6 @@ export const RotaScheduleTab = () => {
             jobFamilies={jobFamilies}
             sites={sites}
             assignedUserIds={assignedUserIdsForSelectedDay}
-            onOpenLocumDialog={() => setShowLocumDialog(true)}
           />
 
           {/* Schedule Grid */}
