@@ -2,9 +2,8 @@ import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { UserPlus, Search, GripVertical } from "lucide-react";
+import { Search, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
 
@@ -42,7 +41,6 @@ interface StaffPanelProps {
   jobFamilies: JobFamily[];
   sites: Site[];
   assignedUserIds: string[];
-  onOpenLocumDialog: () => void;
 }
 
 export const StaffPanel = ({
@@ -52,7 +50,6 @@ export const StaffPanel = ({
   jobFamilies,
   sites,
   assignedUserIds,
-  onOpenLocumDialog,
 }: StaffPanelProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [siteFilter, setSiteFilter] = useState<string>("all");
@@ -101,6 +98,11 @@ export const StaffPanel = ({
 
   const handleDragStart = (e: React.DragEvent, staffId: string) => {
     e.dataTransfer.setData("staffId", staffId);
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
+  const handleLocumDragStart = (e: React.DragEvent, type: "confirmed" | "unconfirmed") => {
+    e.dataTransfer.setData("locumType", type);
     e.dataTransfer.effectAllowed = "copy";
   };
 
@@ -160,6 +162,26 @@ export const StaffPanel = ({
         </div>
       </div>
 
+      {/* Fixed Locum Badges */}
+      <div className="px-2 pt-2 pb-1 space-y-1 border-b">
+        <div
+          draggable
+          onDragStart={(e) => handleLocumDragStart(e, "confirmed")}
+          className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs cursor-grab active:cursor-grabbing border border-green-300 bg-green-500 text-white font-medium"
+        >
+          <GripVertical className="h-3.5 w-3.5 text-white/70 shrink-0" />
+          <span className="truncate">Locum - Confirmed</span>
+        </div>
+        <div
+          draggable
+          onDragStart={(e) => handleLocumDragStart(e, "unconfirmed")}
+          className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs cursor-grab active:cursor-grabbing border border-red-300 bg-red-500 text-white font-medium"
+        >
+          <GripVertical className="h-3.5 w-3.5 text-white/70 shrink-0" />
+          <span className="truncate">Locum - Unconfirmed</span>
+        </div>
+      </div>
+
       {/* Staff list */}
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
@@ -198,18 +220,6 @@ export const StaffPanel = ({
         </div>
       </ScrollArea>
 
-      {/* Add Locum button */}
-      <div className="p-2 border-t">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full text-xs h-8"
-          onClick={onOpenLocumDialog}
-        >
-          <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-          Add Locum / Temp
-        </Button>
-      </div>
     </div>
   );
 };
