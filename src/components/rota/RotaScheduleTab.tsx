@@ -620,6 +620,67 @@ export const RotaScheduleTab = () => {
     setEditingShift(null);
   };
 
+  const handleEditOncall = (oncall: RotaOncall, slot: number, period: "am" | "pm") => {
+    setEditingOncall({ oncall, slot, period });
+    const fakeShift: RotaShift = {
+      id: oncall.id,
+      rota_week_id: "",
+      organisation_id: oncall.organisation_id,
+      user_id: oncall.user_id,
+      user_name: oncall.user_name || "",
+      job_title_name: oncall.job_title_name || null,
+      shift_date: oncall.oncall_date,
+      shift_type: oncall.custom_start_time ? "custom" : (period === "am" ? "am" : "pm"),
+      custom_start_time: oncall.custom_start_time,
+      custom_end_time: oncall.custom_end_time,
+      is_oncall: true,
+      facility_id: null,
+      notes: null,
+      linked_shift_id: null,
+      is_temp_staff: oncall.is_temp_staff,
+      temp_staff_name: oncall.temp_staff_name,
+      temp_confirmed: oncall.temp_confirmed,
+    };
+    setEditingShift(fakeShift);
+  };
+
+  const handleEditOncallSave = async (updates: {
+    shift_type: ShiftType;
+    custom_start_time: string | null;
+    custom_end_time: string | null;
+    is_oncall: boolean;
+    notes: string | null;
+    is_temp_staff: boolean;
+    temp_confirmed: boolean;
+  }) => {
+    if (!editingOncall) return;
+    const { oncall, slot, period } = editingOncall;
+
+    let newPeriod = period;
+    if (updates.shift_type === "am") newPeriod = "am";
+    else if (updates.shift_type === "pm") newPeriod = "pm";
+
+    if (newPeriod !== period) {
+      await deleteOncall(oncall.oncall_date, slot, period);
+    }
+
+    await addOncall(
+      oncall.oncall_date,
+      slot,
+      newPeriod,
+      oncall.user_id,
+      oncall.is_temp_staff,
+      oncall.temp_confirmed,
+      oncall.temp_staff_name || undefined,
+      updates.custom_start_time || undefined,
+      updates.custom_end_time || undefined,
+    );
+
+    toast({ title: "On-call updated", description: "On-call assignment has been saved" });
+    setEditingShift(null);
+    setEditingOncall(null);
+  };
+
   const handleDeleteShift = async (shiftId: string) => {
     const success = await deleteShift(shiftId);
     if (success) {
