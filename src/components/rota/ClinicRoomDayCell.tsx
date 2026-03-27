@@ -785,6 +785,34 @@ export const ClinicRoomDayCell = ({
           onSelectStaff={handleSelectStaff}
         />
       )}
+
+      {/* Locum Name Dialog */}
+      <Dialog open={!!locumNameDialog?.open} onOpenChange={(open) => { if (!open) { setLocumNameDialog(null); setLocumName(""); } }}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>
+              {locumNameDialog?.confirmed ? "Add Confirmed Locum" : "Add Unconfirmed Locum"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <Input
+              placeholder="Enter locum name..."
+              value={locumName}
+              onChange={(e) => setLocumName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleLocumNameConfirm(); }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setLocumNameDialog(null); setLocumName(""); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleLocumNameConfirm} disabled={!locumName.trim()}>
+              Add Locum
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
