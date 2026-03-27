@@ -600,6 +600,11 @@ export const ClinicRoomDayCell = ({
                         )}
                         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                           <span className="text-sm font-medium truncate">{amOncall.user_name}</span>
+                          {amOncall.job_title_name && (
+                            <Badge variant="outline" className={cn("text-[9px] px-1 py-0 shrink-0", getJobTitleColors(amOncall.job_title_name))}>
+                              {amOncall.job_title_name}
+                            </Badge>
+                          )}
                           {amOncall.custom_start_time && amOncall.custom_end_time && (
                             <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
                               <Clock className="h-3 w-3 mr-0.5" />
@@ -662,6 +667,11 @@ export const ClinicRoomDayCell = ({
                         )}
                         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                           <span className="text-sm font-medium truncate">{pmOncall.user_name}</span>
+                          {pmOncall.job_title_name && (
+                            <Badge variant="outline" className={cn("text-[9px] px-1 py-0 shrink-0", getJobTitleColors(pmOncall.job_title_name))}>
+                              {pmOncall.job_title_name}
+                            </Badge>
+                          )}
                           {pmOncall.custom_start_time && pmOncall.custom_end_time && (
                             <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
                               <Clock className="h-3 w-3 mr-0.5" />

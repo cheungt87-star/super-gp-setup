@@ -107,7 +107,7 @@ export const StaffPanel = ({
   };
 
   return (
-    <div className="w-[240px] shrink-0 border-r bg-card flex flex-col h-full">
+    <div className="w-[240px] shrink-0 border-r bg-card flex flex-col sticky top-0 self-start h-screen">
       {/* Header */}
       <div className="px-3 py-3 border-b">
         <h3 className="text-sm font-semibold mb-2">Available Staff</h3>
@@ -206,7 +206,7 @@ export const StaffPanel = ({
                 {s.job_title_name && (
                   <Badge
                     variant="outline"
-                    className={cn("text-[9px] px-1 py-0 leading-tight shrink-0 whitespace-nowrap", getJobTitleColors(s.job_title_name))}
+                    className={cn("text-[9px] px-1 py-0 leading-tight shrink-0 whitespace-nowrap ml-auto", getJobTitleColors(s.job_title_name))}
                   >
                     {s.job_title_name}
                   </Badge>
