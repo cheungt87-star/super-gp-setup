@@ -394,31 +394,33 @@ export const ClinicRoomDayCell = ({
           </Badge>
         )}
         
-        <div className="flex items-center gap-2 min-w-0 flex-wrap flex-1">
-          <span className="text-sm truncate">{shift.user_name}</span>
-          {shift.job_title_name && (
-            <Badge variant="outline" className={cn("text-[10px] px-1 py-0 shrink-0", getJobTitleColors(shift.job_title_name))}>{shift.job_title_name}</Badge>
-          )}
-          {showFullBadge && (
-            <Badge variant="secondary" className="text-[10px] px-1 py-0 shrink-0">Full</Badge>
-          )}
-          {isCustom && shift.custom_start_time && shift.custom_end_time && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
-              <Clock className="h-3 w-3 mr-0.5" />
-              {shift.custom_start_time.slice(0, 5)}-{shift.custom_end_time.slice(0, 5)}
-            </Badge>
-          )}
-          {shift.linked_shift_id && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700">
-              Spans Break
-            </Badge>
-          )}
-          {!shift.linked_shift_id && isCustom && shift.custom_start_time && shift.custom_end_time &&
-            doesSpanBreak(shift.custom_start_time, shift.custom_end_time, amShiftEnd, pmShiftStart) && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700">
-              Spans Break
-            </Badge>
-          )}
+        <div className="flex items-center gap-2 min-w-0 flex-nowrap flex-1">
+          <span className="text-sm truncate flex-1 min-w-0">{shift.user_name}</span>
+          <div className="ml-auto flex items-center gap-1 shrink-0">
+            {showFullBadge && (
+              <Badge variant="secondary" className="text-[10px] px-1 py-0 shrink-0">Full</Badge>
+            )}
+            {isCustom && shift.custom_start_time && shift.custom_end_time && (
+              <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
+                <Clock className="h-3 w-3 mr-0.5" />
+                {shift.custom_start_time.slice(0, 5)}-{shift.custom_end_time.slice(0, 5)}
+              </Badge>
+            )}
+            {shift.linked_shift_id && (
+              <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700">
+                Spans Break
+              </Badge>
+            )}
+            {!shift.linked_shift_id && isCustom && shift.custom_start_time && shift.custom_end_time &&
+              doesSpanBreak(shift.custom_start_time, shift.custom_end_time, amShiftEnd, pmShiftStart) && (
+              <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700">
+                Spans Break
+              </Badge>
+            )}
+            {shift.job_title_name && (
+              <Badge variant="outline" className={cn("text-[10px] px-1 py-0 shrink-0", getJobTitleColors(shift.job_title_name))}>{shift.job_title_name}</Badge>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
           <Button
@@ -598,28 +600,40 @@ export const ClinicRoomDayCell = ({
                             {!amOncall.temp_confirmed ? "⚠️ TEMP" : "✓ Temp"}
                           </Badge>
                         )}
-                        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                          <span className="text-sm font-medium truncate">{amOncall.user_name}</span>
-                          {amOncall.job_title_name && (
-                            <Badge variant="outline" className={cn("text-[9px] px-1 py-0 shrink-0", getJobTitleColors(amOncall.job_title_name))}>
-                              {amOncall.job_title_name}
-                            </Badge>
-                          )}
-                          {amOncall.custom_start_time && amOncall.custom_end_time && (
-                            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
-                              <Clock className="h-3 w-3 mr-0.5" />
-                              {amOncall.custom_start_time.slice(0, 5)}-{amOncall.custom_end_time.slice(0, 5)}
-                            </Badge>
-                          )}
+                        <div className="flex items-center gap-1.5 min-w-0 flex-nowrap flex-1">
+                          <span className="text-sm font-medium truncate flex-1 min-w-0">{amOncall.user_name}</span>
+                          <div className="ml-auto flex items-center gap-1 shrink-0">
+                            {amOncall.custom_start_time && amOncall.custom_end_time && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
+                                <Clock className="h-3 w-3 mr-0.5" />
+                                {amOncall.custom_start_time.slice(0, 5)}-{amOncall.custom_end_time.slice(0, 5)}
+                              </Badge>
+                            )}
+                            {amOncall.job_title_name && (
+                              <Badge variant="outline" className={cn("text-[9px] px-1 py-0 shrink-0", getJobTitleColors(amOncall.job_title_name))}>
+                                {amOncall.job_title_name}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 hover:bg-destructive/20 shrink-0"
-                          onClick={() => onDeleteOncall(dateKey, slot, "am")}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 hover:bg-accent shrink-0"
+                            onClick={() => onEditOncall?.(amOncall, slot, "am")}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 hover:bg-destructive/20 shrink-0"
+                            onClick={() => onDeleteOncall(dateKey, slot, "am")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <Button
@@ -665,28 +679,40 @@ export const ClinicRoomDayCell = ({
                             {!pmOncall.temp_confirmed ? "⚠️ TEMP" : "✓ Temp"}
                           </Badge>
                         )}
-                        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                          <span className="text-sm font-medium truncate">{pmOncall.user_name}</span>
-                          {pmOncall.job_title_name && (
-                            <Badge variant="outline" className={cn("text-[9px] px-1 py-0 shrink-0", getJobTitleColors(pmOncall.job_title_name))}>
-                              {pmOncall.job_title_name}
-                            </Badge>
-                          )}
-                          {pmOncall.custom_start_time && pmOncall.custom_end_time && (
-                            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
-                              <Clock className="h-3 w-3 mr-0.5" />
-                              {pmOncall.custom_start_time.slice(0, 5)}-{pmOncall.custom_end_time.slice(0, 5)}
-                            </Badge>
-                          )}
+                        <div className="flex items-center gap-1.5 min-w-0 flex-nowrap flex-1">
+                          <span className="text-sm font-medium truncate flex-1 min-w-0">{pmOncall.user_name}</span>
+                          <div className="ml-auto flex items-center gap-1 shrink-0">
+                            {pmOncall.custom_start_time && pmOncall.custom_end_time && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 bg-amber-50 text-amber-700 border-amber-200">
+                                <Clock className="h-3 w-3 mr-0.5" />
+                                {pmOncall.custom_start_time.slice(0, 5)}-{pmOncall.custom_end_time.slice(0, 5)}
+                              </Badge>
+                            )}
+                            {pmOncall.job_title_name && (
+                              <Badge variant="outline" className={cn("text-[9px] px-1 py-0 shrink-0", getJobTitleColors(pmOncall.job_title_name))}>
+                                {pmOncall.job_title_name}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 hover:bg-destructive/20 shrink-0"
-                          onClick={() => onDeleteOncall(dateKey, slot, "pm")}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 hover:bg-accent shrink-0"
+                            onClick={() => onEditOncall?.(pmOncall, slot, "pm")}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 hover:bg-destructive/20 shrink-0"
+                            onClick={() => onDeleteOncall(dateKey, slot, "pm")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <Button
