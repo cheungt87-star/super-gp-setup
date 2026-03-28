@@ -1,58 +1,56 @@
 
 
-# Rota Controls — Logical Grouping Redesign
+# Redesign Rota Section Header — 3-Column Layout
 
-## Current Problem
-9 actions scattered across 3 locations:
-- **Top strip**: Site select, Week select, Status badge
-- **Card header**: In Progress badge, Confirm Day, Preview Week, Publish
-- **Inside day tab**: Copy from Previous Week, Copy to Whole Week, Copy Previous Day, Clear All
+## Current State
+The rota has two separate areas: a top control strip (site select + week selector + status badge) and a card header below ("Weekly Schedule" title + In Progress + Preview Week + Publish). Copy actions live inside the day tab's Quick Actions bar.
 
-Users must scan multiple areas to find what they need.
+## New Layout
 
-## Proposed Layout — 3 Tiers
+Replace both the top control strip AND the card header with a single unified header block titled **"Weekly Rota Creation"**, split into 3 sub-sections:
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ TIER 1: Navigation (top strip - bg-slate-50)                │
-│  [Site ▼]   [< Mar 23 – Mar 29, 2026 >] [Today]   draft    │
-├─────────────────────────────────────────────────────────────┤
-│ TIER 2: Week Actions (card header)                          │
-│  Weekly Schedule                    [⏳ In Progress (2/5)]  │
-│  Click + to add staff...            [Preview Week] [Publish]│
-├─────────────────────────────────────────────────────────────┤
-│ [Mon] [Tue] [Wed] [Thu] [Fri]                               │
-├─────────────────────────────────────────────────────────────┤
-│ TIER 3: Day Actions (inside tab, "Quick Actions" bar)       │
-│  Quick Actions:                                             │
-│  [✓ Confirm Day] | [Copy Prev Day] [Copy Prev Week]        │
-│                    [Copy to Week]   [Clear All]    [Reset]  │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Weekly Rota Creation                                                    │
+├────────────────────┬────────────────────────┬───────────────────────────┤
+│  Site              │  Preview Week  (btn)   │  Quick Actions            │
+│  [Site dropdown ▼] │  In Progress (0/5)     │  [Copy from Prev Week]   │
+│                    │  Publish       (btn)   │  [Copy to Whole Week]    │
+│  Date Range        │                        │                           │
+│  [< Week Range >]  │                        │                           │
+│  [Today]           │                        │                           │
+└────────────────────┴────────────────────────┴───────────────────────────┘
 ```
 
-### Key changes:
+## Changes — `src/components/rota/RotaScheduleTab.tsx`
 
-**1. Move Confirm Day down to the "Quick Actions" bar** — `RotaScheduleTab.tsx`
-Remove Confirm Day / Day Confirmed + Reset from the card header. Pass confirmation state + handlers as props to `ClinicRoomDayCell`, which already renders the Quick Actions bar per day.
+### 1. Replace top control strip + CardHeader with unified 3-column header
+- Remove the existing `bg-slate-50` controls div (lines 1017-1046)
+- Replace `CardHeader` content (lines 1063-1173) with the new 3-column layout
+- Use a single container with `bg-slate-50 border border-slate-200 rounded-lg` and a header title "Weekly Rota Creation"
+- Inside, use `grid grid-cols-3 gap-6` with sub-section labels in muted text
 
-**2. Keep Preview Week + Publish in card header** — `RotaScheduleTab.tsx`
-These are week-level actions. They stay in the header alongside the progress badge. This keeps Tier 2 focused on week-level concerns only.
+### 2. Sub-section 1 (left): Navigation
+- Label "Site" above the site `<Select>` dropdown
+- Label "Date Range" above the `<WeekSelector>` + Today button
+- Stack vertically with `space-y-3`
 
-**3. Add Confirm Day to Quick Actions bar** — `ClinicRoomDayCell.tsx`
-Add new props: `confirmation`, `onConfirmDay`, `onResetConfirmation`, `savingConfirmation`. Render the Confirm Day button (or green "Day Confirmed" + Reset) as the first item in the Quick Actions bar, separated from copy/clear actions with a visual divider (`border-r`).
+### 3. Sub-section 2 (center): Status & Actions
+- Preview Week button
+- In Progress badge (existing logic)
+- Publish button (existing logic with tooltip)
+- Stack vertically with `space-y-2`, center-aligned
 
-**4. Group copy actions together with a separator** — `ClinicRoomDayCell.tsx`
-Structure the Quick Actions bar as:
-- **Left group**: Confirm Day / Day Confirmed + Reset
-- **Divider**: `border-r border-slate-300 h-6`
-- **Right group**: Copy Previous Day, Copy from Previous Week, Copy to Whole Week, Clear All
+### 4. Sub-section 3 (right): Quick Actions
+- Label "Quick Actions"
+- Move "Copy from Previous Week" and "Copy to Whole Week" buttons here from `ClinicRoomDayCell`
+- Stack vertically with `space-y-2`
 
-This creates a clear mental model:
-- **Tier 1** = "Where am I?" (navigation)
-- **Tier 2** = "How's the week?" (status + week-level actions)
-- **Tier 3** = "What can I do today?" (all day-specific actions)
+### 5. Remove copy buttons from ClinicRoomDayCell
+- Remove the `isFirstOpenDay && onCopyFromPreviousWeek` and `isFirstOpenDay && onCopyToWholeWeek` button blocks from `ClinicRoomDayCell.tsx` (lines 556-581)
+- Keep "Copy Previous Day" and "Clear All" in the day-level Quick Actions bar since those are day-specific
 
-## Files to edit
-- `src/components/rota/RotaScheduleTab.tsx` — remove Confirm Day from header, pass confirmation props to ClinicRoomDayCell
-- `src/components/rota/ClinicRoomDayCell.tsx` — add Confirm Day to Quick Actions bar, add visual grouping
+## Files
+- `src/components/rota/RotaScheduleTab.tsx` — merge controls into single 3-column header
+- `src/components/rota/ClinicRoomDayCell.tsx` — remove week-level copy buttons
 
