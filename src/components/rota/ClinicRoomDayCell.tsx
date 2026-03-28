@@ -720,7 +720,7 @@ export const ClinicRoomDayCell = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full justify-start text-muted-foreground hover:text-foreground"
+                        className="w-full justify-start text-muted-foreground hover:text-foreground opacity-60 hover:opacity-100"
                         disabled={loading}
                         onClick={() => handleAddClick("", slotLabel, "pm", slot)}
                       >
