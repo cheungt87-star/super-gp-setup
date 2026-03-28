@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2, Trash2, Pencil } from "lucide-react";
+import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2, Trash2, Pencil, CheckCircle2 } from "lucide-react";
 import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
 import type { RotaOncall } from "@/hooks/useRotaOncalls";
@@ -92,6 +92,10 @@ interface ClinicRoomDayCellProps {
   onCopyFromPreviousWeek?: () => Promise<void>;
   onClearAll?: (dateKey: string) => Promise<void>;
   copyingFromPrevWeek?: boolean;
+  confirmation?: { status: string } | undefined;
+  onConfirmDay?: () => void;
+  onResetConfirmation?: () => void;
+  savingConfirmation?: boolean;
 }
 
 export const ClinicRoomDayCell = ({
@@ -127,6 +131,10 @@ export const ClinicRoomDayCell = ({
   onClearAll,
   copyingFromPrevWeek = false,
   crossSiteShifts = [],
+  confirmation,
+  onConfirmDay,
+  onResetConfirmation,
+  savingConfirmation = false,
 }: ClinicRoomDayCellProps) => {
   const [selectionDialog, setSelectionDialog] = useState<{
     open: boolean;
@@ -500,6 +508,51 @@ export const ClinicRoomDayCell = ({
             <span className="text-sm font-medium text-muted-foreground">Quick Actions</span>
           </div>
           <div className="flex items-center gap-2">
+            {/* Confirm Day group */}
+            {onConfirmDay && (
+              <>
+                {confirmation && confirmation.status ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      className="h-8 bg-green-600 hover:bg-green-700 text-white"
+                      disabled
+                    >
+                      <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                      Day Confirmed
+                    </Button>
+                    {onResetConfirmation && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={onResetConfirmation}
+                        disabled={savingConfirmation}
+                      >
+                        Reset
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={onConfirmDay}
+                    disabled={savingConfirmation}
+                  >
+                    {savingConfirmation ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Confirm Day
+                  </Button>
+                )}
+                <div className="border-r border-slate-300 h-6" />
+              </>
+            )}
+            {/* Copy/Clear actions group */}
             {isFirstOpenDay && onCopyFromPreviousWeek && (
               <Button
                 variant="outline"

@@ -1109,55 +1109,6 @@ export const RotaScheduleTab = () => {
                     </div>
                   );
                 })()}
-                
-                {/* Confirm Day button - dynamically shows for selected day */}
-                {(() => {
-                  const selectedDay = weekDays[selectedDayIndex];
-                  if (!selectedDay) return null;
-                  const dateKey = formatDateKey(selectedDay);
-                  const confirmation = getConfirmationStatus(dateKey);
-                  
-                  if (confirmation && confirmation.status) {
-                    return (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          className="h-8 bg-green-600 hover:bg-green-700 text-white"
-                          disabled
-                        >
-                          <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-                          Day Confirmed
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-xs"
-                          onClick={() => handleResetConfirmation(dateKey)}
-                          disabled={savingConfirmation}
-                        >
-                          Reset
-                        </Button>
-                      </div>
-                    );
-                  }
-                  
-                  return (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8"
-                      onClick={() => handleConfirmDay(selectedDay)}
-                      disabled={savingConfirmation}
-                    >
-                      {savingConfirmation ? (
-                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-                      )}
-                      Confirm Day
-                    </Button>
-                  );
-                })()}
 
                 {/* Preview Week + Publish buttons */}
                 {selectedSiteId && rotaWeek && (
@@ -1314,17 +1265,9 @@ export const RotaScheduleTab = () => {
                   const previousDateKey = index > 0 ? formatDateKey(weekDays[index - 1]) : null;
                   const confirmation = getConfirmationStatus(dateKey);
 
-                  // Render confirm button in header via portal-like pattern
-                  const isSelectedDay = selectedDayIndex === index;
-                  
+
                   return (
                     <TabsContent key={dateKey} value={String(index)} className="mt-0">
-                      {/* Confirm Day Button - rendered inline with CardHeader title */}
-                      {isSelectedDay && (
-                        <div className="hidden">
-                          {/* Portal target - actual button rendered in header */}
-                        </div>
-                      )}
                       <ClinicRoomDayCell
                         date={day}
                         dateKey={dateKey}
@@ -1362,13 +1305,16 @@ export const RotaScheduleTab = () => {
                         onClearAll={async (dateKey) => {
                           await deleteShiftsForDay(dateKey);
                           await deleteOncallsForDay(dateKey);
-                          // Reset confirmation if it exists
                           if (confirmations.some(c => c.shift_date === dateKey)) {
                             await resetDayConfirmation(dateKey);
                           }
                         }}
                         copyingFromPrevWeek={copyingFromPrevWeek}
                         crossSiteShifts={crossSiteShifts.filter(s => s.shift_date === dateKey)}
+                        confirmation={confirmation}
+                        onConfirmDay={() => handleConfirmDay(day)}
+                        onResetConfirmation={() => handleResetConfirmation(dateKey)}
+                        savingConfirmation={savingConfirmation}
                       />
                     </TabsContent>
                   );
