@@ -199,9 +199,24 @@ export const ClinicRoomDayCell = ({
 
     const staffId = e.dataTransfer.getData("staffId");
     if (staffId) {
+      // Check if user is already assigned to another on-call slot in the same period
+      const isAlreadyOncall = oncalls.some((oc) => {
+        if (!oc.user_id || oc.user_id !== staffId) return false;
+        if (oc.oncall_slot === slot && oc.shift_period?.toLowerCase() === period) return false;
+        const ocPeriod = oc.shift_period?.toLowerCase() || "";
+        return ocPeriod === period || ocPeriod === "full_day" || ocPeriod === "full day" || period === "full_day";
+      });
+      if (isAlreadyOncall) {
+        toast({
+          title: "Conflict",
+          description: "This staff member is already assigned to another on-call slot for this period.",
+          variant: "destructive",
+        });
+        return;
+      }
       onAddShift(staffId, dateKey, period as ShiftType, true, undefined, undefined, undefined, undefined, undefined, undefined, slot);
     }
-  }, [dateKey, onAddShift]);
+  }, [dateKey, onAddShift, oncalls, toast]);
 
   const handleLocumNameConfirm = useCallback(() => {
     if (!locumNameDialog || !locumName.trim()) return;
@@ -252,10 +267,27 @@ export const ClinicRoomDayCell = ({
   // Get user IDs that conflict with a given shift type - checks ALL shifts site-wide
   const getConflictingUserIds = (targetShiftType: ShiftType | "oncall", facilityId?: string, customStart?: string, customEnd?: string, oncallSlot?: number): string[] => {
     if (targetShiftType === "oncall" || oncallSlot) {
-      // For on-call, no conflicts with room shifts - only exclude users already in that oncall slot+period
-      return [];
-      const slotOncall = getOncallForSlot(oncallSlot || 1);
-      return slotOncall?.user_id ? [slotOncall.user_id] : [];
+      // Collect user IDs from all on-call slots that overlap the target period
+      const conflicting: string[] = [];
+      oncalls.forEach((oc) => {
+        if (!oc.user_id) return;
+        // Skip the current slot being assigned to
+        if (oncallSlot && oc.oncall_slot === oncallSlot && oc.shift_period?.toLowerCase() === targetShiftType) return;
+        
+        const ocPeriod = oc.shift_period?.toLowerCase() || "";
+        // Check period overlap: AM conflicts with AM/Full Day, PM conflicts with PM/Full Day, Full Day conflicts with all
+        const targetPeriod = targetShiftType === "oncall" ? "full_day" : targetShiftType;
+        const overlaps =
+          targetPeriod === "full_day" || ocPeriod === "full_day" || ocPeriod === "full day" ||
+          targetPeriod === ocPeriod ||
+          (targetPeriod === "am" && ocPeriod === "am") ||
+          (targetPeriod === "pm" && ocPeriod === "pm");
+        
+        if (overlaps) {
+          conflicting.push(oc.user_id);
+        }
+      });
+      return conflicting;
     }
 
     // Determine the target time range
