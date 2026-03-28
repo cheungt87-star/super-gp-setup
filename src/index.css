@@ -125,5 +125,9 @@
   .card-gradient {
     background: linear-gradient(135deg, hsl(var(--card-gradient-from)), hsl(var(--card-gradient-to)));
   }
+
+  .sidebar-gradient [data-sidebar="sidebar"] {
+    background: linear-gradient(135deg, hsla(259, 42%, 86%, 1) 0%, hsla(193, 37%, 85%, 1) 24%, hsla(0, 0%, 96%, 1) 100%) !important;
+  }
 }
 
