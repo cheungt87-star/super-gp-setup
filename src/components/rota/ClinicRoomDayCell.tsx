@@ -151,9 +151,10 @@ export const ClinicRoomDayCell = ({
     open: boolean;
     facilityId: string;
     period: "am" | "pm";
-    confirmed: boolean;
+    confirmed?: boolean;
     isOncall?: boolean;
     oncallSlot?: number;
+    step: "status" | "name";
   } | null>(null);
   const [locumName, setLocumName] = useState("");
 
@@ -178,7 +179,7 @@ export const ClinicRoomDayCell = ({
         open: true,
         facilityId,
         period,
-        confirmed: locumType === "confirmed",
+        step: "status",
       });
       return;
     }
@@ -200,9 +201,9 @@ export const ClinicRoomDayCell = ({
         open: true,
         facilityId: "",
         period,
-        confirmed: locumType === "confirmed",
         isOncall: true,
         oncallSlot: slot,
+        step: "status",
       });
       return;
     }

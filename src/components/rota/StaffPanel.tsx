@@ -168,23 +168,15 @@ export const StaffPanel = ({
         </div>
       </div>
 
-      {/* Fixed Locum Badges */}
-      <div className="px-2 pt-2 pb-1 space-y-1 border-b">
+      {/* Fixed Locum Badge */}
+      <div className="px-2 pt-2 pb-1 border-b">
         <div
           draggable
-          onDragStart={(e) => handleLocumDragStart(e, "confirmed")}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs cursor-grab active:cursor-grabbing border border-green-300 bg-green-500 text-white font-medium"
+          onDragStart={(e) => handleLocumDragStart(e, "locum")}
+          className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs cursor-grab active:cursor-grabbing border border-slate-400 bg-slate-600 text-white font-medium"
         >
           <GripVertical className="h-3.5 w-3.5 text-white/70 shrink-0" />
-          <span className="truncate">Locum - Confirmed</span>
-        </div>
-        <div
-          draggable
-          onDragStart={(e) => handleLocumDragStart(e, "unconfirmed")}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs cursor-grab active:cursor-grabbing border border-red-300 bg-red-500 text-white font-medium"
-        >
-          <GripVertical className="h-3.5 w-3.5 text-white/70 shrink-0" />
-          <span className="truncate">Locum - Unconfirmed</span>
+          <span className="truncate">Add Locum/Temp</span>
         </div>
       </div>
 
