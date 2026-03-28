@@ -1018,12 +1018,12 @@ export const RotaScheduleTab = () => {
         <h2 className="text-xl font-semibold text-slate-900 mb-4">Weekly Rota Creation</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Container 1: Overview */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 flex flex-col space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Overview</h3>
+          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-sm p-5 flex flex-col space-y-4">
+            <h3 className="text-base font-bold text-white">Overview</h3>
             <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Site</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Site</label>
               <Select value={selectedSiteId || ""} onValueChange={setSelectedSiteId}>
-                <SelectTrigger className="w-full h-10 bg-slate-50 border-slate-300 focus:ring-teal-500 focus:border-teal-500">
+                <SelectTrigger className="w-full h-10 bg-slate-700 border-slate-600 text-white focus:ring-teal-500 focus:border-teal-500">
                   <SelectValue placeholder="Select site" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1036,43 +1036,8 @@ export const RotaScheduleTab = () => {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Date Range</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Date Range</label>
               <WeekSelector weekStart={weekStart} onWeekChange={setWeekStart} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Week Status</label>
-              {(() => {
-                const openDayDates = weekDays.filter((day) => {
-                  const dayOfWeek = day.getDay();
-                  const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-                  const dayHours = openingHoursByDay[adjustedDay];
-                  return !dayHours?.is_closed;
-                });
-                const confirmedCount = openDayDates.filter((day) => {
-                  const dateKey = formatDateKey(day);
-                  const status = getConfirmationStatus(dateKey);
-                  return status && status.status;
-                }).length;
-                const totalOpenDays = openDayDates.length;
-                const isCompleted = totalOpenDays > 0 && confirmedCount === totalOpenDays;
-                if (totalOpenDays === 0) return null;
-                return (
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border",
-                      isCompleted
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-amber-50 text-amber-700 border-amber-200"
-                    )}
-                  >
-                    {isCompleted ? (
-                      <><CheckCircle2 className="h-3.5 w-3.5" /> All days complete</>
-                    ) : (
-                      <><Clock className="h-3.5 w-3.5" /> {confirmedCount}/{totalOpenDays} days complete</>
-                    )}
-                  </span>
-                );
-              })()}
             </div>
           </div>
 
