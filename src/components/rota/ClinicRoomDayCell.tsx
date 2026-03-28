@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2, Trash2, Pencil } from "lucide-react";
+import { Plus, X, Phone, Copy, Sun, Moon, DoorOpen, Clock, Loader2, Trash2, Pencil, CheckCircle2 } from "lucide-react";
 import { StaffSelectionDialog } from "./StaffSelectionDialog";
 import type { RotaShift } from "@/hooks/useRotaSchedule";
 import type { RotaOncall } from "@/hooks/useRotaOncalls";
@@ -92,6 +92,10 @@ interface ClinicRoomDayCellProps {
   onCopyFromPreviousWeek?: () => Promise<void>;
   onClearAll?: (dateKey: string) => Promise<void>;
   copyingFromPrevWeek?: boolean;
+  confirmation?: { status: string } | undefined;
+  onConfirmDay?: () => void;
+  onResetConfirmation?: () => void;
+  savingConfirmation?: boolean;
 }
 
 export const ClinicRoomDayCell = ({
@@ -127,6 +131,10 @@ export const ClinicRoomDayCell = ({
   onClearAll,
   copyingFromPrevWeek = false,
   crossSiteShifts = [],
+  confirmation,
+  onConfirmDay,
+  onResetConfirmation,
+  savingConfirmation = false,
 }: ClinicRoomDayCellProps) => {
   const [selectionDialog, setSelectionDialog] = useState<{
     open: boolean;
