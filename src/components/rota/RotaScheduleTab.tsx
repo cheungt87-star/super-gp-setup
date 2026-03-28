@@ -1270,12 +1270,6 @@ export const RotaScheduleTab = () => {
                   
                   return (
                     <TabsContent key={dateKey} value={String(index)} className="mt-0">
-                      {/* Confirm Day Button - rendered inline with CardHeader title */}
-                      {isSelectedDay && (
-                        <div className="hidden">
-                          {/* Portal target - actual button rendered in header */}
-                        </div>
-                      )}
                       <ClinicRoomDayCell
                         date={day}
                         dateKey={dateKey}
@@ -1313,13 +1307,16 @@ export const RotaScheduleTab = () => {
                         onClearAll={async (dateKey) => {
                           await deleteShiftsForDay(dateKey);
                           await deleteOncallsForDay(dateKey);
-                          // Reset confirmation if it exists
                           if (confirmations.some(c => c.shift_date === dateKey)) {
                             await resetDayConfirmation(dateKey);
                           }
                         }}
                         copyingFromPrevWeek={copyingFromPrevWeek}
                         crossSiteShifts={crossSiteShifts.filter(s => s.shift_date === dateKey)}
+                        confirmation={confirmation}
+                        onConfirmDay={() => handleConfirmDay(day)}
+                        onResetConfirmation={() => handleResetConfirmation(dateKey)}
+                        savingConfirmation={savingConfirmation}
                       />
                     </TabsContent>
                   );
