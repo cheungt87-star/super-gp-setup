@@ -940,31 +940,57 @@ export const ClinicRoomDayCell = ({
         />
       )}
 
-      {/* Locum Name Dialog */}
+      {/* Locum Status & Name Dialog */}
       <Dialog open={!!locumNameDialog?.open} onOpenChange={(open) => { if (!open) { setLocumNameDialog(null); setLocumName(""); } }}>
         <DialogContent className="sm:max-w-[360px]">
-          <DialogHeader>
-            <DialogTitle>
-              {locumNameDialog?.confirmed ? "Add Confirmed Locum" : "Add Unconfirmed Locum"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-2">
-            <Input
-              placeholder="Enter locum name..."
-              value={locumName}
-              onChange={(e) => setLocumName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleLocumNameConfirm(); }}
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setLocumNameDialog(null); setLocumName(""); }}>
-              Cancel
-            </Button>
-            <Button onClick={handleLocumNameConfirm} disabled={!locumName.trim()}>
-              Add Locum
-            </Button>
-          </DialogFooter>
+          {locumNameDialog?.step === "status" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Add Locum/Temp</DialogTitle>
+              </DialogHeader>
+              <div className="py-4 space-y-3">
+                <p className="text-sm text-muted-foreground">What is the status of this locum?</p>
+                <div className="flex gap-3">
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    onClick={handleLocumUnconfirmed}
+                  >
+                    Unconfirmed
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => setLocumNameDialog(prev => prev ? { ...prev, step: "name", confirmed: true } : null)}
+                  >
+                    Confirmed
+                  </Button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Add Confirmed Locum</DialogTitle>
+              </DialogHeader>
+              <div className="py-2">
+                <Input
+                  placeholder="Enter locum name..."
+                  value={locumName}
+                  onChange={(e) => setLocumName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleLocumNameConfirm(); }}
+                  autoFocus
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setLocumNameDialog(prev => prev ? { ...prev, step: "status" } : null)}>
+                  Back
+                </Button>
+                <Button onClick={handleLocumNameConfirm} disabled={!locumName.trim()}>
+                  Add Locum
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
