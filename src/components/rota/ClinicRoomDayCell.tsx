@@ -379,7 +379,7 @@ export const ClinicRoomDayCell = ({
           "relative flex items-center justify-between gap-2 rounded-md px-3 py-2 cursor-pointer transition-colors min-h-[40px]",
           isTempUnconfirmed && "bg-destructive/10 border-2 border-destructive ring-2 ring-destructive/20",
           isTempConfirmed && "bg-amber-50 border border-amber-300",
-          !shift.is_temp_staff && "bg-muted/50 hover:bg-muted"
+          !shift.is_temp_staff && "bg-white border border-slate-200 shadow-sm hover:shadow-md"
         )}
         onClick={() => onEditShift(shift)}
       >
@@ -534,16 +534,16 @@ export const ClinicRoomDayCell = ({
           {/* On-Call Rows - 3 slots with AM/PM columns */}
           <div className="rounded-lg border overflow-hidden">
             {/* On-Call Header */}
-            <div className="grid grid-cols-[160px_1fr_1fr] items-center bg-primary/5 border-b">
-              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 bg-primary/10 text-primary border-r">
+            <div className="grid grid-cols-[160px_1fr_1fr] items-center bg-amber-50/50 border-b">
+              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 bg-amber-100 text-amber-800 border-r border-amber-200">
                 <Phone className="h-4 w-4" />
                 On-Call
               </div>
-              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l">
+              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l bg-amber-50/50">
                 <Sun className="h-4 w-4 text-amber-500" />
                 AM ({amShiftStart.slice(0, 5)} - {amShiftEnd.slice(0, 5)})
               </div>
-              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l">
+              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l bg-amber-50/50">
                 <Moon className="h-4 w-4 text-indigo-500" />
                 PM ({pmShiftStart.slice(0, 5)} - {pmShiftEnd.slice(0, 5)})
               </div>
@@ -568,14 +568,14 @@ export const ClinicRoomDayCell = ({
                   )}
                 >
                   {/* Slot Name */}
-                  <div className="px-4 py-3 flex items-start min-h-[60px] bg-muted/30 border-r">
+                  <div className="px-4 py-3 flex items-start min-h-[60px] bg-amber-50/50 border-r border-amber-100">
                     <span className="font-medium text-sm">{slotLabel}</span>
                   </div>
 
                   {/* AM Column */}
                   <div
                     className={cn(
-                      "px-4 py-3 border-l space-y-2 min-h-[60px] transition-colors",
+                      "px-4 py-3 border-l space-y-2 min-h-[60px] transition-colors bg-amber-50/30",
                       dragOverTarget === `oncall-${slot}-am` && "bg-primary/10 border-2 border-dashed border-primary"
                     )}
                     onDragOver={(e) => handleDragOver(e, `oncall-${slot}-am`)}
@@ -588,7 +588,7 @@ export const ClinicRoomDayCell = ({
                           "relative flex items-center justify-between gap-2 rounded-md px-3 py-2 min-h-[40px]",
                           amOncall.is_temp_staff && !amOncall.temp_confirmed && "bg-destructive/10 border-2 border-destructive",
                           amOncall.is_temp_staff && amOncall.temp_confirmed && "bg-amber-50 border border-amber-300",
-                          !amOncall.is_temp_staff && "bg-muted/50"
+                          !amOncall.is_temp_staff && "bg-white border border-slate-200 shadow-sm"
                         )}
                       >
                         {amOncall.is_temp_staff && (
@@ -641,7 +641,7 @@ export const ClinicRoomDayCell = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full justify-start text-muted-foreground hover:text-foreground"
+                        className="w-full justify-start text-muted-foreground hover:text-foreground opacity-60 hover:opacity-100"
                         disabled={loading}
                         onClick={() => handleAddClick("", slotLabel, "am", slot)}
                       >
@@ -654,7 +654,7 @@ export const ClinicRoomDayCell = ({
                   {/* PM Column */}
                   <div
                     className={cn(
-                      "px-4 py-3 border-l space-y-2 min-h-[60px] transition-colors",
+                      "px-4 py-3 border-l space-y-2 min-h-[60px] transition-colors bg-indigo-50/30",
                       dragOverTarget === `oncall-${slot}-pm` && "bg-primary/10 border-2 border-dashed border-primary"
                     )}
                     onDragOver={(e) => handleDragOver(e, `oncall-${slot}-pm`)}
@@ -667,7 +667,7 @@ export const ClinicRoomDayCell = ({
                           "relative flex items-center justify-between gap-2 rounded-md px-3 py-2 min-h-[40px]",
                           pmOncall.is_temp_staff && !pmOncall.temp_confirmed && "bg-destructive/10 border-2 border-destructive",
                           pmOncall.is_temp_staff && pmOncall.temp_confirmed && "bg-amber-50 border border-amber-300",
-                          !pmOncall.is_temp_staff && "bg-muted/50"
+                          !pmOncall.is_temp_staff && "bg-white border border-slate-200 shadow-sm"
                         )}
                       >
                         {pmOncall.is_temp_staff && (
@@ -736,18 +736,18 @@ export const ClinicRoomDayCell = ({
 
           {/* Clinic Rooms Table */}
           {clinicRooms.length > 0 ? (
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border overflow-hidden mt-6">
               {/* Table Header */}
-              <div className="grid grid-cols-[160px_1fr_1fr] items-center bg-primary/5 border-b">
-                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 bg-primary/10 text-primary border-r">
+              <div className="grid grid-cols-[160px_1fr_1fr] items-center bg-slate-50 border-b">
+                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 bg-slate-200 text-slate-700 border-r">
                   <DoorOpen className="h-4 w-4" />
                   Room
                 </div>
-                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l">
+                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l bg-slate-50">
                   <Sun className="h-4 w-4 text-amber-500" />
                   AM ({amShiftStart.slice(0, 5)} - {amShiftEnd.slice(0, 5)})
                 </div>
-                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l">
+                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l bg-slate-50">
                   <Moon className="h-4 w-4 text-indigo-500" />
                   PM ({pmShiftStart.slice(0, 5)} - {pmShiftEnd.slice(0, 5)})
                 </div>
@@ -761,7 +761,7 @@ export const ClinicRoomDayCell = ({
                 return (
                   <div key={room.id} className="grid grid-cols-[160px_1fr_1fr] border-b last:border-b-0">
                     {/* Room Name */}
-                    <div className="px-4 py-3 flex items-start min-h-[80px] bg-muted/30 border-r">
+                    <div className="px-4 py-3 flex items-start min-h-[80px] bg-slate-50 border-r border-slate-200">
                       <div>
                         <span className="font-medium text-sm">{room.name}</span>
                         {room.capacity > 0 && (
@@ -775,7 +775,7 @@ export const ClinicRoomDayCell = ({
                     {/* AM Column */}
                     <div
                       className={cn(
-                        "px-4 py-3 border-l space-y-2 min-h-[80px] transition-colors",
+                      "px-4 py-3 border-l space-y-2 min-h-[80px] transition-colors bg-amber-50/30",
                         dragOverTarget === `${room.id}-am` && "bg-primary/10 border-2 border-dashed border-primary"
                       )}
                       onDragOver={(e) => handleDragOver(e, `${room.id}-am`)}
@@ -788,7 +788,7 @@ export const ClinicRoomDayCell = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full justify-start text-muted-foreground hover:text-foreground"
+                        className="w-full justify-start text-muted-foreground hover:text-foreground opacity-60 hover:opacity-100"
                         disabled={loading}
                         onClick={() => handleAddClick(room.id, room.name, "am")}
                       >
@@ -800,7 +800,7 @@ export const ClinicRoomDayCell = ({
                     {/* PM Column */}
                     <div
                       className={cn(
-                        "px-4 py-3 border-l space-y-2 min-h-[80px] transition-colors",
+                      "px-4 py-3 border-l space-y-2 min-h-[80px] transition-colors bg-indigo-50/30",
                         dragOverTarget === `${room.id}-pm` && "bg-primary/10 border-2 border-dashed border-primary"
                       )}
                       onDragOver={(e) => handleDragOver(e, `${room.id}-pm`)}
@@ -813,7 +813,7 @@ export const ClinicRoomDayCell = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full justify-start text-muted-foreground hover:text-foreground"
+                        className="w-full justify-start text-muted-foreground hover:text-foreground opacity-60 hover:opacity-100"
                         disabled={loading}
                         onClick={() => handleAddClick(room.id, room.name, "pm")}
                       >
