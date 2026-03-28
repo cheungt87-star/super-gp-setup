@@ -128,12 +128,12 @@ export const SiteCard = ({
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {/* Details and Opening Hours - Side by Side */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {/* Contact Details */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Details</h4>
+          <div className="bg-slate-50/50 rounded-lg p-4 space-y-3">
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Details</h4>
             {hasContactInfo ? (
               <div className="space-y-2 text-sm">
                 {addressLines.length > 0 && (
@@ -171,10 +171,10 @@ export const SiteCard = ({
           </div>
 
           {/* Opening Hours */}
-          <div className="space-y-3">
+          <div className="bg-slate-50/50 rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Opening Hours</h4>
+              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Opening Hours</h4>
             </div>
             {openingHours.length > 0 ? (
               <OpeningHoursDisplay hours={openingHours} />
@@ -184,13 +184,11 @@ export const SiteCard = ({
           </div>
         </div>
 
-        <Separator />
-
         {/* Capacity Settings */}
-        <div className="space-y-3">
+        <div className="bg-slate-50/50 rounded-lg p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-muted-foreground" />
-            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Capacity Settings</h4>
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Capacity Settings</h4>
           </div>
           <div className="flex items-end gap-4">
             <div className="space-y-1.5">
@@ -222,11 +220,9 @@ export const SiteCard = ({
           </div>
         </div>
 
-        <Separator />
-
         {/* Facilities Section */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+        <div className="bg-slate-50/50 rounded-lg p-4 space-y-3">
+          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             Facilities ({facilities.length})
           </h4>
           
