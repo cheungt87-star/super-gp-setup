@@ -1086,100 +1086,80 @@ export const RotaScheduleTab = () => {
               Copy to Whole Week
             </Button>
           </div>
-            {selectedSiteId && rotaWeek && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start h-10 bg-white border-slate-200 text-slate-600 text-sm hover:bg-slate-50"
-                onClick={() => setShowPreview(true)}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Preview Week
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start h-10 bg-white border-slate-200 text-slate-600 text-sm hover:bg-slate-50"
-              disabled={loadingSchedule || copyingFromPrevWeek || !rotaWeek}
-              onClick={handleCopyFromPreviousWeek}
-            >
-              {copyingFromPrevWeek ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Copy className="h-4 w-4 mr-2" />
-              )}
-              Copy from Previous Week
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start h-10 bg-white border-slate-200 text-slate-600 text-sm hover:bg-slate-50"
-              disabled={loadingSchedule || copyingFromPrevWeek || !rotaWeek}
-              onClick={() => {
-                const selectedDay = weekDays[selectedDayIndex];
-                if (selectedDay) {
-                  const dateKey = formatDateKey(selectedDay);
-                  handleCopyToWholeWeek(dateKey);
-                }
-              }}
-            >
-              <Copy className="h-4 w-4 mr-2" />
-              Copy to Whole Week
-            </Button>
-          </div>
 
           {/* Container 3: Publish & Confirm */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 flex flex-col items-center justify-center">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 self-start">Publish & Confirm</h3>
+          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-sm p-5 flex flex-col items-center">
+            <h3 className="text-base font-bold text-white mb-4 text-center w-full">Publish & Confirm</h3>
             {rotaWeek?.status === "draft" ? (() => {
               const openDayDates = weekDays.filter((day) => {
                 const dw = day.getDay();
                 const adj = dw === 0 ? 6 : dw - 1;
                 return !openingHoursByDay[adj]?.is_closed;
               });
-              const allDaysCompleted = openDayDates.length > 0 &&
-                openDayDates.every(day => {
-                  const s = getConfirmationStatus(formatDateKey(day));
-                  return s && s.status;
-                });
+              const confirmedCount = openDayDates.filter(day => {
+                const s = getConfirmationStatus(formatDateKey(day));
+                return s && s.status;
+              }).length;
+              const totalOpenDays = openDayDates.length;
+              const allDaysCompleted = totalOpenDays > 0 && confirmedCount === totalOpenDays;
               return (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-block w-full">
-                        <Button
-                          className="w-full h-16 bg-teal-500 hover:bg-teal-600 text-white font-semibold text-base rounded-lg"
-                          onClick={async () => {
-                            const ok = await updateWeekStatus("published");
-                            if (ok && organisationId) {
-                              supabase.functions.invoke("send-notification-email", {
-                                body: { type: "rota_published", organisation_id: organisationId },
-                              });
-                            }
-                          }}
-                          disabled={saving || !allDaysCompleted}
-                        >
-                          {saving ? (
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          ) : (
-                            <Send className="mr-2 h-5 w-5" />
-                          )}
-                          Publish & Confirm Week
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
+                <div className="flex flex-col items-center justify-center flex-1 w-full gap-3">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-block w-full">
+                          <Button
+                            className="w-full aspect-square max-h-32 bg-teal-500 hover:bg-teal-600 text-white font-semibold text-base rounded-lg flex flex-col items-center justify-center gap-2"
+                            onClick={async () => {
+                              const ok = await updateWeekStatus("published");
+                              if (ok && organisationId) {
+                                supabase.functions.invoke("send-notification-email", {
+                                  body: { type: "rota_published", organisation_id: organisationId },
+                                });
+                              }
+                            }}
+                            disabled={saving || !allDaysCompleted}
+                          >
+                            {saving ? (
+                              <Loader2 className="h-6 w-6 animate-spin" />
+                            ) : (
+                              <Send className="h-6 w-6" />
+                            )}
+                            Publish & Confirm Week
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {!allDaysCompleted && (
+                        <TooltipContent>
+                          <p>Can only publish once all days confirmed</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                  <div className="flex flex-col items-center gap-1">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border",
+                        allDaysCompleted
+                          ? "bg-emerald-900/40 text-emerald-300 border-emerald-600"
+                          : "bg-amber-900/40 text-amber-300 border-amber-600"
+                      )}
+                    >
+                      {allDaysCompleted ? (
+                        <><CheckCircle2 className="h-3.5 w-3.5" /> All days complete</>
+                      ) : (
+                        <><Clock className="h-3.5 w-3.5" /> {confirmedCount}/{totalOpenDays} days complete</>
+                      )}
+                    </span>
                     {!allDaysCompleted && (
-                      <TooltipContent>
-                        <p>Can only publish once all days confirmed</p>
-                      </TooltipContent>
+                      <span className="text-slate-400 text-xs">Complete all to publish</span>
                     )}
-                  </Tooltip>
-                </TooltipProvider>
+                  </div>
+                </div>
               );
             })() : (
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+              <div className="flex items-center gap-2 text-sm text-slate-300">
+                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
                 <span className="font-medium">Week Published</span>
               </div>
             )}
