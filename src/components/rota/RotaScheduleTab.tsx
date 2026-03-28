@@ -1141,7 +1141,7 @@ export const RotaScheduleTab = () => {
               variant="outline"
               size="sm"
               className="w-full justify-start"
-              disabled={loading || copyingFromPrevWeek || !rotaWeek}
+              disabled={loadingSchedule || copyingFromPrevWeek || !rotaWeek}
               onClick={handleCopyFromPreviousWeek}
             >
               {copyingFromPrevWeek ? (
