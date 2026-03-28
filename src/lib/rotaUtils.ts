@@ -10,7 +10,7 @@ export const getWeekStartDate = (date: Date): Date => {
 
 export const formatWeekRange = (weekStart: Date): string => {
   const weekEnd = addDays(weekStart, 6);
-  return `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d, yyyy")}`;
+  return `${format(weekStart, "dd/MM/yy")} - ${format(weekEnd, "dd/MM/yy")}`;
 };
 
 export const formatDayShort = (date: Date): string => {
