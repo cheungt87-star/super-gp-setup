@@ -1265,9 +1265,7 @@ export const RotaScheduleTab = () => {
                   const previousDateKey = index > 0 ? formatDateKey(weekDays[index - 1]) : null;
                   const confirmation = getConfirmationStatus(dateKey);
 
-                  // Render confirm button in header via portal-like pattern
-                  const isSelectedDay = selectedDayIndex === index;
-                  
+
                   return (
                     <TabsContent key={dateKey} value={String(index)} className="mt-0">
                       <ClinicRoomDayCell
