@@ -988,8 +988,8 @@ export const RotaScheduleTab = () => {
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <Card>
-        <CardContent className="py-4">
+      <div className="bg-slate-50 border border-slate-200 rounded-lg shadow-sm">
+        <div className="py-4 px-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <Select value={selectedSiteId || ""} onValueChange={setSelectedSiteId}>
@@ -1072,8 +1072,8 @@ export const RotaScheduleTab = () => {
               })()}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {selectedSiteId && (
         <div className="flex gap-0 border rounded-lg bg-card">
