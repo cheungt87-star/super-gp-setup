@@ -107,7 +107,7 @@ export const StaffPanel = ({
     e.dataTransfer.effectAllowed = "copy";
   };
 
-  const handleLocumDragStart = (e: React.DragEvent, type: "confirmed" | "unconfirmed") => {
+  const handleLocumDragStart = (e: React.DragEvent, type: string) => {
     e.dataTransfer.setData("locumType", type);
     e.dataTransfer.effectAllowed = "copy";
   };

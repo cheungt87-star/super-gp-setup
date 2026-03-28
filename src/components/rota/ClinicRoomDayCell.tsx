@@ -234,17 +234,34 @@ export const ClinicRoomDayCell = ({
     if (locumNameDialog.isOncall && locumNameDialog.oncallSlot) {
       onAddShift(
         null, dateKey, locumNameDialog.period as ShiftType, true, undefined, undefined, undefined,
-        true, locumNameDialog.confirmed, locumName.trim(), locumNameDialog.oncallSlot
+        true, true, locumName.trim(), locumNameDialog.oncallSlot
       );
     } else {
       onAddShift(
         null, dateKey, locumNameDialog.period as ShiftType, false, locumNameDialog.facilityId,
-        undefined, undefined, true, locumNameDialog.confirmed, locumName.trim()
+        undefined, undefined, true, true, locumName.trim()
       );
     }
     setLocumNameDialog(null);
     setLocumName("");
   }, [locumNameDialog, locumName, dateKey, onAddShift]);
+
+  const handleLocumUnconfirmed = useCallback(() => {
+    if (!locumNameDialog) return;
+    if (locumNameDialog.isOncall && locumNameDialog.oncallSlot) {
+      onAddShift(
+        null, dateKey, locumNameDialog.period as ShiftType, true, undefined, undefined, undefined,
+        true, false, "TBC", locumNameDialog.oncallSlot
+      );
+    } else {
+      onAddShift(
+        null, dateKey, locumNameDialog.period as ShiftType, false, locumNameDialog.facilityId,
+        undefined, undefined, true, false, "TBC"
+      );
+    }
+    setLocumNameDialog(null);
+    setLocumName("");
+  }, [locumNameDialog, dateKey, onAddShift]);
 
   const isClosed = openingHours?.is_closed ?? true;
   const dateLabel = format(date, "EEEE, d MMMM");
