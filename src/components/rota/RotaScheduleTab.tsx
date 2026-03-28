@@ -1014,7 +1014,7 @@ export const RotaScheduleTab = () => {
   return (
     <div className="space-y-6">
       {/* Unified Header */}
-      <div className="bg-slate-50 border border-slate-200 rounded-lg shadow-sm p-6">
+      <div className="bg-slate-100 border-2 border-slate-300 rounded-lg shadow-md p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">Weekly Rota Creation</h2>
         <div className="grid grid-cols-3 gap-6">
           {/* Sub-section 1: Navigation */}
@@ -1042,6 +1042,7 @@ export const RotaScheduleTab = () => {
 
           {/* Sub-section 2: Status & Actions */}
           <div className="flex flex-col items-center justify-center space-y-2 border-l border-r border-slate-200 px-6">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Week Status</label>
             {selectedSiteId && rotaWeek && (
               <Button
                 variant="outline"
@@ -1071,7 +1072,7 @@ export const RotaScheduleTab = () => {
               return (
                 <div
                   className={cn(
-                    "flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border w-full",
+                    "flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border-2 w-full",
                     isCompleted
                       ? "border-green-300 bg-green-50 text-green-700"
                       : "border-amber-300 bg-amber-50 text-amber-700"
@@ -1080,7 +1081,7 @@ export const RotaScheduleTab = () => {
                   {isCompleted ? (
                     <><CheckCircle2 className="h-3.5 w-3.5" /> Completed</>
                   ) : (
-                    <><Clock className="h-3.5 w-3.5" /> In Progress ({confirmedCount}/{totalOpenDays})</>
+                    <><Clock className="h-3.5 w-3.5" /> {confirmedCount}/{totalOpenDays} days complete</>
                   )}
                 </div>
               );

@@ -26,7 +26,7 @@ export const WeekSelector = ({ weekStart, onWeekChange }: WeekSelectorProps) => 
       <Button variant="outline" size="icon" onClick={handlePrevWeek}>
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      <div className="min-w-[180px] text-center font-medium bg-muted/50 rounded-lg px-4 py-1">
+      <div className="min-w-[180px] text-center font-medium border-2 border-slate-300 shadow-sm rounded-lg px-4 py-1.5">
         {formatWeekRange(weekStart)}
       </div>
       <Button variant="outline" size="icon" onClick={handleNextWeek}>
