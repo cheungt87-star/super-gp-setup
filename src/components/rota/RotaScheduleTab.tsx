@@ -1040,62 +1040,6 @@ export const RotaScheduleTab = () => {
                   {rotaWeek.status}
                 </Badge>
               )}
-              {selectedSiteId && rotaWeek && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowPreview(true)}
-                >
-                  <Eye className="mr-2 h-4 w-4" />
-                  Preview
-                </Button>
-              )}
-              {rotaWeek?.status === "draft" && (() => {
-                const openDayDates = weekDays.filter((day) => {
-                  const dw = day.getDay();
-                  const adj = dw === 0 ? 6 : dw - 1;
-                  return !openingHoursByDay[adj]?.is_closed;
-                });
-                const allDaysCompleted = openDayDates.length > 0 &&
-                  openDayDates.every(day => {
-                    const s = getConfirmationStatus(formatDateKey(day));
-                    return s && s.status;
-                  });
-                return (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-block">
-                          <Button
-                            size="sm"
-                            onClick={async () => {
-                              const ok = await updateWeekStatus("published");
-                              if (ok && organisationId) {
-                                supabase.functions.invoke("send-notification-email", {
-                                  body: { type: "rota_published", organisation_id: organisationId },
-                                });
-                              }
-                            }}
-                            disabled={saving || !allDaysCompleted}
-                          >
-                            {saving ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Send className="mr-2 h-4 w-4" />
-                            )}
-                            Publish
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      {!allDaysCompleted && (
-                        <TooltipContent>
-                          <p>Can only publish once all days confirmed</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
-                );
-              })()}
             </div>
           </div>
         </div>
@@ -1176,20 +1120,14 @@ export const RotaScheduleTab = () => {
                   if (confirmation && confirmation.status) {
                     return (
                       <div className="flex items-center gap-2">
-                        <div 
-                          className={cn(
-                            "flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border",
-                            confirmation.status === "confirmed" 
-                              ? "border-green-300 bg-green-50 text-green-700" 
-                              : "border-amber-300 bg-amber-50 text-amber-700"
-                          )}
+                        <Button
+                          size="sm"
+                          className="h-8 bg-green-600 hover:bg-green-700 text-white"
+                          disabled
                         >
-                          {confirmation.status === "confirmed" ? (
-                            <><CheckCircle2 className="h-3.5 w-3.5" /> Day Confirmed</>
-                          ) : (
-                            <><AlertTriangle className="h-3.5 w-3.5" /> Overrides Applied</>
-                          )}
-                        </div>
+                          <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                          Day Confirmed
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1218,6 +1156,66 @@ export const RotaScheduleTab = () => {
                       )}
                       Confirm Day
                     </Button>
+                  );
+                })()}
+
+                {/* Preview Week + Publish buttons */}
+                {selectedSiteId && rotaWeek && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setShowPreview(true)}
+                  >
+                    <Eye className="mr-1.5 h-3.5 w-3.5" />
+                    Preview Week
+                  </Button>
+                )}
+                {rotaWeek?.status === "draft" && (() => {
+                  const openDayDates = weekDays.filter((day) => {
+                    const dw = day.getDay();
+                    const adj = dw === 0 ? 6 : dw - 1;
+                    return !openingHoursByDay[adj]?.is_closed;
+                  });
+                  const allDaysCompleted = openDayDates.length > 0 &&
+                    openDayDates.every(day => {
+                      const s = getConfirmationStatus(formatDateKey(day));
+                      return s && s.status;
+                    });
+                  return (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-block">
+                            <Button
+                              size="sm"
+                              className="h-8"
+                              onClick={async () => {
+                                const ok = await updateWeekStatus("published");
+                                if (ok && organisationId) {
+                                  supabase.functions.invoke("send-notification-email", {
+                                    body: { type: "rota_published", organisation_id: organisationId },
+                                  });
+                                }
+                              }}
+                              disabled={saving || !allDaysCompleted}
+                            >
+                              {saving ? (
+                                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Send className="mr-1.5 h-3.5 w-3.5" />
+                              )}
+                              Publish
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        {!allDaysCompleted && (
+                          <TooltipContent>
+                            <p>Can only publish once all days confirmed</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
                   );
                 })()}
               </div>

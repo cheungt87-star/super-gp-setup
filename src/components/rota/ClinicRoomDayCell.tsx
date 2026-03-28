@@ -497,11 +497,7 @@ export const ClinicRoomDayCell = ({
       {!isClosed && (
         <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/20">
           <div className="flex items-center gap-3">
-            {openingHours?.open_time && openingHours?.close_time && (
-              <span className="text-sm text-muted-foreground">
-                {openingHours.open_time.slice(0, 5)} - {openingHours.close_time.slice(0, 5)}
-              </span>
-            )}
+            <span className="text-sm font-medium text-muted-foreground">Quick Actions</span>
           </div>
           <div className="flex items-center gap-2">
             {isFirstOpenDay && onCopyFromPreviousWeek && (
