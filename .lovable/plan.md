@@ -1,32 +1,25 @@
 
 
-# Rota Grid Color & Border Improvements
+# Prevent Duplicate On-Call Assignments in Same Time Slot
 
-## Changes — `src/components/rota/ClinicRoomDayCell.tsx`
+## Problem
+`getConflictingUserIds` (line 254-256) returns `[]` for on-call assignments — it never checks if a user is already assigned to another on-call slot in the same period. This allows the same person to be assigned as both On-Call Manager AM and On-Call Doctor 1 AM simultaneously.
 
-### 1. On-Call section: Replace amber with blue/violet theme
-Switch all amber references in the On-Call section to a blue-purple palette (avoiding green/red/amber):
+## Fix — `src/components/rota/ClinicRoomDayCell.tsx`
 
-- **Header row** (line 537-548): Change to a uniform darker accent:
-  - All three cells: `bg-violet-100 text-violet-800 border-violet-200` (same shade across On-Call, AM, PM)
-  - Sun/Moon icon colors: `text-violet-600` instead of `text-amber-500`/`text-indigo-500`
-- **Slot name cells** (line 571): `bg-violet-50/50 border-r border-violet-200`
-- **AM data cells** (line 578): `bg-violet-50/20` instead of `bg-amber-50/30`
-- **PM data cells** (line 657): `bg-violet-50/10` instead of `bg-indigo-50/30`
+### 1. Update `getConflictingUserIds` on-call branch (lines 254-258)
 
-### 2. Clinic Rooms section: Matching darker accent header
-- **Header row** (line 741-752): Make all three cells the same darker slate accent:
-  - All cells: `bg-slate-200 text-slate-700` (currently only the first cell is `bg-slate-200`, AM/PM are lighter `bg-slate-50`)
-  - Sun/Moon icon colors: `text-slate-600`
-- **Room name cells** (line 764): keep `bg-slate-50 border-r border-slate-200`
+Replace the early `return []` with logic that collects user IDs from all on-call slots for the same period:
 
-### 3. More prominent grid borders
-- Outer containers (lines 535, 739): Add `border-2` instead of `border`
-- All `border-b` on rows: Add `border-slate-300` (darker than default)
-- All `border-l` between columns: Add `border-slate-300`
-- Header row `border-b`: Change to `border-slate-400` for stronger separation
+- Determine the target period(s) from the shift type being assigned (AM → check AM oncalls, PM → check PM oncalls, Full Day → check both)
+- Loop through `oncalls` array and collect `user_id` values where `shift_period` overlaps with the target period
+- Exclude the current slot being assigned to (so editing a slot doesn't conflict with itself)
 
-### 4. Keep traffic-light colors untouched
-- Temp confirmed (`bg-amber-50 border-amber-300`) — these stay as-is since they're part of the traffic light system for staff cards
-- Custom time badges (`bg-amber-50 text-amber-700`) — keep as-is
+This applies to both the **drag-and-drop** path (`handleOncallDrop`) and the **"Add" button** path (`StaffSelectionDialog` via `handleAddClick`), since both use `getConflictingUserIds` to build `excludeUserIds`.
+
+### 2. Add validation in `handleOncallDrop` (line 182-204)
+
+After resolving the `staffId` from the drag data, check if that user is already in any on-call slot for the same period on this day. If so, show a toast error and return early instead of calling `onAddShift`.
+
+This provides a safety net for the drag path in case the `excludeUserIds` filtering doesn't fully prevent it.
 
