@@ -1155,7 +1155,7 @@ export const RotaScheduleTab = () => {
               variant="outline"
               size="sm"
               className="w-full justify-start"
-              disabled={loading || copyingFromPrevWeek || !rotaWeek}
+              disabled={loadingSchedule || copyingFromPrevWeek || !rotaWeek}
               onClick={() => {
                 const selectedDay = weekDays[selectedDayIndex];
                 if (selectedDay) {
@@ -1187,115 +1187,13 @@ export const RotaScheduleTab = () => {
           {/* Schedule Grid */}
           <Card className="flex-1 border-0 rounded-none">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Weekly Schedule</CardTitle>
-                <CardDescription>
-                  {clinicRooms.length === 0
-                    ? "No clinic rooms configured. Add them in Site Management."
-                    : "Click + to add staff to each clinic room"}
-                </CardDescription>
-              </div>
-              {/* Week status + Confirm Day button area */}
-              <div className="flex items-center gap-2">
-                {/* Week status callout */}
-                {(() => {
-                  const openDayDates = weekDays.filter((day) => {
-                    const dayOfWeek = day.getDay();
-                    const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-                    const dayHours = openingHoursByDay[adjustedDay];
-                    return !dayHours?.is_closed;
-                  });
-                  
-                  const confirmedCount = openDayDates.filter((day) => {
-                    const dateKey = formatDateKey(day);
-                    const status = getConfirmationStatus(dateKey);
-                    return status && status.status;
-                  }).length;
-                  
-                  const totalOpenDays = openDayDates.length;
-                  const isCompleted = totalOpenDays > 0 && confirmedCount === totalOpenDays;
-                  
-                  if (totalOpenDays === 0) return null;
-                  
-                  return (
-                    <div 
-                      className={cn(
-                        "flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border",
-                        isCompleted 
-                          ? "border-green-300 bg-green-50 text-green-700" 
-                          : "border-amber-300 bg-amber-50 text-amber-700"
-                      )}
-                    >
-                      {isCompleted ? (
-                        <><CheckCircle2 className="h-3.5 w-3.5" /> Completed</>
-                      ) : (
-                        <><Clock className="h-3.5 w-3.5" /> In Progress ({confirmedCount}/{totalOpenDays})</>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {/* Preview Week + Publish buttons */}
-                {selectedSiteId && rotaWeek && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                    onClick={() => setShowPreview(true)}
-                  >
-                    <Eye className="mr-1.5 h-3.5 w-3.5" />
-                    Preview Week
-                  </Button>
-                )}
-                {rotaWeek?.status === "draft" && (() => {
-                  const openDayDates = weekDays.filter((day) => {
-                    const dw = day.getDay();
-                    const adj = dw === 0 ? 6 : dw - 1;
-                    return !openingHoursByDay[adj]?.is_closed;
-                  });
-                  const allDaysCompleted = openDayDates.length > 0 &&
-                    openDayDates.every(day => {
-                      const s = getConfirmationStatus(formatDateKey(day));
-                      return s && s.status;
-                    });
-                  return (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-block">
-                            <Button
-                              size="sm"
-                              className="h-8"
-                              onClick={async () => {
-                                const ok = await updateWeekStatus("published");
-                                if (ok && organisationId) {
-                                  supabase.functions.invoke("send-notification-email", {
-                                    body: { type: "rota_published", organisation_id: organisationId },
-                                  });
-                                }
-                              }}
-                              disabled={saving || !allDaysCompleted}
-                            >
-                              {saving ? (
-                                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Send className="mr-1.5 h-3.5 w-3.5" />
-                              )}
-                              Publish
-                            </Button>
-                          </span>
-                        </TooltipTrigger>
-                        {!allDaysCompleted && (
-                          <TooltipContent>
-                            <p>Can only publish once all days confirmed</p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
-                  );
-                })()}
-              </div>
+            <div>
+              <CardTitle className="text-base">Weekly Schedule</CardTitle>
+              <CardDescription>
+                {clinicRooms.length === 0
+                  ? "No clinic rooms configured. Add them in Site Management."
+                  : "Click + to add staff to each clinic room"}
+              </CardDescription>
             </div>
           </CardHeader>
           <CardContent className="p-0">
