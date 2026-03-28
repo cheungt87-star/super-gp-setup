@@ -151,9 +151,10 @@ export const ClinicRoomDayCell = ({
     open: boolean;
     facilityId: string;
     period: "am" | "pm";
-    confirmed: boolean;
+    confirmed?: boolean;
     isOncall?: boolean;
     oncallSlot?: number;
+    step: "status" | "name";
   } | null>(null);
   const [locumName, setLocumName] = useState("");
 
@@ -178,7 +179,7 @@ export const ClinicRoomDayCell = ({
         open: true,
         facilityId,
         period,
-        confirmed: locumType === "confirmed",
+        step: "status",
       });
       return;
     }
@@ -200,9 +201,9 @@ export const ClinicRoomDayCell = ({
         open: true,
         facilityId: "",
         period,
-        confirmed: locumType === "confirmed",
         isOncall: true,
         oncallSlot: slot,
+        step: "status",
       });
       return;
     }
@@ -233,17 +234,34 @@ export const ClinicRoomDayCell = ({
     if (locumNameDialog.isOncall && locumNameDialog.oncallSlot) {
       onAddShift(
         null, dateKey, locumNameDialog.period as ShiftType, true, undefined, undefined, undefined,
-        true, locumNameDialog.confirmed, locumName.trim(), locumNameDialog.oncallSlot
+        true, true, locumName.trim(), locumNameDialog.oncallSlot
       );
     } else {
       onAddShift(
         null, dateKey, locumNameDialog.period as ShiftType, false, locumNameDialog.facilityId,
-        undefined, undefined, true, locumNameDialog.confirmed, locumName.trim()
+        undefined, undefined, true, true, locumName.trim()
       );
     }
     setLocumNameDialog(null);
     setLocumName("");
   }, [locumNameDialog, locumName, dateKey, onAddShift]);
+
+  const handleLocumUnconfirmed = useCallback(() => {
+    if (!locumNameDialog) return;
+    if (locumNameDialog.isOncall && locumNameDialog.oncallSlot) {
+      onAddShift(
+        null, dateKey, locumNameDialog.period as ShiftType, true, undefined, undefined, undefined,
+        true, false, "TBC", locumNameDialog.oncallSlot
+      );
+    } else {
+      onAddShift(
+        null, dateKey, locumNameDialog.period as ShiftType, false, locumNameDialog.facilityId,
+        undefined, undefined, true, false, "TBC"
+      );
+    }
+    setLocumNameDialog(null);
+    setLocumName("");
+  }, [locumNameDialog, dateKey, onAddShift]);
 
   const isClosed = openingHours?.is_closed ?? true;
   const dateLabel = format(date, "EEEE, d MMMM");
@@ -922,31 +940,57 @@ export const ClinicRoomDayCell = ({
         />
       )}
 
-      {/* Locum Name Dialog */}
+      {/* Locum Status & Name Dialog */}
       <Dialog open={!!locumNameDialog?.open} onOpenChange={(open) => { if (!open) { setLocumNameDialog(null); setLocumName(""); } }}>
         <DialogContent className="sm:max-w-[360px]">
-          <DialogHeader>
-            <DialogTitle>
-              {locumNameDialog?.confirmed ? "Add Confirmed Locum" : "Add Unconfirmed Locum"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-2">
-            <Input
-              placeholder="Enter locum name..."
-              value={locumName}
-              onChange={(e) => setLocumName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleLocumNameConfirm(); }}
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setLocumNameDialog(null); setLocumName(""); }}>
-              Cancel
-            </Button>
-            <Button onClick={handleLocumNameConfirm} disabled={!locumName.trim()}>
-              Add Locum
-            </Button>
-          </DialogFooter>
+          {locumNameDialog?.step === "status" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Add Locum/Temp</DialogTitle>
+              </DialogHeader>
+              <div className="py-4 space-y-3">
+                <p className="text-sm text-muted-foreground">What is the status of this locum?</p>
+                <div className="flex gap-3">
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    onClick={handleLocumUnconfirmed}
+                  >
+                    Unconfirmed
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => setLocumNameDialog(prev => prev ? { ...prev, step: "name", confirmed: true } : null)}
+                  >
+                    Confirmed
+                  </Button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Add Confirmed Locum</DialogTitle>
+              </DialogHeader>
+              <div className="py-2">
+                <Input
+                  placeholder="Enter locum name..."
+                  value={locumName}
+                  onChange={(e) => setLocumName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleLocumNameConfirm(); }}
+                  autoFocus
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setLocumNameDialog(prev => prev ? { ...prev, step: "status" } : null)}>
+                  Back
+                </Button>
+                <Button onClick={handleLocumNameConfirm} disabled={!locumName.trim()}>
+                  Add Locum
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
