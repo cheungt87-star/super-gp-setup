@@ -348,6 +348,10 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
       temp_confirmed?: boolean;
     }
   ) => {
+    // Optimistic: apply updates to local state immediately
+    const shiftToUpdate = shifts.find(s => s.id === shiftId);
+    setShifts(prev => prev.map(s => s.id === shiftId ? { ...s, ...updates } : s));
+
     setSaving(true);
     try {
       const { error } = await supabase
@@ -357,16 +361,15 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
 
       if (error) throw error;
 
-      // Find the shift date before it's gone from state
-      const shiftToUpdate = shifts.find(s => s.id === shiftId);
       if (shiftToUpdate) {
         await resetDayOnEdit(shiftToUpdate.shift_date);
       }
 
-      await fetchSchedule(true);
+      fetchSchedule(true);
       return true;
     } catch (error: any) {
       console.error("Error updating shift:", error);
+      fetchSchedule(true);
       toast({
         title: "Error",
         description: "Failed to update shift",
@@ -379,12 +382,15 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
   };
 
   const deleteShift = async (shiftId: string) => {
+    // Find linked shift before deleting
+    const shiftToDelete = shifts.find(s => s.id === shiftId);
+    const linkedId = shiftToDelete?.linked_shift_id;
+
+    // Optimistic: remove from local state immediately
+    setShifts(prev => prev.filter(s => s.id !== shiftId && s.id !== linkedId));
+
     setSaving(true);
     try {
-      // Find linked shift before deleting
-      const shiftToDelete = shifts.find(s => s.id === shiftId);
-      const linkedId = shiftToDelete?.linked_shift_id;
-
       const { error } = await supabase.from("rota_shifts").delete().eq("id", shiftId);
       if (error) throw error;
 
@@ -397,10 +403,11 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
         await resetDayOnEdit(shiftToDelete.shift_date);
       }
 
-      await fetchSchedule(true);
+      fetchSchedule(true);
       return true;
     } catch (error: any) {
       console.error("Error deleting shift:", error);
+      fetchSchedule(true);
       toast({
         title: "Error",
         description: "Failed to delete shift",

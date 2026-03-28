@@ -106,9 +106,30 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
       tempConfirmed = false,
       tempStaffName?: string,
       customStartTime?: string,
-      customEndTime?: string
+      customEndTime?: string,
+      userName?: string,
+      jobTitleName?: string
     ) => {
       if (!organisationId) return null;
+
+      // Optimistic: add to local state immediately
+      const tempId = `temp-oncall-${Date.now()}`;
+      const optimisticOncall: RotaOncall = {
+        id: tempId,
+        organisation_id: organisationId,
+        oncall_date: dateKey,
+        oncall_slot: slot,
+        shift_period: shiftPeriod,
+        user_id: userId,
+        user_name: isTempStaff && !userId ? (tempStaffName || "Locum") : (userName || "Unknown"),
+        job_title_name: jobTitleName || null,
+        is_temp_staff: isTempStaff,
+        temp_staff_name: tempStaffName || null,
+        temp_confirmed: tempConfirmed,
+        custom_start_time: customStartTime || null,
+        custom_end_time: customEndTime || null,
+      };
+      setOncalls(prev => [...prev, optimisticOncall]);
 
       setSaving(true);
       try {
@@ -134,10 +155,11 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
 
         if (error) throw error;
 
-        await fetchOncalls();
+        fetchOncalls();
         return data;
       } catch (error) {
         console.error("Error adding oncall:", error);
+        fetchOncalls();
         toast({
           title: "Error",
           description: "Failed to add on-call assignment",
