@@ -532,19 +532,19 @@ export const ClinicRoomDayCell = ({
       {!isClosed && (
         <div className="p-4 space-y-4">
           {/* On-Call Rows - 3 slots with AM/PM columns */}
-          <div className="rounded-lg border overflow-hidden">
+           <div className="rounded-lg border-2 border-slate-300 overflow-hidden">
             {/* On-Call Header */}
-            <div className="grid grid-cols-[160px_1fr_1fr] items-center bg-amber-50/50 border-b">
-              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 bg-amber-100 text-amber-800 border-r border-amber-200">
+            <div className="grid grid-cols-[160px_1fr_1fr] items-center border-b border-slate-400">
+              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 bg-violet-100 text-violet-800 border-r border-violet-200">
                 <Phone className="h-4 w-4" />
                 On-Call
               </div>
-              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l bg-amber-50/50">
-                <Sun className="h-4 w-4 text-amber-500" />
+              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l border-slate-300 bg-violet-100 text-violet-800">
+                <Sun className="h-4 w-4 text-violet-600" />
                 AM ({amShiftStart.slice(0, 5)} - {amShiftEnd.slice(0, 5)})
               </div>
-              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l bg-amber-50/50">
-                <Moon className="h-4 w-4 text-indigo-500" />
+              <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l border-slate-300 bg-violet-100 text-violet-800">
+                <Moon className="h-4 w-4 text-violet-600" />
                 PM ({pmShiftStart.slice(0, 5)} - {pmShiftEnd.slice(0, 5)})
               </div>
             </div>
@@ -564,18 +564,18 @@ export const ClinicRoomDayCell = ({
                   key={slot} 
                   className={cn(
                     "grid grid-cols-[160px_1fr_1fr]",
-                    slot !== 3 && "border-b"
+                    slot !== 3 && "border-b border-slate-300"
                   )}
                 >
                   {/* Slot Name */}
-                  <div className="px-4 py-3 flex items-start min-h-[60px] bg-amber-50/50 border-r border-amber-100">
+                  <div className="px-4 py-3 flex items-start min-h-[60px] bg-violet-50/50 border-r border-violet-200">
                     <span className="font-medium text-sm">{slotLabel}</span>
                   </div>
 
                   {/* AM Column */}
                   <div
                     className={cn(
-                      "px-4 py-3 border-l space-y-2 min-h-[60px] transition-colors bg-amber-50/30",
+                      "px-4 py-3 border-l border-slate-300 space-y-2 min-h-[60px] transition-colors bg-violet-50/20",
                       dragOverTarget === `oncall-${slot}-am` && "bg-primary/10 border-2 border-dashed border-primary"
                     )}
                     onDragOver={(e) => handleDragOver(e, `oncall-${slot}-am`)}
@@ -654,7 +654,7 @@ export const ClinicRoomDayCell = ({
                   {/* PM Column */}
                   <div
                     className={cn(
-                      "px-4 py-3 border-l space-y-2 min-h-[60px] transition-colors bg-indigo-50/30",
+                      "px-4 py-3 border-l border-slate-300 space-y-2 min-h-[60px] transition-colors bg-violet-50/10",
                       dragOverTarget === `oncall-${slot}-pm` && "bg-primary/10 border-2 border-dashed border-primary"
                     )}
                     onDragOver={(e) => handleDragOver(e, `oncall-${slot}-pm`)}
@@ -736,19 +736,19 @@ export const ClinicRoomDayCell = ({
 
           {/* Clinic Rooms Table */}
           {clinicRooms.length > 0 ? (
-            <div className="rounded-lg border overflow-hidden mt-6">
+            <div className="rounded-lg border-2 border-slate-300 overflow-hidden mt-6">
               {/* Table Header */}
-              <div className="grid grid-cols-[160px_1fr_1fr] items-center bg-slate-50 border-b">
-                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 bg-slate-200 text-slate-700 border-r">
+              <div className="grid grid-cols-[160px_1fr_1fr] items-center border-b border-slate-400">
+                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 bg-slate-200 text-slate-700 border-r border-slate-300">
                   <DoorOpen className="h-4 w-4" />
                   Room
                 </div>
-                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l bg-slate-50">
-                  <Sun className="h-4 w-4 text-amber-500" />
+                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l border-slate-300 bg-slate-200 text-slate-700">
+                  <Sun className="h-4 w-4 text-slate-600" />
                   AM ({amShiftStart.slice(0, 5)} - {amShiftEnd.slice(0, 5)})
                 </div>
-                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l bg-slate-50">
-                  <Moon className="h-4 w-4 text-indigo-500" />
+                <div className="px-4 py-2 font-medium text-sm flex items-center gap-2 border-l border-slate-300 bg-slate-200 text-slate-700">
+                  <Moon className="h-4 w-4 text-slate-600" />
                   PM ({pmShiftStart.slice(0, 5)} - {pmShiftEnd.slice(0, 5)})
                 </div>
               </div>
@@ -759,7 +759,7 @@ export const ClinicRoomDayCell = ({
                 const pmData = getShiftsForRoom(room.id, "pm");
 
                 return (
-                  <div key={room.id} className="grid grid-cols-[160px_1fr_1fr] border-b last:border-b-0">
+                  <div key={room.id} className="grid grid-cols-[160px_1fr_1fr] border-b border-slate-300 last:border-b-0">
                     {/* Room Name */}
                     <div className="px-4 py-3 flex items-start min-h-[80px] bg-slate-50 border-r border-slate-200">
                       <div>
@@ -775,7 +775,7 @@ export const ClinicRoomDayCell = ({
                     {/* AM Column */}
                     <div
                       className={cn(
-                      "px-4 py-3 border-l space-y-2 min-h-[80px] transition-colors bg-amber-50/30",
+                      "px-4 py-3 border-l border-slate-300 space-y-2 min-h-[80px] transition-colors",
                         dragOverTarget === `${room.id}-am` && "bg-primary/10 border-2 border-dashed border-primary"
                       )}
                       onDragOver={(e) => handleDragOver(e, `${room.id}-am`)}
@@ -800,7 +800,7 @@ export const ClinicRoomDayCell = ({
                     {/* PM Column */}
                     <div
                       className={cn(
-                      "px-4 py-3 border-l space-y-2 min-h-[80px] transition-colors bg-indigo-50/30",
+                      "px-4 py-3 border-l border-slate-300 space-y-2 min-h-[80px] transition-colors",
                         dragOverTarget === `${room.id}-pm` && "bg-primary/10 border-2 border-dashed border-primary"
                       )}
                       onDragOver={(e) => handleDragOver(e, `${room.id}-pm`)}
