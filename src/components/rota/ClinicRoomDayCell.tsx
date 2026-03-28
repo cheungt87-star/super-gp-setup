@@ -137,6 +137,7 @@ export const ClinicRoomDayCell = ({
   } | null>(null);
 
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+  const { toast } = useToast();
   
   const [locumNameDialog, setLocumNameDialog] = useState<{
     open: boolean;
