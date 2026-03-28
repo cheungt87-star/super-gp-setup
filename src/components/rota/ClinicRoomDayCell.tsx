@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getJobTitleColors } from "@/lib/jobTitleColors";
@@ -204,7 +205,7 @@ export const ClinicRoomDayCell = ({
         if (!oc.user_id || oc.user_id !== staffId) return false;
         if (oc.oncall_slot === slot && oc.shift_period?.toLowerCase() === period) return false;
         const ocPeriod = oc.shift_period?.toLowerCase() || "";
-        return ocPeriod === period || ocPeriod === "full_day" || ocPeriod === "full day" || period === "full_day";
+        return ocPeriod === period || ocPeriod === "full_day" || ocPeriod === "full day";
       });
       if (isAlreadyOncall) {
         toast({
