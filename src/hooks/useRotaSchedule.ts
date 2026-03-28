@@ -188,7 +188,10 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
     tempConfirmed: boolean = false,
     tempStaffName?: string,
     oncallSlot?: number,
-    pmBoundary?: string
+    pmBoundary?: string,
+    userName?: string,
+    jobTitleName?: string,
+    facilityName?: string
   ) => {
     if (!rotaWeek || !organisationId) return null;
 
@@ -197,9 +200,41 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
     const spans = shiftType === "custom" && customStartTime && customEndTime && 
       customStartTime.slice(0, 5) < boundary && customEndTime.slice(0, 5) > boundary;
 
+    // Build optimistic shift for instant UI update
+    const displayName = isTempStaff ? (tempStaffName || "Locum") : (userName || "Unknown");
+    const buildOptimisticShift = (id: string, type: ShiftType, start?: string, end?: string, linkedId?: string | null): RotaShift => ({
+      id,
+      rota_week_id: rotaWeek.id,
+      user_id: userId,
+      shift_date: shiftDate,
+      shift_type: type,
+      custom_start_time: type === "custom" ? (start || null) : null,
+      custom_end_time: type === "custom" ? (end || null) : null,
+      is_oncall: isOncall,
+      oncall_slot: isOncall ? (oncallSlot || 1) : null,
+      notes: null,
+      facility_id: facilityId || null,
+      is_temp_staff: isTempStaff,
+      temp_confirmed: tempConfirmed,
+      temp_staff_name: tempStaffName || null,
+      linked_shift_id: linkedId || null,
+      user_name: displayName,
+      job_title_name: jobTitleName || "",
+      facility_name: facilityName || null,
+    });
+
     setSaving(true);
     try {
       if (spans && customStartTime && customEndTime) {
+        // Optimistic: add both halves immediately
+        const tempAmId = `temp-am-${Date.now()}`;
+        const tempPmId = `temp-pm-${Date.now()}`;
+        setShifts(prev => [
+          ...prev,
+          buildOptimisticShift(tempAmId, "custom", customStartTime, boundary, tempPmId),
+          buildOptimisticShift(tempPmId, "custom", boundary, customEndTime, tempAmId),
+        ]);
+
         // Create AM half
         const { data: amData, error: amError } = await supabase
           .from("rota_shifts")
@@ -252,9 +287,13 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
           .eq("id", amData.id);
 
         await resetDayOnEdit(shiftDate);
-        await fetchSchedule(true);
+        fetchSchedule(true);
         return amData;
       }
+
+      // Optimistic: add single shift immediately
+      const tempId = `temp-${Date.now()}`;
+      setShifts(prev => [...prev, buildOptimisticShift(tempId, shiftType, customStartTime, customEndTime)]);
 
       // Non-spanning: single insert (existing behavior)
       const { data, error } = await supabase
@@ -280,10 +319,12 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
       if (error) throw error;
 
       await resetDayOnEdit(shiftDate);
-      await fetchSchedule(true);
+      fetchSchedule(true);
       return data;
     } catch (error: any) {
       console.error("Error adding shift:", error);
+      // Revert optimistic update on error
+      fetchSchedule(true);
       toast({
         title: "Error",
         description: "Failed to add shift",
@@ -307,6 +348,10 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
       temp_confirmed?: boolean;
     }
   ) => {
+    // Optimistic: apply updates to local state immediately
+    const shiftToUpdate = shifts.find(s => s.id === shiftId);
+    setShifts(prev => prev.map(s => s.id === shiftId ? { ...s, ...updates } : s));
+
     setSaving(true);
     try {
       const { error } = await supabase
@@ -316,16 +361,15 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
 
       if (error) throw error;
 
-      // Find the shift date before it's gone from state
-      const shiftToUpdate = shifts.find(s => s.id === shiftId);
       if (shiftToUpdate) {
         await resetDayOnEdit(shiftToUpdate.shift_date);
       }
 
-      await fetchSchedule(true);
+      fetchSchedule(true);
       return true;
     } catch (error: any) {
       console.error("Error updating shift:", error);
+      fetchSchedule(true);
       toast({
         title: "Error",
         description: "Failed to update shift",
@@ -338,12 +382,15 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
   };
 
   const deleteShift = async (shiftId: string) => {
+    // Find linked shift before deleting
+    const shiftToDelete = shifts.find(s => s.id === shiftId);
+    const linkedId = shiftToDelete?.linked_shift_id;
+
+    // Optimistic: remove from local state immediately
+    setShifts(prev => prev.filter(s => s.id !== shiftId && s.id !== linkedId));
+
     setSaving(true);
     try {
-      // Find linked shift before deleting
-      const shiftToDelete = shifts.find(s => s.id === shiftId);
-      const linkedId = shiftToDelete?.linked_shift_id;
-
       const { error } = await supabase.from("rota_shifts").delete().eq("id", shiftId);
       if (error) throw error;
 
@@ -356,10 +403,11 @@ export const useRotaSchedule = ({ siteId, organisationId, weekStart, onShiftChan
         await resetDayOnEdit(shiftToDelete.shift_date);
       }
 
-      await fetchSchedule(true);
+      fetchSchedule(true);
       return true;
     } catch (error: any) {
       console.error("Error deleting shift:", error);
+      fetchSchedule(true);
       toast({
         title: "Error",
         description: "Failed to delete shift",

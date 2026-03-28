@@ -422,7 +422,17 @@ export const RotaScheduleTab = () => {
     customStartTime?: string,
     customEndTime?: string
   ) => {
-    const result = await addOncall(dateKey, slot, shiftPeriod, userId, isTempStaff || false, tempConfirmed || false, tempStaffName, customStartTime, customEndTime);
+    // Look up user display info for optimistic rendering
+    let userName: string | undefined;
+    let jobTitleName: string | undefined;
+    if (userId) {
+      const staffMember = allStaff.find(s => s.id === userId);
+      if (staffMember) {
+        userName = `${staffMember.first_name || ""} ${staffMember.last_name || ""}`.trim();
+        jobTitleName = staffMember.job_title_name || undefined;
+      }
+    }
+    const result = await addOncall(dateKey, slot, shiftPeriod, userId, isTempStaff || false, tempConfirmed || false, tempStaffName, customStartTime, customEndTime, userName, jobTitleName);
     if (result) {
       const slotLabels: Record<number, string> = { 1: "On Call Manager", 2: "On Duty Doctor 1", 3: "On Duty Doctor 2" };
       const staffLabel = tempStaffName || "Staff member";
@@ -538,7 +548,23 @@ export const RotaScheduleTab = () => {
     const dayHoursForBoundary = openingHoursByDay[adjustedDayNum];
     const pmBoundary = dayHoursForBoundary?.pm_open_time?.slice(0, 5) || "13:00";
 
-    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, false, facilityId, isTempStaff || false, tempConfirmed || false, tempStaffName, undefined, pmBoundary);
+    // Look up user display info for optimistic rendering
+    let userName: string | undefined;
+    let jobTitleName: string | undefined;
+    let facilityName: string | undefined;
+    if (userId) {
+      const staffMember = allStaff.find(s => s.id === userId);
+      if (staffMember) {
+        userName = `${staffMember.first_name || ""} ${staffMember.last_name || ""}`.trim();
+        jobTitleName = staffMember.job_title_name || undefined;
+      }
+    }
+    if (facilityId) {
+      const facility = clinicRooms.find(r => r.id === facilityId);
+      facilityName = facility?.name;
+    }
+
+    const result = await addShift(userId, dateKey, shiftType, customStartTime, customEndTime, false, facilityId, isTempStaff || false, tempConfirmed || false, tempStaffName, undefined, pmBoundary, userName, jobTitleName, facilityName);
 
     if (result) {
       const shiftLabel = shiftType === "full_day" ? "Full Day" : shiftType.toUpperCase();
