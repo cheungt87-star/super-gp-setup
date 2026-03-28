@@ -1014,15 +1014,15 @@ export const RotaScheduleTab = () => {
   return (
     <div className="space-y-6">
       {/* Unified Header */}
-      <div className="bg-slate-100 border-2 border-slate-300 rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Weekly Rota Creation</h2>
-        <div className="grid grid-cols-3 gap-6">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+        <h2 className="text-xl font-semibold text-slate-900 mb-5">Weekly Rota Creation</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Sub-section 1: Navigation */}
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Site</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Site</label>
               <Select value={selectedSiteId || ""} onValueChange={setSelectedSiteId}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full h-10 bg-slate-50 border-slate-300 focus:ring-teal-500 focus:border-teal-500">
                   <SelectValue placeholder="Select site" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1035,25 +1035,14 @@ export const RotaScheduleTab = () => {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Date Range</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Date Range</label>
               <WeekSelector weekStart={weekStart} onWeekChange={setWeekStart} />
             </div>
           </div>
 
-          {/* Sub-section 2: Status & Actions */}
-          <div className="flex flex-col items-center justify-center space-y-2 border-l border-r border-slate-200 px-6">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Week Status</label>
-            {selectedSiteId && rotaWeek && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-center"
-                onClick={() => setShowPreview(true)}
-              >
-                <Eye className="mr-1.5 h-3.5 w-3.5" />
-                Preview Week
-              </Button>
-            )}
+          {/* Sub-section 2: Week Status */}
+          <div className="flex flex-col items-center justify-center space-y-3 md:border-l md:border-r border-slate-100 md:px-8">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Week Status</label>
             {(() => {
               const openDayDates = weekDays.filter((day) => {
                 const dayOfWeek = day.getDay();
@@ -1070,78 +1059,91 @@ export const RotaScheduleTab = () => {
               const isCompleted = totalOpenDays > 0 && confirmedCount === totalOpenDays;
               if (totalOpenDays === 0) return null;
               return (
-                <div
+                <span
                   className={cn(
-                    "flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border-2 w-full",
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border",
                     isCompleted
-                      ? "border-green-300 bg-green-50 text-green-700"
-                      : "border-amber-300 bg-amber-50 text-amber-700"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
                   )}
                 >
                   {isCompleted ? (
-                    <><CheckCircle2 className="h-3.5 w-3.5" /> Completed</>
+                    <><CheckCircle2 className="h-3.5 w-3.5" /> All days complete</>
                   ) : (
                     <><Clock className="h-3.5 w-3.5" /> {confirmedCount}/{totalOpenDays} days complete</>
                   )}
-                </div>
+                </span>
               );
             })()}
-            {rotaWeek?.status === "draft" && (() => {
-              const openDayDates = weekDays.filter((day) => {
-                const dw = day.getDay();
-                const adj = dw === 0 ? 6 : dw - 1;
-                return !openingHoursByDay[adj]?.is_closed;
-              });
-              const allDaysCompleted = openDayDates.length > 0 &&
-                openDayDates.every(day => {
-                  const s = getConfirmationStatus(formatDateKey(day));
-                  return s && s.status;
+            <div className="flex items-center gap-2 w-full">
+              {selectedSiteId && rotaWeek && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-10 border-slate-300 text-slate-700 bg-white hover:bg-slate-50"
+                  onClick={() => setShowPreview(true)}
+                >
+                  <Eye className="mr-1.5 h-4 w-4" />
+                  Preview Week
+                </Button>
+              )}
+              {rotaWeek?.status === "draft" && (() => {
+                const openDayDates = weekDays.filter((day) => {
+                  const dw = day.getDay();
+                  const adj = dw === 0 ? 6 : dw - 1;
+                  return !openingHoursByDay[adj]?.is_closed;
                 });
-              return (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-block w-full">
-                        <Button
-                          size="sm"
-                          className="w-full justify-center"
-                          onClick={async () => {
-                            const ok = await updateWeekStatus("published");
-                            if (ok && organisationId) {
-                              supabase.functions.invoke("send-notification-email", {
-                                body: { type: "rota_published", organisation_id: organisationId },
-                              });
-                            }
-                          }}
-                          disabled={saving || !allDaysCompleted}
-                        >
-                          {saving ? (
-                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Send className="mr-1.5 h-3.5 w-3.5" />
-                          )}
-                          Publish
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {!allDaysCompleted && (
-                      <TooltipContent>
-                        <p>Can only publish once all days confirmed</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
-              );
-            })()}
+                const allDaysCompleted = openDayDates.length > 0 &&
+                  openDayDates.every(day => {
+                    const s = getConfirmationStatus(formatDateKey(day));
+                    return s && s.status;
+                  });
+                return (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-block flex-1">
+                          <Button
+                            size="sm"
+                            className="w-full h-10 bg-teal-500 hover:bg-teal-600 text-white font-medium"
+                            onClick={async () => {
+                              const ok = await updateWeekStatus("published");
+                              if (ok && organisationId) {
+                                supabase.functions.invoke("send-notification-email", {
+                                  body: { type: "rota_published", organisation_id: organisationId },
+                                });
+                              }
+                            }}
+                            disabled={saving || !allDaysCompleted}
+                          >
+                            {saving ? (
+                              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Send className="mr-1.5 h-4 w-4" />
+                            )}
+                            Publish
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {!allDaysCompleted && (
+                        <TooltipContent>
+                          <p>Can only publish once all days confirmed</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              })()}
+            </div>
           </div>
 
           {/* Sub-section 3: Quick Actions */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Quick Actions</label>
+          <div className="space-y-3">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Quick Actions</label>
             <Button
               variant="outline"
               size="sm"
-              className="w-full justify-start"
+              className="w-full justify-start h-10 bg-white border-slate-200 text-slate-600 text-sm hover:bg-slate-50"
               disabled={loadingSchedule || copyingFromPrevWeek || !rotaWeek}
               onClick={handleCopyFromPreviousWeek}
             >
@@ -1155,7 +1157,7 @@ export const RotaScheduleTab = () => {
             <Button
               variant="outline"
               size="sm"
-              className="w-full justify-start"
+              className="w-full justify-start h-10 bg-white border-slate-200 text-slate-600 text-sm hover:bg-slate-50"
               disabled={loadingSchedule || copyingFromPrevWeek || !rotaWeek}
               onClick={() => {
                 const selectedDay = weekDays[selectedDayIndex];
