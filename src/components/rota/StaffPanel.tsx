@@ -113,7 +113,7 @@ export const StaffPanel = ({
   };
 
   return (
-    <div className="<div className="w-[280px] shrink-0 border-r border-slate-200 bg-slate-50/50 flex flex-col sticky top-0 self-start h-screen"> shrink-0 border-r bg-card flex flex-col sticky top-0 self-start h-screen">
+    <div className="w-[280px] shrink-0 border-r border-slate-200 bg-slate-50/50 flex flex-col sticky top-0 self-start h-screen">
       {/* Header */}
       <div className="px-3 py-3 border-b">
         <h3 className="text-sm font-semibold mb-2">Available Staff</h3>
