@@ -1013,13 +1013,16 @@ export const RotaScheduleTab = () => {
 
   return (
     <div className="space-y-6">
-      {/* Controls */}
-      <div className="bg-slate-50 border border-slate-200 rounded-lg shadow-sm">
-        <div className="py-4 px-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+      {/* Unified Header */}
+      <div className="bg-slate-50 border border-slate-200 rounded-lg shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Weekly Rota Creation</h2>
+        <div className="grid grid-cols-3 gap-6">
+          {/* Sub-section 1: Navigation */}
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Site</label>
               <Select value={selectedSiteId || ""} onValueChange={setSelectedSiteId}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select site" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1030,17 +1033,140 @@ export const RotaScheduleTab = () => {
                   ))}
                 </SelectContent>
               </Select>
-
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Date Range</label>
               <WeekSelector weekStart={weekStart} onWeekChange={setWeekStart} />
             </div>
+          </div>
 
-            <div className="flex items-center gap-2">
-              {rotaWeek && (
-                <Badge variant={rotaWeek.status === "published" ? "default" : "secondary"}>
-                  {rotaWeek.status}
-                </Badge>
+          {/* Sub-section 2: Status & Actions */}
+          <div className="flex flex-col items-center justify-center space-y-2 border-l border-r border-slate-200 px-6">
+            {selectedSiteId && rotaWeek && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-center"
+                onClick={() => setShowPreview(true)}
+              >
+                <Eye className="mr-1.5 h-3.5 w-3.5" />
+                Preview Week
+              </Button>
+            )}
+            {(() => {
+              const openDayDates = weekDays.filter((day) => {
+                const dayOfWeek = day.getDay();
+                const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                const dayHours = openingHoursByDay[adjustedDay];
+                return !dayHours?.is_closed;
+              });
+              const confirmedCount = openDayDates.filter((day) => {
+                const dateKey = formatDateKey(day);
+                const status = getConfirmationStatus(dateKey);
+                return status && status.status;
+              }).length;
+              const totalOpenDays = openDayDates.length;
+              const isCompleted = totalOpenDays > 0 && confirmedCount === totalOpenDays;
+              if (totalOpenDays === 0) return null;
+              return (
+                <div
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border w-full",
+                    isCompleted
+                      ? "border-green-300 bg-green-50 text-green-700"
+                      : "border-amber-300 bg-amber-50 text-amber-700"
+                  )}
+                >
+                  {isCompleted ? (
+                    <><CheckCircle2 className="h-3.5 w-3.5" /> Completed</>
+                  ) : (
+                    <><Clock className="h-3.5 w-3.5" /> In Progress ({confirmedCount}/{totalOpenDays})</>
+                  )}
+                </div>
+              );
+            })()}
+            {rotaWeek?.status === "draft" && (() => {
+              const openDayDates = weekDays.filter((day) => {
+                const dw = day.getDay();
+                const adj = dw === 0 ? 6 : dw - 1;
+                return !openingHoursByDay[adj]?.is_closed;
+              });
+              const allDaysCompleted = openDayDates.length > 0 &&
+                openDayDates.every(day => {
+                  const s = getConfirmationStatus(formatDateKey(day));
+                  return s && s.status;
+                });
+              return (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-block w-full">
+                        <Button
+                          size="sm"
+                          className="w-full justify-center"
+                          onClick={async () => {
+                            const ok = await updateWeekStatus("published");
+                            if (ok && organisationId) {
+                              supabase.functions.invoke("send-notification-email", {
+                                body: { type: "rota_published", organisation_id: organisationId },
+                              });
+                            }
+                          }}
+                          disabled={saving || !allDaysCompleted}
+                        >
+                          {saving ? (
+                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Send className="mr-1.5 h-3.5 w-3.5" />
+                          )}
+                          Publish
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {!allDaysCompleted && (
+                      <TooltipContent>
+                        <p>Can only publish once all days confirmed</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            })()}
+          </div>
+
+          {/* Sub-section 3: Quick Actions */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Quick Actions</label>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              disabled={loading || copyingFromPrevWeek || !rotaWeek}
+              onClick={handleCopyFromPreviousWeek}
+            >
+              {copyingFromPrevWeek ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Copy className="h-4 w-4 mr-2" />
               )}
-            </div>
+              Copy from Previous Week
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              disabled={loading || copyingFromPrevWeek || !rotaWeek}
+              onClick={() => {
+                const selectedDay = weekDays[selectedDayIndex];
+                if (selectedDay) {
+                  const dateKey = formatDateKey(selectedDay);
+                  handleCopyToWholeWeek(dateKey);
+                }
+              }}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copy to Whole Week
+            </Button>
           </div>
         </div>
       </div>
