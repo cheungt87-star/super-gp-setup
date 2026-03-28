@@ -1109,55 +1109,6 @@ export const RotaScheduleTab = () => {
                     </div>
                   );
                 })()}
-                
-                {/* Confirm Day button - dynamically shows for selected day */}
-                {(() => {
-                  const selectedDay = weekDays[selectedDayIndex];
-                  if (!selectedDay) return null;
-                  const dateKey = formatDateKey(selectedDay);
-                  const confirmation = getConfirmationStatus(dateKey);
-                  
-                  if (confirmation && confirmation.status) {
-                    return (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          className="h-8 bg-green-600 hover:bg-green-700 text-white"
-                          disabled
-                        >
-                          <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-                          Day Confirmed
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-xs"
-                          onClick={() => handleResetConfirmation(dateKey)}
-                          disabled={savingConfirmation}
-                        >
-                          Reset
-                        </Button>
-                      </div>
-                    );
-                  }
-                  
-                  return (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8"
-                      onClick={() => handleConfirmDay(selectedDay)}
-                      disabled={savingConfirmation}
-                    >
-                      {savingConfirmation ? (
-                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-                      )}
-                      Confirm Day
-                    </Button>
-                  );
-                })()}
 
                 {/* Preview Week + Publish buttons */}
                 {selectedSiteId && rotaWeek && (
