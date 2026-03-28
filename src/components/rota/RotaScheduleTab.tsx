@@ -1072,7 +1072,7 @@ export const RotaScheduleTab = () => {
               return (
                 <div
                   className={cn(
-                    "flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border w-full",
+                    "flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border-2 w-full",
                     isCompleted
                       ? "border-green-300 bg-green-50 text-green-700"
                       : "border-amber-300 bg-amber-50 text-amber-700"
