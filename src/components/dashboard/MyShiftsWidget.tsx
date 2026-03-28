@@ -416,7 +416,7 @@ export const MyShiftsWidget = () => {
   return (
     <div className="mb-8 rounded-2xl bg-[#F8FAFC] p-6 animate-fade-in">
       <div className="flex flex-row items-center justify-between mb-4">
-        <h2 className="text-3xl font-bold text-[#1E293B]">
+        <h2 className="text-3xl font-bold text-[#1E293B] border-l-4 border-primary pl-3">
           {selectedUserId === "me" ? "My Upcoming Shifts" : `${selectedStaffName}'s Shifts`}
         </h2>
         <WeekSelector weekStart={weekStart} onWeekChange={setWeekStart} />

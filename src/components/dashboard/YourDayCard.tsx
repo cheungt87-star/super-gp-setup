@@ -205,7 +205,7 @@ export function YourDayCard({ todayTasks }: YourDayCardProps) {
     <div className="mb-8 rounded-2xl bg-[#F8FAFC] p-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-3xl font-bold text-[#1E293B]">Your Day</h2>
+        <h2 className="text-3xl font-bold text-[#1E293B] border-l-4 border-primary pl-3">Your Day</h2>
         <span className="rounded-full bg-[#6366F1] px-4 py-1.5 text-sm font-semibold text-white">
           {format(today, "EEE do MMM")}
         </span>
