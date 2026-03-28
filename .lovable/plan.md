@@ -1,25 +1,52 @@
 
 
-# Prevent Duplicate On-Call Assignments in Same Time Slot
+# Design System: Prominent CTAs, Dropdowns & Section Hierarchy
 
 ## Problem
-`getConflictingUserIds` (line 254-256) returns `[]` for on-call assignments — it never checks if a user is already assigned to another on-call slot in the same period. This allows the same person to be assigned as both On-Call Manager AM and On-Call Doctor 1 AM simultaneously.
+1. **Outline buttons** (arrows, "Today", "Copy from previous week") use `border-input` which maps to a very light `hsl(220 13% 91%)` — nearly invisible
+2. **Sections** on dashboard ("Your Day", "My Upcoming Shifts") and admin pages ("Capacity Settings", "Facilities") lack clear visual boundaries and hierarchy
 
-## Fix — `src/components/rota/ClinicRoomDayCell.tsx`
+## Changes
 
-### 1. Update `getConflictingUserIds` on-call branch (lines 254-258)
+### 1. Stronger outline buttons globally — `src/components/ui/button.tsx`
 
-Replace the early `return []` with logic that collects user IDs from all on-call slots for the same period:
+Change the `outline` variant from:
+```
+border border-input bg-background hover:bg-accent hover:text-accent-foreground
+```
+to:
+```
+border-2 border-slate-300 bg-background shadow-sm hover:bg-accent hover:text-accent-foreground hover:border-slate-400
+```
 
-- Determine the target period(s) from the shift type being assigned (AM → check AM oncalls, PM → check PM oncalls, Full Day → check both)
-- Loop through `oncalls` array and collect `user_id` values where `shift_period` overlaps with the target period
-- Exclude the current slot being assigned to (so editing a slot doesn't conflict with itself)
+This makes every outline button across the app (week selector arrows, "Today", "Copy from previous week", dropdowns triggers, etc.) immediately more visible with a stronger border and subtle shadow.
 
-This applies to both the **drag-and-drop** path (`handleOncallDrop`) and the **"Add" button** path (`StaffSelectionDialog` via `handleAddClick`), since both use `getConflictingUserIds` to build `excludeUserIds`.
+### 2. Stronger select/dropdown triggers — `src/components/ui/select.tsx`
 
-### 2. Add validation in `handleOncallDrop` (line 182-204)
+The `SelectTrigger` likely uses `border-input`. Update its base class to include `border-slate-300 shadow-sm` for consistency with the button treatment.
 
-After resolving the `staffId` from the drag data, check if that user is already in any on-call slot for the same period on this day. If so, show a toast error and return early instead of calling `onAddShift`.
+### 3. Dashboard section headers — `src/pages/Dashboard.tsx` + widgets
 
-This provides a safety net for the drag path in case the `excludeUserIds` filtering doesn't fully prevent it.
+Each major section ("Your Day", "My Upcoming Shifts", "Full Rota", etc.) already has its own wrapper `div` with `bg-[#F8FAFC]` and `rounded-2xl`. These are fairly well separated. Add:
+- A left accent border (`border-l-4 border-primary`) on each section's heading for visual anchoring
+- Increase `mb-8` to `mb-10` between sections for breathing room
+
+### 4. Admin SiteCard sub-section styling — `src/components/admin/SiteCard.tsx`
+
+Currently sub-sections (Details, Opening Hours, Capacity Settings, Facilities) use plain `<Separator />` dividers and small muted labels. Improve:
+- Wrap each sub-section in a `bg-slate-50/50 rounded-lg p-4` container instead of relying on separators
+- Remove `<Separator />` elements (the background containers create visual separation)
+- Make sub-section headers slightly larger: `text-sm font-semibold` instead of `text-sm font-medium`
+
+### 5. WeekSelector — more prominent controls — `src/components/rota/WeekSelector.tsx`
+
+The week range text sits between two outline icon buttons. Add a subtle `bg-muted/50 rounded-lg px-4 py-1` background to the date text to make it feel like a cohesive control group.
+
+## Summary of files to edit
+- `src/components/ui/button.tsx` (line 14 — outline variant)
+- `src/components/ui/select.tsx` (SelectTrigger border)
+- `src/components/admin/SiteCard.tsx` (sub-section containers)
+- `src/components/rota/WeekSelector.tsx` (date display background)
+- `src/components/dashboard/YourDayCard.tsx` (heading accent)
+- `src/components/dashboard/MyShiftsWidget.tsx` (heading accent)
 
