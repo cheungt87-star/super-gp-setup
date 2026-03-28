@@ -1042,8 +1042,50 @@ export const RotaScheduleTab = () => {
           </div>
 
           {/* Container 2: Quick Actions */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 flex flex-col space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Quick Actions</h3>
+          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-sm p-5 flex flex-col space-y-3">
+            <h3 className="text-base font-bold text-white">Quick Actions</h3>
+            {selectedSiteId && rotaWeek && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start h-10 bg-slate-700 border-slate-600 text-slate-200 text-sm hover:bg-slate-600"
+                onClick={() => setShowPreview(true)}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Preview Week
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start h-10 bg-slate-700 border-slate-600 text-slate-200 text-sm hover:bg-slate-600"
+              disabled={loadingSchedule || copyingFromPrevWeek || !rotaWeek}
+              onClick={handleCopyFromPreviousWeek}
+            >
+              {copyingFromPrevWeek ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Copy className="h-4 w-4 mr-2" />
+              )}
+              Copy from Previous Week
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start h-10 bg-slate-700 border-slate-600 text-slate-200 text-sm hover:bg-slate-600"
+              disabled={loadingSchedule || copyingFromPrevWeek || !rotaWeek}
+              onClick={() => {
+                const selectedDay = weekDays[selectedDayIndex];
+                if (selectedDay) {
+                  const dateKey = formatDateKey(selectedDay);
+                  handleCopyToWholeWeek(dateKey);
+                }
+              }}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copy to Whole Week
+            </Button>
+          </div>
             {selectedSiteId && rotaWeek && (
               <Button
                 variant="outline"
