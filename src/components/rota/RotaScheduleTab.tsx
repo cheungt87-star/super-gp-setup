@@ -1088,8 +1088,8 @@ export const RotaScheduleTab = () => {
           </div>
 
           {/* Container 3: Publish & Confirm */}
-          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-sm p-5 flex flex-col items-center">
-            <h3 className="text-base font-bold text-white mb-4 text-center w-full">Publish & Confirm</h3>
+          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-sm p-5 flex flex-col items-start">
+            <h3 className="text-base font-bold text-white mb-4 text-left w-full">Publish & Confirm</h3>
             {rotaWeek?.status === "draft" ? (() => {
               const openDayDates = weekDays.filter((day) => {
                 const dw = day.getDay();
@@ -1109,7 +1109,7 @@ export const RotaScheduleTab = () => {
                       <TooltipTrigger asChild>
                         <span className="inline-block w-full">
                           <Button
-                            className="w-full aspect-square max-h-32 bg-teal-500 hover:bg-teal-600 text-white font-semibold text-base rounded-lg flex flex-col items-center justify-center gap-2"
+                            className="w-full h-16 bg-teal-500 hover:bg-teal-600 text-white font-semibold text-base rounded-lg flex items-center justify-center gap-2"
                             onClick={async () => {
                               const ok = await updateWeekStatus("published");
                               if (ok && organisationId) {
