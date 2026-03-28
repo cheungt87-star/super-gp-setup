@@ -177,6 +177,15 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
     async (dateKey: string, slot: number, shiftPeriod?: "am" | "pm") => {
       if (!organisationId) return false;
 
+      // Optimistic: remove from local state immediately
+      setOncalls((prev) =>
+        prev.filter((oc) => {
+          if (oc.oncall_date !== dateKey || oc.oncall_slot !== slot) return true;
+          if (shiftPeriod && oc.shift_period !== shiftPeriod) return true;
+          return false;
+        })
+      );
+
       setSaving(true);
       try {
         let query = supabase
@@ -194,16 +203,10 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
 
         if (error) throw error;
 
-        setOncalls((prev) =>
-          prev.filter((oc) => {
-            if (oc.oncall_date !== dateKey || oc.oncall_slot !== slot) return true;
-            if (shiftPeriod && oc.shift_period !== shiftPeriod) return true;
-            return false;
-          })
-        );
         return true;
       } catch (error) {
         console.error("Error deleting oncall:", error);
+        fetchOncalls();
         toast({
           title: "Error",
           description: "Failed to remove on-call assignment",
@@ -214,7 +217,7 @@ export function useRotaOncalls({ organisationId, weekStart }: UseRotaOncallsProp
         setSaving(false);
       }
     },
-    [organisationId]
+    [organisationId, fetchOncalls]
   );
 
   const deleteOncallsForDay = useCallback(
